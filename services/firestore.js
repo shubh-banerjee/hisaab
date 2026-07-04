@@ -1,4 +1,4 @@
-const { applicationDefault, getApps, initializeApp } = require('firebase-admin/app');
+const { applicationDefault, cert, getApps, initializeApp } = require('firebase-admin/app');
 const { FieldValue, getFirestore, Timestamp } = require('firebase-admin/firestore');
 
 const COLLECTIONS = {
@@ -20,22 +20,39 @@ function log(level, message, details = {}) {
   console[level](`[Firestore] ${message}${payload}`);
 }
 
+function getCredentialConfig() {
+  const encodedServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+  if (!encodedServiceAccount) {
+    return {
+      credential: applicationDefault(),
+      source: process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'GOOGLE_APPLICATION_CREDENTIALS' : 'application_default',
+    };
+  }
+
+  const serviceAccount = JSON.parse(Buffer.from(encodedServiceAccount, 'base64').toString('utf8'));
+  return {
+    credential: cert(serviceAccount),
+    source: 'FIREBASE_SERVICE_ACCOUNT_BASE64',
+  };
+}
+
 function initializeFirestore() {
   if (db) return db;
   if (initError) return null;
 
   try {
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
+    const credentialConfig = getCredentialConfig();
     if (!getApps().length) {
       initializeApp({
-        credential: applicationDefault(),
+        credential: credentialConfig.credential,
         projectId,
       });
     }
     db = getFirestore();
     log('log', 'initialized', {
       projectId: projectId || '(application default)',
-      credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'GOOGLE_APPLICATION_CREDENTIALS' : 'application_default',
+      credentials: credentialConfig.source,
     });
     return db;
   } catch (err) {

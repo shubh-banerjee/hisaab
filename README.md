@@ -93,6 +93,7 @@ PORT=8080
 | `GEMINI_MODEL` | No | `gemini-2.5-flash-lite` | Gemini model used for wording only |
 | `PORT` | No | `8080` | Port the Express server listens on |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Local only | ADC | Absolute path to a Google Cloud service-account JSON key with Firestore access |
+| `FIREBASE_SERVICE_ACCOUNT_BASE64` | Vercel only | None | Base64-encoded Firebase service-account JSON for hosts without ADC or mounted files |
 | `GOOGLE_CLOUD_PROJECT` | Usually local | ADC project | Firestore project ID if it cannot be inferred from credentials |
 
 ## Get a Gemini API Key
@@ -114,6 +115,8 @@ export GOOGLE_CLOUD_PROJECT=your-firestore-project-id
 ```
 
 On Cloud Run, grant the service account Firestore access and omit `GOOGLE_APPLICATION_CREDENTIALS`; the default runtime identity is used automatically.
+
+On Vercel, set `FIREBASE_SERVICE_ACCOUNT_BASE64` instead because serverless functions cannot rely on a local key file or attached GCP runtime identity.
 
 The browser creates a stable `hisaabSessionId` in `localStorage` and sends it as `X-Hisaab-Session` on API requests. There are no accounts or passwords.
 
