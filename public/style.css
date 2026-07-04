@@ -185,6 +185,20 @@ button,input,textarea{ font-family:var(--sans); }
 button{ cursor:pointer; }
 code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.95em; }
 
+.brand,
+.new-question-btn,
+.your-decisions{
+  outline:none;
+}
+
+.brand:focus-visible,
+.new-question-btn:focus-visible,
+.your-decisions:focus-visible{
+  outline:2px solid rgba(53,109,255,0.58);
+  outline-offset:4px;
+  box-shadow:0 0 0 6px rgba(53,109,255,0.12);
+}
+
 .brand{
   position:fixed;
   top:22px;

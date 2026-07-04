@@ -250,9 +250,13 @@
   viewInLogLink.addEventListener('click', openDecisionLog);
   openDecisions.addEventListener('click', openDecisionLog);
   closeDecisions.addEventListener('click', closeDecisionLog);
-  newQuestion.addEventListener('click', resetToLanding);
+  newQuestion.addEventListener('click', () => {
+    resetToLanding();
+    newQuestion.blur();
+  });
   brandReset.addEventListener('click', () => {
     if (isAnalysisPage()) resetToLanding();
+    brandReset.blur();
   });
   refineQuestion.addEventListener('input', resizeRefineQuestion);
   refineQuestion.addEventListener('keydown', e => {
