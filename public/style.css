@@ -309,11 +309,12 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 }
 
 .greet{
-  margin:0 0 14px;
+  margin:0 0 12px;
+  padding-bottom:6px;
   color:transparent;
   font-size:clamp(30px, 4.2vw, 46px);
   font-weight:500;
-  line-height:1.1;
+  line-height:1.16;
   letter-spacing:0;
   background:linear-gradient(90deg, #0D1833 0%, #356DFF 100%);
   -webkit-background-clip:text;
@@ -1406,8 +1407,8 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 .intent-captured-msg{
   display:none;
   align-items:center;
-  justify-content:center;
-  text-align:center;
+  justify-content:flex-start;
+  text-align:left;
   gap:7px;
   color:var(--good);
   font-size:13.5px;
@@ -1421,11 +1422,16 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 .intent-prompt.captured{
   display:flex;
   align-items:center;
-  justify-content:center;
+  justify-content:space-between;
   gap:24px;
+  width:100%;
 }
 
-.intent-prompt.captured .intent-captured-msg{ display:flex; }
+.intent-prompt.captured .intent-captured-msg{
+  display:flex;
+  flex:1 1 auto;
+  min-width:0;
+}
 
 .intent-prompt.captured .view-in-log{
   display:flex;
@@ -1512,6 +1518,7 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   justify-content:flex-start;
   gap:4px;
   align-items:baseline;
+  min-width:0;
 }
 
 .intent-error{
