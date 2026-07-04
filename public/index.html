@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hisaab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Google+Sans+Text:wght@400;500;700&family=Noto+Sans+Devanagari:wght@500&family=Noto+Sans+Bengali:wght@500&family=Noto+Sans+Tamil:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="intro-loading">
+  <section class="intro-loader" id="intro-loader" aria-label="Loading hisaab">
+    <div class="intro-greeting" id="intro-greeting">Hello</div>
+    <div class="intro-logo" id="intro-logo" aria-hidden="true">
+      <div class="intro-logo-name">hisaab<span>.</span></div>
+    </div>
+  </section>
+
+  <button class="brand" id="brand-reset" type="button" aria-label="hisaab">
+    <div class="brand-name">hisaab<span>.</span></div>
+  </button>
+  <div class="top-actions" aria-label="Page actions">
+    <button class="your-decisions" id="open-decisions" type="button" hidden>
+      <span>Your decisions</span>
+      <span class="count" id="decision-count">0</span>
+    </button>
+    <button class="new-question-btn" id="new-question" type="button" hidden>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>New question</span>
+    </button>
+  </div>
+
+  <main class="stage" id="stage">
+    <div class="greet-block">
+      <h1 class="greet" id="greet">What would you like to change?</h1>
+      <p class="subtitle" id="subtitle">An honest answer to your business's next what-if — reckoned from your own numbers.</p>
+    </div>
+
+    <div class="path-chooser" id="path-chooser">
+      <button class="path active" id="path-sample" type="button">
+        <span class="path-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg>
+        </span>
+        <span class="path-body">
+          <span class="path-title">Try with sample data</span>
+        </span>
+      </button>
+      <button class="path" id="path-real" type="button">
+        <span class="path-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </span>
+        <span class="path-body">
+          <span class="path-title">Connect my order data</span>
+        </span>
+      </button>
+    </div>
+
+    <section class="sheet-slot" id="sheet-slot" aria-label="Connect order data">
+      <div class="lbl">Paste a public Google Sheets link. Hisaab reads whatever columns exist.</div>
+      <div class="sheet-url-field">
+        <input id="sheet-url-input" type="url" placeholder="https://docs.google.com/spreadsheets/..." aria-label="Google Sheets URL">
+        <button class="clear-link-btn" id="clear-sheet-url" type="button" aria-label="Clear Google Sheets link" hidden>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="or">or <button id="csv-upload-link" type="button">upload a CSV file</button></div>
+      <div class="sheet-actions">
+        <div class="pending-data-note" id="pending-data-note" hidden>
+          <span class="dot"></span>
+          <span id="pending-data-note-text">New data detected — not used yet.</span>
+        </div>
+        <button class="apply-data-btn" id="apply-data-btn" type="button" hidden>Apply to analysis</button>
+      </div>
+      <input id="csv-file-input" type="file" accept=".csv,text/csv" hidden>
+    </section>
+
+    <section class="data-detected" id="data-detected" aria-live="polite">
+      <button class="data-panel-close" id="data-panel-close" type="button" aria-label="Dismiss data context">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+      <div class="dd-headline"><span class="pulse"></span><span id="detected-headline"></span></div>
+      <div class="dd-body" id="detected-body"></div>
+      <div class="capability-list" id="capability-list" hidden></div>
+      <div class="dd-caveat" id="detected-caveat" hidden></div>
+      <div class="dd-actions">
+        <button class="dd-details-link" id="detected-toggle" type="button">See what I read from your sheet ↓</button>
+      </div>
+      <div class="dd-details" id="detected-details"></div>
+    </section>
+
+    <div class="composer" id="composer">
+      <textarea id="question-input" placeholder="e.g. If I raise my delivery fee by ₹20, what happens to repeat orders?" rows="1" aria-label="Ask a what-if question" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
+      <button class="icon-btn mic" id="mic-btn" title="Speak your question in any language" type="button">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+      <button class="icon-btn send" id="simulate-btn" title="Calculate" type="button">
+        <span class="btn-text" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.4 1.4 5.6 5.6H4v2h12.2l-5.6 5.6L12 20l8-8-8-8z"/></svg>
+        </span>
+        <span class="btn-loader" hidden><span class="spinner"></span></span>
+      </button>
+    </div>
+    <div class="loading-status" id="loading-status" hidden aria-live="polite">Running the numbers...</div>
+
+    <div class="suggestions" id="sample-suggestions">
+      <button class="chip" data-q="If I raise my delivery fee by ₹20, what happens to repeat orders?" type="button">Raise delivery fee</button>
+      <button class="chip" data-q="If I run a promotional discount next month, what lift can I expect?" type="button">Run a promo</button>
+      <button class="chip" data-q="If I increase product prices by 5%, how does it affect total orders?" type="button">Change my price</button>
+      <button class="chip" data-q="If I stop offering cash on delivery, what happens to total orders?" type="button">Stop cash on delivery</button>
+    </div>
+    <div class="suggestions" id="real-suggestions" hidden>
+      <button class="chip" data-q="What's driving the change in my repeat customer rate recently?" type="button">What's dragging my repeat rate?</button>
+      <button class="chip" data-q="Where in my order history could I safely raise prices without losing volume?" type="button">Where can I safely raise prices?</button>
+      <button class="chip" data-q="What if my worst month had been an average month — what did it cost me?" type="button">What did my worst month cost me?</button>
+      <button class="chip" data-q="Which lever in my data has the strongest effect on total orders?" type="button">What actually moves my orders?</button>
+    </div>
+
+    <div class="lang-note">Type or speak in <b>English, हिन्दी, বাংলা,</b> or <b>தமிழ்</b></div>
+
+    <section class="nudge" id="validation-nudge" hidden>
+      <b>That's a bit too open for a calculation.</b>
+      Try naming one specific change — a price, a fee, or a promotion — and what you'd like to see the effect on.
+    </section>
+
+    <section class="nudge" id="missing-input-section" hidden>
+      <b id="missing-summary">We need a little more information before calculating this.</b>
+      <div id="missing-fields" class="missing-fields"></div>
+      <button id="missing-submit-btn" class="cta-primary missing-submit-btn" type="button">Continue with these details</button>
+    </section>
+
+    <div class="error-banner" id="error-banner" hidden>
+      <b>Something went wrong.</b>
+      <span id="error-msg"></span>
+    </div>
+
+    <section class="trajectory" id="trajectory" hidden></section>
+
+    <section class="refine-inline" id="refine-inline" hidden>
+      <div class="label">Refining your question</div>
+      <div class="refine-inline-row">
+        <textarea id="refine-question" placeholder="e.g. What about my average order value instead?" rows="1" aria-label="Refined question" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
+        <button class="icon-btn send" id="refine-send" title="Calculate refined question" type="button">
+          <span class="btn-text" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.4 1.4 5.6 5.6H4v2h12.2l-5.6 5.6L12 20l8-8-8-8z"/></svg>
+          </span>
+          <span class="btn-loader" hidden><span class="spinner"></span></span>
+        </button>
+      </div>
+      <div class="loading-status" id="refine-loading-status" hidden aria-live="polite">Running the numbers...</div>
+    </section>
+
+    <section class="results" id="results" hidden>
+      <div class="result-top">
+        <span id="data-source-note" class="src demo"><span class="dot"></span><span id="data-source-text">Using sample order history — no sheet connected</span></span>
+      </div>
+
+      <div class="evidence">
+        <div class="ev-left">
+          <div id="metric-value" class="num"></div>
+          <div id="metric-label" class="num-label"></div>
+          <div class="stats">
+            <div class="stat" id="revenue-impact" hidden>
+              <div id="revenue-value" class="v"></div>
+              <div class="l">est change</div>
+            </div>
+            <div class="stat" id="downside-card" hidden>
+              <div id="downside-value" class="v bad"></div>
+              <div class="l">worst case</div>
+            </div>
+            <div class="stat" id="trend-chip" hidden>
+              <div class="v"><span id="trend-arrow"></span> <span id="trend-text"></span></div>
+              <div class="l">recent trend</div>
+            </div>
+          </div>
+        </div>
+        <div class="ev-right">
+          <div class="chart-label" id="chart-label">Orders · recent history</div>
+          <svg id="sparkline" class="spark" viewBox="0 0 300 60" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div class="chart-axis"><span id="chart-start">Earlier</span><span id="chart-end">Now</span></div>
+          <div class="chart-caption" id="chart-caption"></div>
+        </div>
+      </div>
+
+      <div class="conf" id="confidence-block">
+        <div class="conf-badge" id="confidence-badge"><span class="dot"></span><span id="confidence-label">High confidence</span> <span class="pct" id="confidence-pct">· 81%</span></div>
+        <div class="range" id="range-line"></div>
+        <div id="low-signal-warning" class="weak-note" hidden></div>
+        <div id="ai-wording-note" class="ai-wording-note" hidden>Couldn't reach the AI service to write this up — the numbers above are still the real calculated result, just described with a simpler template.</div>
+        <div class="cta-row" id="low-confidence-actions" hidden>
+          <button class="cta-primary" id="add-real-data-btn" type="button">Add your real data</button>
+          <button class="cta-secondary" id="try-different-btn" type="button">Try a different question</button>
+        </div>
+        <div class="connected-data-note" id="connected-data-note" hidden>
+          <span class="dot"></span>
+          <span id="connected-data-text">Using this data</span>
+        </div>
+        <div class="inline-data-mount" id="inline-data-mount"></div>
+      </div>
+
+      <div class="explain">
+        <div class="tag">What this means</div>
+        <p id="recommendation-text" class="rec"></p>
+        <p id="why-text" class="why"></p>
+      </div>
+
+      <div class="intent-prompt" id="intent-prompt">
+        <div class="intent-q">Are you going to try this?</div>
+        <div class="intent-btns">
+          <button class="intent-btn primary" data-intent="applied" type="button">Yes, I'll try it</button>
+          <button class="intent-btn" data-intent="skipped" type="button">No, skipping</button>
+          <button class="intent-btn" data-intent="pending" type="button">Not sure yet</button>
+        </div>
+        <div class="refine-link" id="refine-row" hidden>
+          Or refine: <button id="refine-link" type="button"></button>
+        </div>
+        <div class="intent-captured-msg">
+          <span class="icon">✓</span>
+          <span class="intent-copy"><span id="intent-msg">Saved.</span><span class="sub" id="intent-sub"></span></span>
+        </div>
+        <div class="intent-error" id="intent-error" hidden>
+          <span>Couldn't save that — try again?</span>
+          <button id="intent-retry" type="button">Retry</button>
+        </div>
+        <div class="view-in-log" id="view-in-log" hidden>
+          <button id="view-in-log-link" type="button">View in your decisions →</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="decision-log" id="decision-log" hidden>
+      <button class="dl-back" id="close-decisions" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back
+      </button>
+      <div class="dl-header">
+        <h2>Your decisions</h2>
+        <div class="sub" id="decision-log-sub">This is where your saved decisions live. When you tell me what actually happened, I'll compare it with what I predicted.</div>
+      </div>
+      <div class="track-record" id="track-record" hidden>
+        <div class="tr-label">Your Hisaab so far</div>
+        <p class="tr-text" id="track-record-text"></p>
+      </div>
+      <div class="dl-list" id="decision-list"></div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
