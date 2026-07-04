@@ -189,6 +189,9 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 .new-question-btn,
 .your-decisions{
   outline:none;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none;
+  user-select:none;
 }
 
 .brand:focus-visible,
@@ -223,6 +226,8 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   font-weight:700;
   letter-spacing:0;
   line-height:1;
+  -webkit-user-select:none;
+  user-select:none;
 }
 
 .top-actions{
@@ -757,6 +762,7 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   background:var(--surface);
   box-shadow:0 4px 24px rgba(59,111,230,0.08), 0 1px 3px rgba(15,24,48,0.04);
   transition:border-color .2s ease, box-shadow .2s ease;
+  overflow:hidden;
 }
 
 .composer:focus-within{
@@ -779,6 +785,27 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 }
 
 .composer textarea::placeholder{ color:var(--ink-mute); }
+
+.composer grammarly-extension,
+.composer grammarly-desktop-integration,
+.composer [data-grammarly-part],
+.composer [data-testid*="grammarly" i],
+.composer [class*="grammarly" i],
+.composer [class*="gemini" i],
+.composer [aria-label*="Gemini" i],
+.composer [aria-label*="grammar" i],
+.composer [aria-label*="writing" i],
+.refine-inline-row grammarly-extension,
+.refine-inline-row grammarly-desktop-integration,
+.refine-inline-row [data-grammarly-part],
+.refine-inline-row [data-testid*="grammarly" i],
+.refine-inline-row [class*="grammarly" i],
+.refine-inline-row [class*="gemini" i],
+.refine-inline-row [aria-label*="Gemini" i],
+.refine-inline-row [aria-label*="grammar" i],
+.refine-inline-row [aria-label*="writing" i]{
+  display:none !important;
+}
 
 .icon-btn{
   width:36px;

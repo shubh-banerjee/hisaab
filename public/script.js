@@ -254,6 +254,8 @@
     resetToLanding();
     newQuestion.blur();
   });
+  brandReset.addEventListener('mousedown', e => e.preventDefault());
+  newQuestion.addEventListener('mousedown', e => e.preventDefault());
   brandReset.addEventListener('click', () => {
     if (isAnalysisPage()) resetToLanding();
     brandReset.blur();
@@ -267,8 +269,33 @@
   });
   refineSend.addEventListener('click', submitRefinement);
   fetchDecisionsCount();
+  protectComposerChrome();
   window.addEventListener('resize', alignDataPanelToSheetSlot);
   window.addEventListener('scroll', alignDataPanelToSheetSlot, { passive: true });
+
+  function protectComposerChrome() {
+    const guardedRows = [composer, document.querySelector('.refine-inline-row')].filter(Boolean);
+    const allowedIds = new Set(['question-input', 'mic-btn', 'simulate-btn', 'refine-question', 'refine-send']);
+    const allowedClasses = new Set(['btn-text', 'btn-loader', 'spinner']);
+
+    const isAllowedNode = node => {
+      if (node.nodeType !== Node.ELEMENT_NODE) return true;
+      if (allowedIds.has(node.id)) return true;
+      return [...node.classList].some(className => allowedClasses.has(className));
+    };
+
+    const removeInjectedNodes = row => {
+      [...row.children].forEach(child => {
+        if (!isAllowedNode(child)) child.remove();
+      });
+    };
+
+    guardedRows.forEach(row => {
+      removeInjectedNodes(row);
+      const observer = new MutationObserver(() => removeInjectedNodes(row));
+      observer.observe(row, { childList: true });
+    });
+  }
 
   function setupIntro() {
     greet.textContent = pageGreetingPhrases[0];
