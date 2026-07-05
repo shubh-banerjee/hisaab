@@ -201,4 +201,4 @@ gcloud run deploy hisaab \
 - **AI:** Gemini Developer API via `@google/genai` for wording only
 - **Frontend:** Plain HTML + CSS + JS
 - **Container:** Docker on `node:20-alpine`
-- **Deploy target:** Google Cloud Run
+- **Deploy target:** Vercel
