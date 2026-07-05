@@ -755,7 +755,7 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   width:100%;
   max-width:720px;
   display:flex;
-  align-items:flex-end;
+  align-items:center;
   gap:6px;
   padding:12px 10px 12px 22px;
   border:1px solid var(--line);
@@ -775,14 +775,15 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   flex:1;
   min-height:28px;
   max-height:200px;
-  padding:6px 4px;
+  padding:2px 4px 0;
   border:none;
   outline:none;
   resize:none;
   background:transparent;
   color:var(--ink);
   font-size:16px;
-  line-height:1.5;
+  line-height:28px;
+  overflow:hidden;
 }
 
 .composer textarea::placeholder{ color:var(--ink-mute); }

@@ -1511,6 +1511,10 @@
   }
 
   function resizeQuestion() {
+    if (!questionInput.value.trim()) {
+      questionInput.style.height = '';
+      return;
+    }
     questionInput.style.height = 'auto';
     questionInput.style.height = Math.min(questionInput.scrollHeight, 200) + 'px';
   }
@@ -1678,6 +1682,7 @@
     questionInput.value = '';
     sheetUrlInput.value = '';
     refineQuestion.value = '';
+    questionInput.style.height = '';
     resizeQuestion();
     resizeRefineQuestion();
     updateQuestionState();
