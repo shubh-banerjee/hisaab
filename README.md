@@ -38,7 +38,7 @@ Gemini is explicitly told not to change the numeric fields.
 
 ## Multilingual Questions
 
-The app supports multilingual questions through Gemini's own language detection. No separate translation service is used. The regression math is language-agnostic, and only the AI-written explanation is localized to the user's question language, such as English, Hindi, Tamil, Bengali, Telugu, Marathi, Kannada, or Hinglish.
+The app supports multilingual input through Gemini's language understanding. Users can ask questions in English, Hindi, Bengali, Tamil, Hinglish, and other Indian languages without a separate translation service. The current product keeps the generated recommendation and explanation consistent in English; full same-language output is a near-term milestone to make the experience more accessible for regional-language shop owners.
 
 ## Optional Google Sheets Input
 
