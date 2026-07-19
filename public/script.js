@@ -124,6 +124,12 @@
   let mediaChunks = [];
   let recorderStopTimer = null;
   let recognizing = false;
+  // Live-preview speech recognition. Runs alongside MediaRecorder to provide
+  // instant "is the mic hearing me?" text feedback while the user speaks.
+  // Gemini transcription replaces this text on stop for the authoritative version.
+  let livePreview = null;
+  let livePreviewActive = false;
+  let livePreviewText = '';
   let introTimers = [];
   let subtitleTimer = null;
   let intentPromptTimer = null;
@@ -1325,10 +1331,79 @@
   function setupSpeech() {
     if (navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
       micBtn.title = 'Tap to speak your question — in any language';
+    } else {
+      micBtn.title = 'Voice input is not supported in this browser';
+      micBtn.setAttribute('aria-disabled', 'true');
+    }
+    setupLivePreview();
+  }
+
+  // Web Speech API is used ONLY to stream interim "is the mic hearing me?" text
+  // into the textarea while the user speaks. The final authoritative transcript
+  // always comes from the Gemini /api/transcribe roundtrip on stop, which is
+  // what handles Hindi/Bengali/Tamil/code-switched speech accurately.
+  function setupLivePreview() {
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      livePreview = null;
       return;
     }
-    micBtn.title = 'Voice input is not supported in this browser';
-    micBtn.setAttribute('aria-disabled', 'true');
+    try {
+      livePreview = new SpeechRecognitionCtor();
+    } catch (_err) {
+      livePreview = null;
+      return;
+    }
+    livePreview.continuous = true;
+    livePreview.interimResults = true;
+    livePreview.maxAlternatives = 1;
+    // en-IN is a reasonable baseline: English speakers see accurate live text;
+    // Hindi/Bengali/Tamil speakers see an English-approximation which is
+    // deliberately styled as a rough preview (.live-previewing on the textarea)
+    // and gets replaced by Gemini's accurate version on stop.
+    livePreview.lang = 'en-IN';
+
+    livePreview.onresult = event => {
+      if (!livePreviewActive) return;
+      let interim = '';
+      let finalPart = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const chunk = result[0]?.transcript || '';
+        if (result.isFinal) finalPart += chunk;
+        else interim += chunk;
+      }
+      if (finalPart) livePreviewText = (livePreviewText + ' ' + finalPart).trim();
+      const combined = (livePreviewText + ' ' + interim).trim();
+      if (combined) {
+        questionInput.value = combined;
+        resizeQuestion();
+        updateQuestionState();
+        hideValidationNudge();
+      }
+    };
+
+    livePreview.onerror = () => { /* silent — Gemini is still capturing */ };
+    livePreview.onend = () => { /* end is expected on stopRecording */ };
+  }
+
+  function startLivePreview() {
+    if (!livePreview) return;
+    livePreviewActive = true;
+    livePreviewText = '';
+    questionInput.classList.add('live-previewing');
+    try {
+      livePreview.start();
+    } catch (_err) {
+      // start() throws if already running (e.g. rapid re-taps). Fine — either
+      // it's already listening, or we'll just skip live feedback this round.
+    }
+  }
+
+  function stopLivePreview() {
+    livePreviewActive = false;
+    if (!livePreview) return;
+    try { livePreview.stop(); } catch (_err) { /* noop */ }
   }
 
   function toggleSpeech() {
@@ -1442,6 +1517,8 @@
     };
     mediaRecorder.onerror = () => {
       if (recorderCleanup) { recorderCleanup(); recorderCleanup = null; }
+      stopLivePreview();
+      questionInput.classList.remove('live-previewing');
       setRecordingState(false);
       showError('Voice recording failed. Try again, or type your question instead.');
     };
@@ -1449,10 +1526,19 @@
       window.clearTimeout(recorderStopTimer);
       recorderStopTimer = null;
       if (recorderCleanup) { recorderCleanup(); recorderCleanup = null; }
+      stopLivePreview();
       setRecordingState(false);
       const elapsed = Date.now() - startedAt;
       if (elapsed < MIN_RECORD_MS || !hasSpokenYet) {
         mediaChunks = [];
+        // Clear any live-preview leftovers if the recording was too short/empty.
+        questionInput.classList.remove('live-previewing');
+        if (livePreviewText) {
+          livePreviewText = '';
+          questionInput.value = '';
+          resizeQuestion();
+          updateQuestionState();
+        }
         showError('I didn\'t catch anything. Tap the mic and try speaking again.');
         return;
       }
@@ -1461,6 +1547,7 @@
 
     mediaRecorder.start();
     setRecordingState(true);
+    startLivePreview();
     // Hard cap so a stuck recording can't run forever.
     recorderStopTimer = window.setTimeout(() => {
       if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -1493,6 +1580,7 @@
 
   async function transcribeRecording() {
     if (!mediaChunks.length) {
+      questionInput.classList.remove('live-previewing');
       showError('I didn\'t catch anything. Tap the mic and try speaking again.');
       return;
     }
@@ -1502,6 +1590,8 @@
     micBtn.disabled = true;
     micBtn.classList.add('transcribing');
     micBtn.title = 'Transcribing...';
+    // Keep the live-preview text visible during transcribing so the user has
+    // continuity, but mark it as "being refined" via the previewing class.
 
     try {
       const res = await fetch('/api/transcribe', {
@@ -1514,17 +1604,26 @@
       });
       const body = await readJsonResponse(res);
       if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);
-      questionInput.value = body.transcript || '';
+      // Gemini's transcript is authoritative — replace whatever the live preview
+      // put in the textarea. If Gemini returns empty, fall back to the preview
+      // text so the user isn't left with nothing.
+      const finalTranscript = (body.transcript || '').trim() || livePreviewText || '';
+      questionInput.value = finalTranscript;
       resizeQuestion();
       updateQuestionState();
       hideValidationNudge();
       questionInput.focus();
     } catch (err) {
-      showError(err.message);
+      // If Gemini failed but we do have live-preview text, keep it — better than
+      // nothing, and clearly marked as preview to the user.
+      if (!livePreviewText) showError(err.message);
+      else showError(`Couldn't refine the transcription (${err.message}). Using the rough live preview — feel free to edit before running.`);
     } finally {
       micBtn.disabled = false;
       micBtn.classList.remove('transcribing');
       micBtn.title = 'Tap to speak your question — in any language';
+      questionInput.classList.remove('live-previewing');
+      livePreviewText = '';
       mediaChunks = [];
     }
   }

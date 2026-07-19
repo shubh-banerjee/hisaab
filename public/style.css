@@ -788,6 +788,14 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 
 .composer textarea::placeholder{ color:var(--ink-mute); }
 
+/* Live-preview state: text is being written by the Web Speech interim stream
+   while the user speaks. Gemini will replace it with the authoritative version
+   on stop. Styled lighter + italic to visually communicate "this isn't final". */
+.composer textarea.live-previewing{
+  color:var(--ink-soft);
+  font-style:italic;
+}
+
 .composer grammarly-extension,
 .composer grammarly-desktop-integration,
 .composer [data-grammarly-part],
