@@ -836,9 +836,21 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   animation:pulse 1.6s ease infinite;
 }
 
+.mic.transcribing{
+  background:var(--surface-2);
+  color:var(--accent);
+  animation:mic-shimmer 1.2s ease infinite;
+  cursor:progress;
+}
+
 @keyframes pulse{
   0%,100%{ box-shadow:0 0 0 0 rgba(59,111,230,0.45); }
   50%{ box-shadow:0 0 0 8px rgba(59,111,230,0); }
+}
+
+@keyframes mic-shimmer{
+  0%,100%{ opacity:1; }
+  50%{ opacity:0.55; }
 }
 
 .send{ background:var(--surface-2); }

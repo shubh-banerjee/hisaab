@@ -120,7 +120,6 @@
   // runQuestionSubmission() / setSubmissionLocked().
   let requestInFlight = false;
   let manualInputs = {};
-  let recognition = null;
   let mediaRecorder = null;
   let mediaChunks = [];
   let recorderStopTimer = null;
@@ -1324,109 +1323,155 @@
   }
 
   function setupSpeech() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      if (navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
-        micBtn.title = 'Record your question';
-        return;
-      }
-      micBtn.title = 'Voice input is not supported in this browser';
-      micBtn.setAttribute('aria-disabled', 'true');
+    if (navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
+      micBtn.title = 'Tap to speak your question — in any language';
       return;
     }
-    recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    recognition.lang = navigator.language || 'en-IN';
-    recognition.onstart = () => {
-      recognizing = true;
-      micBtn.classList.add('recording');
-      micBtn.title = 'Listening...';
-      hideError();
-    };
-    recognition.onresult = e => {
-      const transcript = Array.from(e.results)
-        .map(result => result[0]?.transcript || '')
-        .join('')
-        .trim();
-      if (!transcript) return;
-      questionInput.value = transcript;
-      resizeQuestion();
-      updateQuestionState();
-      hideValidationNudge();
-    };
-    recognition.onerror = e => {
-      const message = speechErrorMessage(e.error);
-      recognizing = false;
-      micBtn.classList.remove('recording');
-      micBtn.title = 'Speak your question in any language';
-      if (message) showError(message);
-    };
-    recognition.onend = () => {
-      recognizing = false;
-      micBtn.classList.remove('recording');
-      micBtn.title = 'Speak your question in any language';
-    };
+    micBtn.title = 'Voice input is not supported in this browser';
+    micBtn.setAttribute('aria-disabled', 'true');
   }
 
   function toggleSpeech() {
-    if (!recognition && navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
-      toggleRecordedSpeech();
+    if (!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder)) {
+      showError('Voice input is not supported in this browser. Please type your question instead.');
       return;
     }
-    if (!recognition) {
-      showError('Voice input is not supported in this browser.');
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      stopRecording('manual');
       return;
     }
-    if (recognizing) {
-      recognition.stop();
-    } else {
-      try {
-        recognition.start();
-      } catch (_err) {
-        recognizing = false;
-        micBtn.classList.remove('recording');
-        showError('Voice input could not start. Try again, or type your question instead.');
-      }
-    }
+    startRecording();
   }
 
-  async function toggleRecordedSpeech() {
+  // Silence-detection tuning. We stop recording after SILENCE_MS of continuous
+  // low-volume audio, but only once the speaker has actually said something
+  // (crossed SPEECH_THRESHOLD at least once). This gives a Siri-like feel
+  // without cutting people off before they start.
+  const SPEECH_THRESHOLD = 0.015;   // normalized RMS above this = speech
+  const SILENCE_THRESHOLD = 0.010;  // normalized RMS below this = silence
+  const SILENCE_MS = 1500;          // how long silence must last before auto-stop
+  const MAX_RECORD_MS = 15000;      // hard cap on any single recording
+  const MIN_RECORD_MS = 500;        // ignore stops within the first 500ms
+
+  let recorderCleanup = null;
+
+  async function startRecording() {
     hideError();
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      mediaRecorder.stop();
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      const denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
+      showError(denied
+        ? 'Microphone access is blocked. Allow mic access in your browser settings, then try again.'
+        : 'Could not start the microphone. Check your input device and try again.');
       return;
     }
 
+    mediaChunks = [];
+    const recorderOptions = preferredRecorderOptions();
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaChunks = [];
-      const recorderOptions = preferredRecorderOptions();
-      mediaRecorder = recorderOptions ? new MediaRecorder(stream, recorderOptions) : new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = event => {
-        if (event.data && event.data.size > 0) mediaChunks.push(event.data);
-      };
-      mediaRecorder.onerror = () => {
-        stopRecorderTracks(stream);
-        setRecordingState(false);
-        showError('Voice recording failed. Try again, or type your question instead.');
-      };
-      mediaRecorder.onstop = async () => {
-        window.clearTimeout(recorderStopTimer);
-        stopRecorderTracks(stream);
-        setRecordingState(false);
-        await transcribeRecording();
-      };
-      mediaRecorder.start();
-      setRecordingState(true);
-      recorderStopTimer = window.setTimeout(() => {
-        if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
-      }, 10000);
-    } catch (err) {
+      mediaRecorder = recorderOptions
+        ? new MediaRecorder(stream, recorderOptions)
+        : new MediaRecorder(stream);
+    } catch (_err) {
+      stopRecorderTracks(stream);
+      showError('Voice recording is not supported in this browser. Please type your question instead.');
+      return;
+    }
+
+    const startedAt = Date.now();
+    let silenceTimer = null;
+    let hasSpokenYet = false;
+    let audioCtx = null;
+    let rafHandle = null;
+
+    // Analyser for silence detection. Runs off the same stream, no extra mic prompt.
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        audioCtx = new AudioCtx();
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024;
+        source.connect(analyser);
+        const buffer = new Uint8Array(analyser.fftSize);
+
+        const tick = () => {
+          if (!mediaRecorder || mediaRecorder.state !== 'recording') return;
+          analyser.getByteTimeDomainData(buffer);
+          // Normalized RMS around 128 (silence midpoint for 8-bit PCM).
+          let sumSq = 0;
+          for (let i = 0; i < buffer.length; i++) {
+            const v = (buffer[i] - 128) / 128;
+            sumSq += v * v;
+          }
+          const rms = Math.sqrt(sumSq / buffer.length);
+
+          if (rms > SPEECH_THRESHOLD) {
+            hasSpokenYet = true;
+            if (silenceTimer) {
+              window.clearTimeout(silenceTimer);
+              silenceTimer = null;
+            }
+          } else if (hasSpokenYet && rms < SILENCE_THRESHOLD && !silenceTimer) {
+            silenceTimer = window.setTimeout(() => {
+              if (mediaRecorder && mediaRecorder.state === 'recording') {
+                stopRecording('silence');
+              }
+            }, SILENCE_MS);
+          }
+          rafHandle = window.requestAnimationFrame(tick);
+        };
+        rafHandle = window.requestAnimationFrame(tick);
+      }
+    } catch (_err) {
+      // If AnalyserNode setup fails, we still work — user can tap-to-stop,
+      // and the hard cap below will fire regardless.
+    }
+
+    recorderCleanup = () => {
+      if (silenceTimer) { window.clearTimeout(silenceTimer); silenceTimer = null; }
+      if (rafHandle) { window.cancelAnimationFrame(rafHandle); rafHandle = null; }
+      if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
+      stopRecorderTracks(stream);
+    };
+
+    mediaRecorder.ondataavailable = event => {
+      if (event.data && event.data.size > 0) mediaChunks.push(event.data);
+    };
+    mediaRecorder.onerror = () => {
+      if (recorderCleanup) { recorderCleanup(); recorderCleanup = null; }
       setRecordingState(false);
-      const denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
-      showError(denied ? 'Microphone access is blocked. Open the app at localhost, allow mic access in the browser, then try again.' : 'Could not start the microphone. Check your input device and try again.');
+      showError('Voice recording failed. Try again, or type your question instead.');
+    };
+    mediaRecorder.onstop = async () => {
+      window.clearTimeout(recorderStopTimer);
+      recorderStopTimer = null;
+      if (recorderCleanup) { recorderCleanup(); recorderCleanup = null; }
+      setRecordingState(false);
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < MIN_RECORD_MS || !hasSpokenYet) {
+        mediaChunks = [];
+        showError('I didn\'t catch anything. Tap the mic and try speaking again.');
+        return;
+      }
+      await transcribeRecording();
+    };
+
+    mediaRecorder.start();
+    setRecordingState(true);
+    // Hard cap so a stuck recording can't run forever.
+    recorderStopTimer = window.setTimeout(() => {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording('timeout');
+      }
+    }, MAX_RECORD_MS);
+  }
+
+  function stopRecording(_reason) {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
     }
   }
 
@@ -1439,22 +1484,23 @@
   function setRecordingState(isRecording) {
     recognizing = isRecording;
     micBtn.classList.toggle('recording', isRecording);
-    micBtn.title = isRecording ? 'Recording... tap to stop' : 'Record your question';
+    micBtn.title = isRecording ? 'Listening... tap to stop' : 'Tap to speak your question — in any language';
   }
 
   function stopRecorderTracks(stream) {
-    stream.getTracks().forEach(track => track.stop());
+    try { stream.getTracks().forEach(track => track.stop()); } catch (_err) { /* noop */ }
   }
 
   async function transcribeRecording() {
     if (!mediaChunks.length) {
-      showError('I did not catch anything. Tap the mic and try speaking again.');
+      showError('I didn\'t catch anything. Tap the mic and try speaking again.');
       return;
     }
 
     const blob = new Blob(mediaChunks, { type: mediaChunks[0].type || 'audio/webm' });
     const audioBase64 = await blobToBase64(blob);
     micBtn.disabled = true;
+    micBtn.classList.add('transcribing');
     micBtn.title = 'Transcribing...';
 
     try {
@@ -1477,7 +1523,8 @@
       showError(err.message);
     } finally {
       micBtn.disabled = false;
-      micBtn.title = 'Record your question';
+      micBtn.classList.remove('transcribing');
+      micBtn.title = 'Tap to speak your question — in any language';
       mediaChunks = [];
     }
   }
@@ -1489,14 +1536,6 @@
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
-  }
-
-  function speechErrorMessage(error) {
-    if (error === 'no-speech') return 'I did not catch anything. Tap the mic and try speaking again.';
-    if (error === 'not-allowed' || error === 'service-not-allowed') return 'Microphone access is blocked. Open the app at localhost, allow mic access in the browser, then try again.';
-    if (error === 'audio-capture') return 'No microphone was found. Check your input device and try again.';
-    if (error === 'network') return 'Voice recognition needs a working browser speech service connection.';
-    return error ? `Voice input stopped: ${error}.` : '';
   }
 
   function readJsonResponse(res) {
