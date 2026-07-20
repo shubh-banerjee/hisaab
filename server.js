@@ -355,6 +355,27 @@ function normalizeHeader(header) {
   return String(header || '').toLowerCase().replace(/^\uFEFF/, '').replace(/[^a-z0-9]/g, '');
 }
 
+// Finds the actual sheet header that best matches a user-typed column name
+// (e.g. from the "Which column is your order date?" manual-input prompt).
+// Tries exact match first, then normalized (case/punctuation-insensitive)
+// match, then a normalized substring match in both directions — someone
+// might type "order date" when the real header is "Order Date (IST)".
+function findMatchingHeader(headers, typedValue) {
+  const typed = String(typedValue || '').trim();
+  if (!typed) return null;
+  const exact = headers.find(h => h === typed);
+  if (exact) return exact;
+  const normalizedTyped = normalizeHeader(typed);
+  if (!normalizedTyped) return null;
+  const normalizedExact = headers.find(h => normalizeHeader(h) === normalizedTyped);
+  if (normalizedExact) return normalizedExact;
+  const substringMatch = headers.find(h => {
+    const nh = normalizeHeader(h);
+    return nh.includes(normalizedTyped) || normalizedTyped.includes(nh);
+  });
+  return substringMatch || null;
+}
+
 function getSheetCsvUrl(sheetUrl) {
   if (!sheetUrl || !String(sheetUrl).trim()) {
     return null;
@@ -515,7 +536,7 @@ function classifySheetColumnsFallback(headers) {
   return normalized;
 }
 
-async function parseSheetData(csvText) {
+async function parseSheetData(csvText, manualOrderColumn = null) {
   const rows = parseCsv(csvText);
   if (rows.length < 2) {
     return {
@@ -542,21 +563,49 @@ async function parseSheetData(csvText) {
     classificationSource = 'local_fallback_after_gemini_error';
   }
 
+  // If the user manually identified their order-date column (because
+  // automatic classification couldn't find one confidently), force that
+  // column's classification to order_date at full confidence BEFORE
+  // aggregation runs. This has to happen here, not as a post-aggregation
+  // patch — aggregateSheetRows buckets every row by month using whichever
+  // column is classified as order_date, so fixing this after the fact is
+  // structurally too late; the monthly rows would already be empty.
+  let manualColumnMatch = null;
+  let manualColumnUnmatched = null;
+  if (manualOrderColumn) {
+    const matchedHeader = findMatchingHeader(headers, manualOrderColumn);
+    if (matchedHeader) {
+      classification[matchedHeader] = { classification: 'order_date', confidence: 1, source: 'manual' };
+      manualColumnMatch = matchedHeader;
+    } else {
+      // The typed value didn't match any real header — this is worth
+      // surfacing distinctly from "we still can't find order data at all",
+      // since the fix here is "check your spelling," not "add more data."
+      manualColumnUnmatched = manualOrderColumn;
+    }
+  }
+
   const monthly = aggregateSheetRows(rawRows, classification);
   return {
     headers,
     rawRows,
     classification,
-    classification_source: classificationSource,
+    classification_source: manualColumnMatch ? 'manual_override' : classificationSource,
     monthlyRows: monthly.rows,
     metricSources: monthly.metricSources,
     columns: monthly.columns,
+    manual_column_match: manualColumnMatch,
+    manual_column_unmatched: manualColumnUnmatched,
   };
 }
 
 async function getUserSheetData(sheetUrl, manualInputs = {}, csvText = '') {
+  const manualOrderColumn = typeof manualInputs?.orders === 'string' && manualInputs.orders.trim()
+    ? manualInputs.orders.trim()
+    : null;
+
   if (csvText && String(csvText).trim()) {
-    const parsed = await parseSheetData(String(csvText));
+    const parsed = await parseSheetData(String(csvText), manualOrderColumn);
     applyManualInputs(parsed.monthlyRows, parsed.metricSources, manualInputs);
     return { parsed, error: null };
   }
@@ -595,7 +644,7 @@ async function getUserSheetData(sheetUrl, manualInputs = {}, csvText = '') {
     throw new Error("Couldn't read that sheet — it looks private or restricted. Make sure it's shared as \"Anyone with the link can view\" in Google Sheets, then try again.");
   }
 
-  const parsed = await parseSheetData(text);
+  const parsed = await parseSheetData(text, manualOrderColumn);
   applyManualInputs(parsed.monthlyRows, parsed.metricSources, manualInputs);
   return { parsed, error: null };
 }
@@ -959,6 +1008,8 @@ async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '') {
         classification: sheetData.parsed.classification,
         columns: sheetData.parsed.columns,
         field_sources: sheetData.parsed.metricSources,
+        manual_column_match: sheetData.parsed.manual_column_match || null,
+        manual_column_unmatched: sheetData.parsed.manual_column_unmatched || null,
         warning: null,
       },
     };
@@ -1059,7 +1110,22 @@ function missingCriticalFields(question, dataSource) {
   }
 
   if (!isAvailable('orders')) {
-    missing.push({ field: 'orders', prompt: 'Which column represents each order? We could not identify order dates and order IDs clearly.', input_type: 'text' });
+    let prompt;
+    if (dataSource.manual_column_unmatched) {
+      // The user already typed something, but it didn't match any real
+      // header in this sheet — the fix is "check the spelling," not "we
+      // still don't have enough data," so say that plainly instead of
+      // repeating the original generic prompt verbatim.
+      prompt = `We couldn't find a column named "${dataSource.manual_column_unmatched}" in your sheet. Please type the exact column header for your order date (check spelling/spacing).`;
+    } else if (dataSource.manual_column_match) {
+      // We found the column they named and used it, but no dates could
+      // actually be parsed from it — this is a different, more specific
+      // problem than "we don't know which column to use."
+      prompt = `We used "${dataSource.manual_column_match}" as your order date column, but couldn't read any valid dates from it. Please check that column contains real dates, or type a different column name.`;
+    } else {
+      prompt = 'Which column contains your order date? Type the exact column header from your sheet (for example: "Order Date").';
+    }
+    missing.push({ field: 'orders', prompt, input_type: 'text' });
   }
   if (!isAvailable(scenario.lever)) {
     const prompt = scenario.lever === 'delivery_fee'
