@@ -2,6 +2,7 @@ require('dotenv').config({ quiet: true });
 
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const { ApiError, GoogleGenAI, Type } = require('@google/genai');
 const firestoreService = require('./services/firestore');
@@ -2148,6 +2149,33 @@ app.post('/api/feedback', async (req, res) => {
   });
 });
 
+// Serve index.html dynamically with a deploy-specific version query on its
+// script/style tags. Cache-Control headers alone weren't reliably preventing
+// a stale page in already-open browser tabs/windows (confirmed via live
+// testing: the same code correctly showed full Hindi localization in a fresh
+// Incognito window, but an existing regular-window tab kept showing a mix of
+// old and new behavior). A version query makes script.js?v=abc123 a genuinely
+// different URL every deploy, which the browser cannot serve from any old
+// cache entry regardless of header behavior or CDN-layer caching quirks.
+const deployVersion = process.env.VERCEL_GIT_COMMIT_SHA
+  ? process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 8)
+  : String(Date.now());
+
+app.get(['/', '/index.html'], (req, res) => {
+  fs.readFile(path.join(__dirname, 'public', 'index.html'), 'utf8', (err, html) => {
+    if (err) {
+      console.error('Failed to read index.html:', err.message);
+      return res.status(500).send('Internal server error');
+    }
+    const versioned = html
+      .replace('href="style.css"', `href="style.css?v=${deployVersion}"`)
+      .replace('src="script.js"', `src="script.js?v=${deployVersion}"`);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(versioned);
+  });
+});
+
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
     // index.html must never be served stale — this is what determines which
@@ -2159,7 +2187,9 @@ app.use(express.static(path.join(__dirname, 'public'), {
     } else {
       // JS/CSS/assets: short-lived cache, always revalidate with the server
       // before trusting a cached copy. Not a long-lived immutable cache since
-      // these files aren't content-hashed.
+      // these files aren't content-hashed. The version query on the tags
+      // pointing to these files (added above) is the primary defense; this
+      // header is a secondary safety net for any direct asset requests.
       res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
     }
   },
