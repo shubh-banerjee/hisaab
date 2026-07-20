@@ -22,12 +22,12 @@
   </button>
   <div class="top-actions" aria-label="Page actions">
     <button class="your-decisions" id="open-decisions" type="button" hidden>
-      <span>Your decisions</span>
+      <span data-i18n="chrome.your_decisions">Your decisions</span>
       <span class="count" id="decision-count">0</span>
     </button>
     <button class="new-question-btn" id="new-question" type="button" hidden>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      <span>New question</span>
+      <span data-i18n="chrome.new_question">New question</span>
     </button>
   </div>
 
@@ -188,8 +188,8 @@
         <div id="low-signal-warning" class="weak-note" hidden></div>
         <div id="ai-wording-note" class="ai-wording-note" hidden>Couldn't reach the AI service to write this up — the numbers above are still the real calculated result, just described with a simpler template.</div>
         <div class="cta-row" id="low-confidence-actions" hidden>
-          <button class="cta-primary" id="add-real-data-btn" type="button">Add your real data</button>
-          <button class="cta-secondary" id="try-different-btn" type="button">Try a different question</button>
+          <button class="cta-primary" id="add-real-data-btn" type="button" data-i18n="lowconf.add_data">Add your real data</button>
+          <button class="cta-secondary" id="try-different-btn" type="button" data-i18n="lowconf.try_different">Try a different question</button>
         </div>
         <div class="connected-data-note" id="connected-data-note" hidden>
           <span class="dot"></span>
@@ -199,17 +199,17 @@
       </div>
 
       <div class="explain">
-        <div class="tag">What this means</div>
+        <div class="tag" data-i18n="result.what_this_means">What this means</div>
         <p id="recommendation-text" class="rec"></p>
         <p id="why-text" class="why"></p>
       </div>
 
       <div class="intent-prompt" id="intent-prompt">
-        <div class="intent-q">Are you going to try this?</div>
+        <div class="intent-q" data-i18n="result.intent.prompt">Are you going to try this?</div>
         <div class="intent-btns">
-          <button class="intent-btn primary" data-intent="applied" type="button">Yes, I'll try it</button>
-          <button class="intent-btn" data-intent="skipped" type="button">No, skipping</button>
-          <button class="intent-btn" data-intent="pending" type="button">Not sure yet</button>
+          <button class="intent-btn primary" data-intent="applied" type="button" data-i18n="result.intent.applied">Yes, I'll try it</button>
+          <button class="intent-btn" data-intent="skipped" type="button" data-i18n="result.intent.skipped">No, skipping</button>
+          <button class="intent-btn" data-intent="pending" type="button" data-i18n="result.intent.pending">Not sure yet</button>
         </div>
         <div class="refine-link" id="refine-row" hidden>
           Or refine: <button id="refine-link" type="button"></button>
@@ -234,7 +234,7 @@
         Back
       </button>
       <div class="dl-header">
-        <h2>Your decisions</h2>
+        <h2 data-i18n="decisions.title">Your decisions</h2>
         <div class="sub" id="decision-log-sub">This is where your saved decisions live. When you tell me what actually happened, I'll compare it with what I predicted.</div>
       </div>
       <div class="track-record" id="track-record" hidden>

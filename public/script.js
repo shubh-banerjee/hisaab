@@ -1,4 +1,75 @@
 (function () {
+  // ─── i18n ────────────────────────────────────────────────────────────────
+  // Two-language dictionary. Kept small on purpose: only user-visible strings
+  // that appear on the result flow after a question is answered, plus the top
+  // chrome. The landing page stays English (universal entry point) — the
+  // response comes back in the user's language, and the surrounding UI follows.
+  const I18N = {
+    en: {
+      'chrome.new_question': 'New question',
+      'chrome.your_decisions': 'Your decisions',
+      'result.what_this_means': 'What this means',
+      'result.confidence.high': 'High confidence',
+      'result.confidence.medium': 'Medium confidence',
+      'result.confidence.low': 'Low confidence',
+      'result.confidence.unknown': 'Confidence unknown',
+      'result.intent.applied': "Yes, I'll try it",
+      'result.intent.skipped': 'No, skipping',
+      'result.intent.pending': 'Not sure yet',
+      'result.intent.prompt': 'Are you going to try this?',
+      'lowconf.add_data': 'Add your real data',
+      'lowconf.try_different': 'Try a different question',
+      'decisions.title': 'Your decisions',
+    },
+    hi: {
+      'chrome.new_question': 'नया प्रश्न',
+      'chrome.your_decisions': 'आपके निर्णय',
+      'result.what_this_means': 'इसका क्या अर्थ है',
+      'result.confidence.high': 'उच्च आत्मविश्वास',
+      'result.confidence.medium': 'मध्यम आत्मविश्वास',
+      'result.confidence.low': 'कम आत्मविश्वास',
+      'result.confidence.unknown': 'आत्मविश्वास अज्ञात',
+      'result.intent.applied': 'हाँ, मैं आजमाऊँगा',
+      'result.intent.skipped': 'नहीं, छोड़ रहा हूँ',
+      'result.intent.pending': 'अभी पक्का नहीं है',
+      'result.intent.prompt': 'क्या आप इसे आजमाने वाले हैं?',
+      'lowconf.add_data': 'अपना वास्तविक डेटा जोड़ें',
+      'lowconf.try_different': 'कोई दूसरा प्रश्न पूछकर देखें',
+      'decisions.title': 'आपके निर्णय',
+    },
+  };
+
+  const SUPPORTED_UI_LANGS = ['en', 'hi'];
+  let currentUILang = (() => {
+    try {
+      const stored = localStorage.getItem('hisaabUILang');
+      return SUPPORTED_UI_LANGS.includes(stored) ? stored : 'en';
+    } catch (_err) { return 'en'; }
+  })();
+
+  function t(key) {
+    return (I18N[currentUILang] && I18N[currentUILang][key]) || I18N.en[key] || key;
+  }
+
+  function setUILang(lang) {
+    if (!SUPPORTED_UI_LANGS.includes(lang) || lang === currentUILang) return;
+    currentUILang = lang;
+    try { localStorage.setItem('hisaabUILang', lang); } catch (_err) { /* noop */ }
+    applyI18nToDom();
+    document.documentElement.setAttribute('lang', lang);
+  }
+
+  // Walk the DOM and swap textContent of every [data-i18n] element to the
+  // current language. Called on load and whenever setUILang() flips.
+  function applyI18nToDom() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (key) el.textContent = t(key);
+    });
+  }
+  // ─── end i18n ────────────────────────────────────────────────────────────
+
+
   const stage = document.getElementById('stage');
   const introLoader = document.getElementById('intro-loader');
   const introGreeting = document.getElementById('intro-greeting');
@@ -151,6 +222,8 @@
 
   setupIntro();
   setupSpeech();
+  applyI18nToDom();
+  document.documentElement.setAttribute('lang', currentUILang);
   resizeQuestion();
   updateQuestionState();
   updateNavScrollState();
@@ -818,6 +891,12 @@
   function renderResults(data, elapsed, options = {}) {
     const computed = data.computed || data;
     const generated = data.generated || data;
+    // If the backend detected the question as Hindi, flip the UI chrome to
+    // Hindi so the response and its surrounding UI speak one language, not two.
+    // English detections leave the UI as-is (users may have already been on Hindi
+    // and typed one English question — we don't yank them back).
+    const detected = String(generated.detected_language || data.detected_language || '').toLowerCase();
+    if (detected === 'hi') setUILang('hi');
     const value = finiteNumber(computed.outcome_value);
     const low = finiteNumber(computed.range_low);
     const high = finiteNumber(computed.range_high);
@@ -863,7 +942,9 @@
 
     confidenceBlock.classList.toggle('weak', isWeak);
     confidenceBadge.classList.toggle('weak', isWeak);
-    confidenceLabel.textContent = pct === null ? 'Confidence unknown' : `${isWeak ? 'Low' : pct >= 70 ? 'High' : 'Medium'} confidence`;
+    confidenceLabel.textContent = pct === null
+      ? t('result.confidence.unknown')
+      : t(isWeak ? 'result.confidence.low' : pct >= 70 ? 'result.confidence.high' : 'result.confidence.medium');
     confidencePct.textContent = pct === null ? '' : `· ${pct}%`;
     rangeLine.textContent = rangeText(low, high, value, isWeak);
     lowSignalWarning.textContent = computed.low_signal_warning || '';
@@ -1083,7 +1164,7 @@
         <div class="conf-badge ${snapshot.isWeak ? 'weak' : ''}"><span class="dot"></span>${escapeHtml(confidenceText(computed.confidence))}</div>
       </div>
       <div class="explain">
-        <div class="tag">What this means</div>
+        <div class="tag">${escapeHtml(t('result.what_this_means'))}</div>
         <p class="rec">${escapeHtml(generated.recommendation || 'No recommendation available.')}</p>
         <p class="why">${escapeHtml(generated.why || '')}</p>
       </div>
@@ -2070,9 +2151,10 @@
 
   function confidenceText(confidence) {
     const value = Number(confidence);
-    if (!Number.isFinite(value)) return 'Confidence unknown';
+    if (!Number.isFinite(value)) return t('result.confidence.unknown');
     const pct = Math.round(value * 100);
-    return `${pct >= 70 ? 'High' : pct >= 35 ? 'Medium' : 'Low'} confidence · ${pct}%`;
+    const key = pct >= 70 ? 'result.confidence.high' : pct >= 35 ? 'result.confidence.medium' : 'result.confidence.low';
+    return `${t(key)} · ${pct}%`;
   }
 
   function relativeDate(value) {

@@ -179,46 +179,61 @@ function normalizeGeneratedResponse(parsed) {
 
 function detectFallbackLanguage(question) {
   const text = String(question || '').toLowerCase();
+  // Only Hindi and English are launch-ready in the fallback wording layer.
+  // Other Indian scripts (Tamil/Bengali/Telugu/Kannada) can be detected in
+  // the input, but the safety-net wording falls back to English until those
+  // languages are added to fallbackGeneratedResponse with native-speaker
+  // review — matching our stated scope of "shipping fewer languages well
+  // rather than more languages poorly."
   if (/[\u0900-\u097F]/.test(text) || /\b(agar|main|badha|doon|toh|kya|asar|padega|hoga|nahi|dukandar)\b/.test(text)) {
     return 'hi';
   }
-  if (/[\u0B80-\u0BFF]/.test(text)) return 'ta';
-  if (/[\u0980-\u09FF]/.test(text)) return 'bn';
-  if (/[\u0C00-\u0C7F]/.test(text)) return 'te';
-  if (/[\u0C80-\u0CFF]/.test(text)) return 'kn';
-  if (/\b(kay|kaay|ahe|nahi|vadha|zala)\b/.test(text)) return 'mr';
   return 'en';
 }
 
 function fallbackGeneratedResponse(computed, language = 'en') {
   const metric = computed.outcome_metric === 'repeat_orders' ? 'repeat customer orders' : 'total orders';
+  const metricHi = computed.outcome_metric === 'repeat_orders' ? 'दोहराए जाने वाले ग्राहक ऑर्डर' : 'कुल ऑर्डर';
   const smallEffect = Math.abs(computed.outcome_value) < 1 || computed.confidence < 0.45;
   const isHindi = language === 'hi';
 
   if (smallEffect) {
     return {
-      recommendation: isHindi ? 'Abhi is data ke basis par bada decision mat lijiye.' : 'Do not make a big decision from this pattern yet.',
-      why: isHindi ? 'Aapke uploaded data me is lever ka saaf aur bharosemand asar abhi dikh nahi raha. Pehle chhota controlled test kijiye.' : `Your uploaded data does not yet show a reliable ${metric} effect from this lever, so use a small controlled test before rollout.`,
-      outcome_metric_label: metric,
+      recommendation: isHindi
+        ? 'इस पैटर्न के आधार पर अभी कोई बड़ा निर्णय न लें।'
+        : 'Do not make a big decision from this pattern yet.',
+      why: isHindi
+        ? `आपके अपलोड किए गए डेटा में अभी तक इस बदलाव से ${metricHi} पर कोई विश्वसनीय असर नहीं दिख रहा है, इसलिए इसे पूरी तरह लागू करने से पहले एक छोटा नियंत्रित परीक्षण करें।`
+        : `Your uploaded data does not yet show a reliable ${metric} effect from this lever, so use a small controlled test before rollout.`,
+      outcome_metric_label: isHindi ? metricHi : metric,
       detected_language: language,
       source: 'server_fallback_for_low_confidence',
     };
   }
 
   if (computed.outcome_value < 0) {
+    const magnitude = Math.abs(computed.outcome_value);
     return {
-      recommendation: isHindi ? 'Is badlav ko sambhal kar test kijiye; orders kam ho sakte hain.' : 'Be careful with this change; the data points to fewer orders.',
-      why: isHindi ? `Aapke data ke hisaab se isse ${metric} lagbhag ${Math.abs(computed.outcome_value)}% kam ho sakte hain.` : `Your history links this lever with about ${Math.abs(computed.outcome_value)}% fewer ${metric}.`,
-      outcome_metric_label: metric,
+      recommendation: isHindi
+        ? 'इस बदलाव को सावधानी से जांचें; ऑर्डर घट सकते हैं।'
+        : 'Be careful with this change; the data points to fewer orders.',
+      why: isHindi
+        ? `आपके इतिहास के अनुसार इस बदलाव से ${metricHi} में लगभग ${magnitude}% की कमी आ सकती है।`
+        : `Your history links this lever with about ${magnitude}% fewer ${metric}.`,
+      outcome_metric_label: isHindi ? metricHi : metric,
       detected_language: language,
       source: 'server_fallback',
     };
   }
 
   return {
-    recommendation: isHindi ? 'Is badlav ko pehle chhote test me try kijiye.' : 'This change looks worth a small test before rolling it out widely.',
-    why: isHindi ? `Aapke data ke hisaab se isse ${metric} lagbhag ${computed.outcome_value}% badh sakte hain.` : `Your history links this lever with about ${computed.outcome_value}% more ${metric}.`,
-    outcome_metric_label: metric,
+    recommendation: isHindi
+      ? 'इस बदलाव को पहले एक छोटे परीक्षण से आजमाएं, फिर व्यापक रूप से लागू करें।'
+      : 'This change looks worth a small test before rolling it out widely.',
+    why: isHindi
+      ? `आपके इतिहास के अनुसार इस बदलाव से ${metricHi} में लगभग ${computed.outcome_value}% की बढ़ोतरी हो सकती है।`
+      : `Your history links this lever with about ${computed.outcome_value}% more ${metric}.`,
+    outcome_metric_label: isHindi ? metricHi : metric,
     detected_language: language,
     source: 'server_fallback',
   };
@@ -231,7 +246,15 @@ function alignGeneratedWithComputed(generated, computed, expectedLanguage = 'en'
   const smallEffect = Math.abs(computed.outcome_value) < 1 || computed.confidence < 0.45;
   const language = String(generated.detected_language || 'en').toLowerCase();
   const expected = String(expectedLanguage || 'en').toLowerCase();
-  const languageMismatch = expected === 'en' && !['en', 'eng', 'english'].includes(language);
+  // Detect language drift in the actual generated text — not just what Gemini
+  // *claims* it produced via detected_language. If we asked for Hindi and got
+  // no Devanagari characters back, the "language brain" silently reverted to
+  // English despite the prompt instruction — treat that as a mismatch.
+  const combinedText = `${generated.recommendation || ''} ${generated.why || ''}`;
+  const hasDevanagari = /[\u0900-\u097F]/.test(combinedText);
+  const languageMismatch =
+    (expected === 'en' && !['en', 'eng', 'english'].includes(language)) ||
+    (expected === 'hi' && !hasDevanagari);
 
   if (smallEffect || languageMismatch || (computed.outcome_value > 0 && saysDecrease) || (computed.outcome_value < 0 && saysIncrease)) {
     return fallbackGeneratedResponse(computed, expected);
@@ -1880,7 +1903,7 @@ ${JSON.stringify(computed, null, 2)}
 
 Important: Do NOT change, reinterpret, round, or replace any numeric fields. The server already calculated them from historical data. Your only job is to write a clear recommendation and a short explanation for a small shop owner.
 
-Detect the language the user's question is written in. It may be English, Hindi, Tamil, Bengali, Telugu, Marathi, Kannada, Gujarati, Punjabi, Hinglish, or another language. Write the recommendation and why fields in that same language, using natural everyday phrasing a small shop owner would use. Do not write a stiff literal translation; write how a native speaker would actually say it. All programmatic fields and numeric fields stay in English/numeric on the server. If the computed outcome_value is close to 0 or confidence is low, say in the user's language that the data does not show a clear effect. Never call a positive computed outcome a decrease, and never call a negative computed outcome an increase.
+Detect the language the user's question is written in. If the question is in English (including Hinglish written in Roman script), respond in English. If the question is in Hindi (Devanagari script), respond in natural everyday Hindi that a small shop owner would actually use — not stiff literal translation, and always in Devanagari script (never romanized Hinglish). For any other language (Tamil, Bengali, Telugu, Marathi, Kannada, or anything else), respond in clear plain English for now — do not attempt other languages. All programmatic fields and numeric fields stay in English/numeric on the server. If the computed outcome_value is close to 0 or confidence is low, say in the response language that the data does not show a clear effect. Never call a positive computed outcome a decrease, and never call a negative computed outcome an increase.
 
 This business operates in India. If you mention any money amount in the recommendation or why fields, always use the ₹ (Indian Rupee) symbol and Indian digit grouping (e.g. ₹1,03,000 or ₹45,000 — lakh/crore style), never $ or USD and never Western digit grouping like ₹103,000.
 
