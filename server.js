@@ -1778,7 +1778,7 @@ app.post('/api/transcribe', async (req, res) => {
         role: 'user',
         parts: [
           {
-            text: 'Transcribe this short retail-business what-if question. Return only the spoken words, with no explanation and no quotation marks. Preserve the spoken language if it is Hindi, Bengali, Tamil, English, or mixed.',
+            text: 'Transcribe this short retail-business what-if question. Return only the spoken words, with no explanation and no quotation marks.\n\nScript rules — these matter:\n- If the speech is purely in Hindi, write it in Devanagari script (हिन्दी), not Roman/Latin letters.\n- If the speech is purely in Bengali, write it in Bengali script (বাংলা).\n- If the speech is purely in Tamil, write it in Tamil script (தமிழ்).\n- If the speech is English, write it in Roman script as normal.\n- If the speech is genuinely code-switched Hinglish (a Hindi speaker naturally mixing in English words mid-sentence, e.g. "mera repeat order kam ho gaya"), write it in natural Roman script exactly as people actually text it — do not force it into Devanagari, since that is not how real code-switched speech is conventionally written.\n\nUse your judgment on which of these five cases applies based on what is actually spoken.',
           },
           {
             inlineData: {
