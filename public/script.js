@@ -28,6 +28,7 @@
       'evidence.worst_case': 'worst case',
       'evidence.recent_trend': 'recent trend',
       'evidence.chart_label': 'Orders · recent history',
+      'evidence.sample_tag': 'Illustrative sample — not your data',
       'evidence.earlier': 'Earlier',
       'evidence.now': 'Now',
       'data_source.sample': 'Using sample order history — no sheet connected',
@@ -55,6 +56,7 @@
       'evidence.worst_case': 'सबसे खराब स्थिति',
       'evidence.recent_trend': 'हाल की प्रवृत्ति',
       'evidence.chart_label': 'ऑर्डर · हाल का इतिहास',
+      'evidence.sample_tag': 'उदाहरण डेटा — आपका डेटा नहीं',
       'evidence.earlier': 'पहले',
       'evidence.now': 'अभी',
       'data_source.sample': 'नमूना ऑर्डर इतिहास का उपयोग — कोई शीट कनेक्ट नहीं है',
@@ -157,6 +159,7 @@
   const addRealDataBtn = document.getElementById('add-real-data-btn');
   const tryDifferentBtn = document.getElementById('try-different-btn');
   const chartLabel = document.getElementById('chart-label');
+  const chartSampleTag = document.getElementById('chart-sample-tag');
   const chartStart = document.getElementById('chart-start');
   const chartEnd = document.getElementById('chart-end');
   const chartCaption = document.getElementById('chart-caption');
@@ -930,7 +933,8 @@
     lastSimulationPersistence = data.persistence || null;
     activeResultId = crypto.randomUUID ? crypto.randomUUID() : `result-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-    drawSparkline(data.chart_series || data.series || [], isWeak);
+    const isSampleData = data.chart_meta?.is_sample === true;
+    drawSparkline(data.chart_series || data.series || [], isWeak, isSampleData);
 
     metricValue.textContent = value === null ? 'Unknown' : formatPct(value);
     metricValue.className = `num ${isWeak || value === null ? 'weak' : value >= 0 ? 'good' : 'bad'}`;
@@ -988,6 +992,8 @@
     const chartMeta = data.chart_meta || {};
     const isHindiUI = currentUILang === 'hi';
     chartLabel.textContent = chartMeta.label || (isHindiUI ? `कुल ऑर्डर · पिछले ${data.summary?.months || 'हाल के'} महीनों के` : `Orders · ${data.summary?.months || 'recent'} months`);
+    chartSampleTag.hidden = chartMeta.is_sample !== true;
+    chartSampleTag.textContent = t('evidence.sample_tag');
     chartStart.textContent = isHindiUI ? (chartMeta.start_label || t('evidence.earlier')) : (chartMeta.start_label || 'Earlier');
     chartEnd.textContent = isHindiUI ? (chartMeta.end_label || t('evidence.now')) : (chartMeta.end_label || 'Now');
     chartCaption.innerHTML = chartSummary(isWeak, low, high, value);
@@ -1023,7 +1029,7 @@
     updateAwayFromLandingState();
   }
 
-  function drawSparkline(series, isWeak) {
+  function drawSparkline(series, isWeak, isSampleData) {
     const svg = document.getElementById('sparkline');
     const values = (series || []).map(point => Number(point.value ?? point.orders)).filter(Number.isFinite);
     if (values.length < 2) {
@@ -1038,8 +1044,13 @@
       const y = 58 - ((v - min) / spread) * 52;
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     }).join(' ');
-    const stroke = isWeak ? '#B8C1D6' : 'var(--accent)';
-    svg.innerHTML = `<polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="1.8" stroke-linejoin="round"/>`;
+    // Sample-data charts are always dashed and muted, regardless of
+    // confidence — this is a "not your real numbers" signal, distinct from
+    // the low-confidence weak-line treatment, and it applies even when the
+    // computed result happens to look confident on the synthetic dataset.
+    const stroke = isSampleData ? '#B8C1D6' : (isWeak ? '#B8C1D6' : 'var(--accent)');
+    const dash = isSampleData ? ' stroke-dasharray="4,3"' : '';
+    svg.innerHTML = `<polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="1.8" stroke-linejoin="round"${dash}/>`;
   }
 
   function makeResultSnapshot(data, elapsed, meta) {

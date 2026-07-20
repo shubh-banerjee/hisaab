@@ -1106,12 +1106,31 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   text-transform:uppercase;
 }
 
-.chart-label{
+.chart-label-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
   margin-bottom:6px;
+}
+
+.chart-label{
+  margin-bottom:0;
   color:var(--ink-mute);
   font-size:10.5px;
   letter-spacing:0.05em;
   text-transform:uppercase;
+}
+
+.chart-sample-tag{
+  color:var(--warn);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:0.02em;
+  white-space:nowrap;
+  background:rgba(184,122,8,0.10);
+  padding:2px 8px;
+  border-radius:999px;
 }
 
 .spark{

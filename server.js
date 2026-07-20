@@ -2043,6 +2043,9 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
     logJson('Parsed Gemini object', generated);
   }
 
+  const isSampleData = dataSource.mode === 'demo_fallback';
+  const chartMetaLabel = `${generated.outcome_metric_label || metricDisplayName(computed.outcome_metric, generated.detected_language)} · ${generated.detected_language === 'hi' ? `पिछले ${data.length} महीनों के` : `last ${data.length} months`}`;
+
   const responseBody = {
     session_id: sessionId,
     computed,
@@ -2053,9 +2056,20 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
     analytics_capabilities: sheetSummary?.capability_map || null,
     chart_series: chartSeries(data, computed.outcome_metric),
     chart_meta: {
-      label: `${generated.outcome_metric_label || metricDisplayName(computed.outcome_metric, generated.detected_language)} · ${generated.detected_language === 'hi' ? `पिछले ${data.length} महीनों के` : `last ${data.length} months`}`,
-      start_label: formatMonthLabel(data[0]?.month),
-      end_label: formatMonthLabel(data[data.length - 1]?.month),
+      label: chartMetaLabel,
+      is_sample: isSampleData,
+      // Sample-mode charts must never show real-looking calendar dates —
+      // "Jan '24 to Jun '25" reads as this business's actual recent history,
+      // which is exactly the false impression a synthetic demo dataset must
+      // not create. Generic "Month 1 / Month N" labels keep the demo mechanic
+      // (an 18-month trend, ups and downs) intact while making it impossible
+      // to mistake for a real finding. Real connected data keeps true dates.
+      start_label: isSampleData
+        ? (generated.detected_language === 'hi' ? 'महीना 1' : 'Month 1')
+        : formatMonthLabel(data[0]?.month),
+      end_label: isSampleData
+        ? (generated.detected_language === 'hi' ? `महीना ${data.length}` : `Month ${data.length}`)
+        : formatMonthLabel(data[data.length - 1]?.month),
     },
     lever: computed.lever,
     outcome_metric: computed.outcome_metric,
