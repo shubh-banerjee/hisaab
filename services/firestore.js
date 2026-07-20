@@ -10,6 +10,7 @@ const COLLECTIONS = {
   feedback: 'feedback',
   events: 'events',
   decisions: 'decisions',
+  bootstrap: 'bootstrap',
 };
 
 let db = null;

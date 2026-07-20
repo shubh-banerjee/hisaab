@@ -79,6 +79,14 @@
           <span class="path-title">Connect my order data</span>
         </span>
       </button>
+      <button class="path" id="path-bootstrap" type="button">
+        <span class="path-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6"/><path d="M12 8V4"/><circle cx="12" cy="11" r="3"/><path d="M5 21h14"/></svg>
+        </span>
+        <span class="path-body">
+          <span class="path-title" data-i18n="path.bootstrap">No data yet — start fresh</span>
+        </span>
+      </button>
     </div>
 
     <section class="sheet-slot" id="sheet-slot" aria-label="Connect order data">
@@ -98,6 +106,26 @@
         <button class="apply-data-btn" id="apply-data-btn" type="button" hidden>Apply to analysis</button>
       </div>
       <input id="csv-file-input" type="file" accept=".csv,text/csv" hidden>
+    </section>
+
+    <!-- Bootstrap daily check-in panel: for zero-data users. Logs one rough
+         number a day; after enough days, questions run on real bootstrapped
+         history. Hidden until the "start fresh" path is chosen. -->
+    <section class="bootstrap-slot" id="bootstrap-slot" hidden aria-label="Start fresh with daily check-ins">
+      <div class="bs-eyebrow" id="bs-eyebrow" data-i18n="bootstrap.eyebrow">Building your history</div>
+      <h2 class="bs-question" data-i18n="bootstrap.question">Roughly how many orders did you get yesterday?</h2>
+      <p class="bs-sub" data-i18n="bootstrap.sub">No spreadsheet needed — just a rough number, typed or spoken. After a few weeks of this, Hisaab can answer real what-ifs for you.</p>
+      <div class="bs-input-row">
+        <input id="bs-orders-input" type="number" min="0" inputmode="numeric" placeholder="e.g. 40" aria-label="Orders yesterday">
+        <button class="bs-save-btn" id="bs-save-btn" type="button" data-i18n="bootstrap.save">Save today's number</button>
+      </div>
+      <div class="bs-optional" id="bs-optional">
+        <input id="bs-fee-input" type="number" min="0" inputmode="numeric" placeholder="" aria-label="Current delivery fee (optional)">
+        <span class="bs-optional-label" data-i18n="bootstrap.fee_optional">Current delivery fee (optional — helps test fee changes later)</span>
+      </div>
+      <div class="bs-progress" id="bs-progress"></div>
+      <div class="bs-progress-label" id="bs-progress-label"></div>
+      <div class="bs-done-note" id="bs-done-note" hidden></div>
     </section>
 
     <section class="data-detected" id="data-detected" aria-live="polite">

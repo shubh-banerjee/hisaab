@@ -52,6 +52,16 @@
       'checkback.skip': 'Skip this check-in',
       'checkback.thanks': 'Thanks — saved. This now counts toward your track record.',
       'checkback.thanks_noted': 'Got it — noted that you skipped this one.',
+      'path.bootstrap': 'No data yet — start fresh',
+      'bootstrap.eyebrow': 'Building your history',
+      'bootstrap.question': 'Roughly how many orders did you get yesterday?',
+      'bootstrap.sub': 'No spreadsheet needed — just a rough number, typed or spoken. After a few weeks of this, Hisaab can answer real what-ifs for you.',
+      'bootstrap.save': "Save today's number",
+      'bootstrap.fee_optional': 'Current delivery fee (optional — helps test fee changes later)',
+      'bootstrap.progress': '{count} of ~{total} days logged',
+      'bootstrap.ready': "You have enough history now — ask a what-if question below.",
+      'bootstrap.saved_today': "Saved. Come back tomorrow and log again — consistency is what makes this work.",
+      'bootstrap.already_today': "You've already logged today. Come back tomorrow.",
     },
     hi: {
       'chrome.new_question': 'नया प्रश्न',
@@ -100,6 +110,16 @@
       'checkback.skip': 'इस जानकारी को छोड़ें',
       'checkback.thanks': 'धन्यवाद — सहेज लिया। यह अब आपके ट्रैक रिकॉर्ड में गिना जाएगा।',
       'checkback.thanks_noted': 'समझ गए — नोट कर लिया कि आपने इसे छोड़ दिया।',
+      'path.bootstrap': 'अभी कोई डेटा नहीं — नई शुरुआत करें',
+      'bootstrap.eyebrow': 'आपका इतिहास बन रहा है',
+      'bootstrap.question': 'कल आपको लगभग कितने ऑर्डर मिले?',
+      'bootstrap.sub': 'किसी शीट की ज़रूरत नहीं — बस एक मोटा नंबर, लिखकर या बोलकर। कुछ हफ़्तों बाद Hisaab आपके लिए असली सवालों के जवाब दे पाएगा।',
+      'bootstrap.save': 'आज का नंबर सहेजें',
+      'bootstrap.fee_optional': 'मौजूदा डिलीवरी शुल्क (वैकल्पिक — बाद में शुल्क बदलाव जाँचने में मदद करता है)',
+      'bootstrap.progress': '~{total} में से {count} दिन दर्ज',
+      'bootstrap.ready': 'अब आपके पास पर्याप्त इतिहास है — नीचे कोई what-if सवाल पूछें।',
+      'bootstrap.saved_today': 'सहेज लिया। कल फिर आकर दर्ज करें — निरंतरता ही इसे कारगर बनाती है।',
+      'bootstrap.already_today': 'आपने आज पहले ही दर्ज कर दिया है। कल फिर आएं।',
     },
   };
 
@@ -308,6 +328,8 @@
 
   pathSample.addEventListener('click', () => setPath('sample'));
   pathReal.addEventListener('click', () => setPath('real'));
+  const pathBootstrapBtn = document.getElementById('path-bootstrap');
+  if (pathBootstrapBtn) pathBootstrapBtn.addEventListener('click', () => setPath('bootstrap'));
   csvUploadLink.addEventListener('click', () => {
     if (uploadedCsv) {
       clearCsvUpload();
@@ -419,6 +441,7 @@
   refineSend.addEventListener('click', submitRefinement);
   fetchDecisionsCount();
   wireCheckBack();
+  wireBootstrap();
   checkForPendingCheckBack();
   protectComposerChrome();
   window.addEventListener('resize', alignDataPanelToSheetSlot);
@@ -519,10 +542,26 @@
   function setPath(path) {
     activePath = path;
     const isReal = path === 'real';
-    pathSample.classList.toggle('active', !isReal);
+    const isBootstrap = path === 'bootstrap';
+    const isSample = !isReal && !isBootstrap;
+    pathSample.classList.toggle('active', isSample);
     pathReal.classList.toggle('active', isReal);
+    const pathBootstrapBtn = document.getElementById('path-bootstrap');
+    if (pathBootstrapBtn) pathBootstrapBtn.classList.toggle('active', isBootstrap);
     sheetSlot.classList.toggle('open', isReal);
+    const bootstrapSlot = document.getElementById('bootstrap-slot');
+    if (bootstrapSlot) bootstrapSlot.classList.toggle('open', isBootstrap);
     renderChipVisibility();
+    if (isBootstrap) {
+      // Entering bootstrap: refresh the progress display. Keep the active
+      // dataset as sample so any question asked while bootstrapping still
+      // works (backend switches to real bootstrap data automatically once
+      // enough entries exist — see getSimulationData bootstrap branch).
+      dataDetected.classList.remove('show');
+      fetchBootstrapStatus();
+      updateAwayFromLandingState();
+      return;
+    }
     if (!isReal) {
       dataDetected.classList.remove('show');
       clearCsvUpload();
@@ -1669,6 +1708,97 @@
       fetchDecisionsCount();
     } catch (_err) {
       /* fail silent — card still closes, user not blocked */
+    }
+  }
+
+  // ── Bootstrap (zero-data daily check-in) ────────────────────────────────
+  let bootstrapMinEntries = 20;
+
+  function wireBootstrap() {
+    const saveBtn = document.getElementById('bs-save-btn');
+    if (!saveBtn) return;
+    saveBtn.addEventListener('click', saveBootstrapEntry);
+    const ordersInput = document.getElementById('bs-orders-input');
+    if (ordersInput) {
+      ordersInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); saveBootstrapEntry(); }
+      });
+    }
+  }
+
+  async function fetchBootstrapStatus() {
+    try {
+      const res = await fetch('/api/bootstrap/status', { headers: apiHeaders() });
+      if (!res.ok) return;
+      const body = await readJsonResponse(res);
+      if (!body) return;
+      bootstrapMinEntries = Number(body.minEntries) || 20;
+      renderBootstrapProgress(Number(body.entryCount) || 0, body.ready, body.loggedToday);
+    } catch (_err) {
+      /* fail silent */
+    }
+  }
+
+  function renderBootstrapProgress(count, ready, loggedToday) {
+    const progress = document.getElementById('bs-progress');
+    const label = document.getElementById('bs-progress-label');
+    const doneNote = document.getElementById('bs-done-note');
+    if (!progress || !label) return;
+    // Render dots capped at minEntries; each logged day fills one.
+    const total = bootstrapMinEntries;
+    const filled = Math.min(count, total);
+    progress.innerHTML = '';
+    for (let i = 0; i < total; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'bs-dot' + (i < filled ? ' done' : '');
+      progress.appendChild(dot);
+    }
+    label.textContent = t('bootstrap.progress')
+      .replace('{count}', count)
+      .replace('{total}', total);
+    if (doneNote) {
+      if (ready) {
+        doneNote.hidden = false;
+        doneNote.textContent = t('bootstrap.ready');
+      } else if (loggedToday) {
+        doneNote.hidden = false;
+        doneNote.textContent = t('bootstrap.already_today');
+      } else {
+        doneNote.hidden = true;
+      }
+    }
+  }
+
+  async function saveBootstrapEntry() {
+    const ordersInput = document.getElementById('bs-orders-input');
+    const feeInput = document.getElementById('bs-fee-input');
+    const doneNote = document.getElementById('bs-done-note');
+    if (!ordersInput) return;
+    const orders = Number(ordersInput.value);
+    if (!Number.isFinite(orders) || orders < 0) {
+      ordersInput.focus();
+      return;
+    }
+    const payload = { orders };
+    const fee = Number(feeInput?.value);
+    if (Number.isFinite(fee) && fee >= 0) payload.delivery_fee = fee;
+    try {
+      const res = await fetch('/api/bootstrap/entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...apiHeaders() },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) return;
+      const body = await readJsonResponse(res);
+      ordersInput.value = '';
+      bootstrapMinEntries = Number(body.minEntries) || bootstrapMinEntries;
+      renderBootstrapProgress(Number(body.entryCount) || 0, body.ready, true);
+      if (doneNote && !body.ready) {
+        doneNote.hidden = false;
+        doneNote.textContent = t('bootstrap.saved_today');
+      }
+    } catch (_err) {
+      /* fail silent */
     }
   }
 

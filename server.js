@@ -977,11 +977,46 @@ function formatMonthLabel(month) {
   return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' }).replace(' ', " '");
 }
 
-async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '') {
+async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '', bootstrapOwner = null) {
   const fallback = getHistoricalData();
   let sheetError = null;
 
-  if ((!sheetUrl || !String(sheetUrl).trim()) && (!csvText || !String(csvText).trim())) {
+  const noSheet = (!sheetUrl || !String(sheetUrl).trim()) && (!csvText || !String(csvText).trim());
+
+  // Bootstrap path: no sheet/csv, but the user has logged daily entries.
+  // Only used when there's actually enough to attempt a regression — below
+  // the minimum we fall through to the sample-data demo so the UI still
+  // works, and the bootstrap progress UI (frontend) drives them to keep
+  // logging rather than asking questions prematurely.
+  if (noSheet && bootstrapOwner) {
+    try {
+      const snapshot = await bootstrapCollection().where('owner', '==', bootstrapOwner).get();
+      if (snapshot.size >= BOOTSTRAP_MIN_ENTRIES) {
+        const entries = snapshot.docs.map(d => d.data());
+        const agg = aggregateBootstrapEntries(entries);
+        if (agg.rows.length >= 2) {
+          return {
+            data: agg.rows,
+            sheetSummary: null,
+            dataSource: {
+              mode: 'bootstrap',
+              sheet_url_used: false,
+              bootstrap_entries_used: snapshot.size,
+              aggregated_rows_used: agg.rows.length,
+              field_sources: agg.metricSources,
+              columns: agg.columns,
+              warning: null,
+            },
+          };
+        }
+      }
+    } catch (err) {
+      // Bootstrap read failed — fall through to demo, never hard-fail here.
+      sheetError = err.message;
+    }
+  }
+
+  if (noSheet) {
     return {
       data: fallback,
       dataSource: {
@@ -2005,6 +2040,144 @@ app.post('/api/decisions/:id/checkback', async (req, res) => {
   }
 });
 
+// ── Zero-data bootstrap ───────────────────────────────────────────────────
+// For a vendor with no spreadsheet at all. They log one simple number a day
+// (rough order count, optionally the current delivery fee / order value).
+// After enough days accumulate, we aggregate those daily entries into the
+// same monthly-row shape the regression consumes — no OCR, no upload.
+
+const BOOTSTRAP_MIN_ENTRIES = Number(process.env.HISAAB_BOOTSTRAP_MIN_ENTRIES || 20);
+
+function bootstrapCollection() {
+  return firestoreService.collection(firestoreService.COLLECTIONS.bootstrap);
+}
+
+// Aggregate raw daily bootstrap entries into monthly rows matching exactly
+// the shape aggregateSheetRows() produces, so getSimulationData can treat a
+// bootstrapped user identically to a connected-sheet user downstream.
+function aggregateBootstrapEntries(entries) {
+  const buckets = new Map();
+  for (const entry of entries) {
+    const date = parseOrderDate(entry.date);
+    if (!date) continue;
+    const key = monthKey(date);
+    if (!buckets.has(key)) {
+      buckets.set(key, { month: key, orders: 0, deliveryFees: [], orderValues: [], days: 0 });
+    }
+    const bucket = buckets.get(key);
+    const orders = toNumber(entry.orders);
+    if (orders !== undefined) bucket.orders += orders;
+    bucket.days += 1;
+    const fee = toNumber(entry.delivery_fee);
+    if (fee !== undefined) bucket.deliveryFees.push(fee);
+    const aov = toNumber(entry.avg_order_value);
+    if (aov !== undefined) bucket.orderValues.push(aov);
+  }
+  const rows = [...buckets.values()]
+    .map(b => ({
+      month: b.month,
+      orders: Math.round(b.orders),
+      // repeat_orders / promo aren't captured in the lightweight daily log —
+      // left undefined, exactly as a sheet without those columns would be.
+      repeat_orders: undefined,
+      avg_order_value: b.orderValues.length ? mean(b.orderValues) : undefined,
+      delivery_fee: b.deliveryFees.length ? mean(b.deliveryFees) : undefined,
+      promo_active: undefined,
+    }))
+    .sort((a, b) => a.month.localeCompare(b.month));
+
+  const hasFee = rows.some(r => r.delivery_fee !== undefined);
+  const hasAov = rows.some(r => r.avg_order_value !== undefined);
+  const metricSources = {
+    orders: { status: rows.length ? 'derived' : 'unavailable', source: 'bootstrap', column: '(daily check-in)', confidence: 0.6 },
+    repeat_orders: { status: 'unavailable', source: null, column: null, confidence: 0 },
+    avg_order_value: { status: hasAov ? 'derived' : 'unavailable', source: hasAov ? 'bootstrap' : null, column: hasAov ? '(daily check-in)' : null, confidence: hasAov ? 0.55 : 0 },
+    delivery_fee: { status: hasFee ? 'derived' : 'unavailable', source: hasFee ? 'bootstrap' : null, column: hasFee ? '(daily check-in)' : null, confidence: hasFee ? 0.55 : 0 },
+    promo_active: { status: 'unavailable', source: null, column: null, confidence: 0 },
+    trend: { status: rows.length >= 2 ? 'derived' : 'unavailable', source: rows.length >= 2 ? 'bootstrap' : null, column: '(daily check-in)', confidence: 0.55 },
+  };
+  return { rows, metricSources, columns: {} };
+}
+
+// Log one daily bootstrap entry. Idempotent per (owner, date): logging the
+// same date again overwrites — a shopkeeper correcting yesterday's number
+// shouldn't create a duplicate day.
+app.post('/api/bootstrap/entry', async (req, res) => {
+  const userId = getRequestUserId(req);
+  const sessionId = getRequestSessionId(req);
+  const owner = userId || sessionId;
+
+  const orders = toNumber(req.body?.orders);
+  if (orders === undefined || orders < 0) {
+    return res.status(400).json({ error: 'orders must be a non-negative number.' });
+  }
+  // Default the date to today (server date) if not provided.
+  const dateStr = String(req.body?.date || '').trim() || new Date().toISOString().slice(0, 10);
+  const parsed = parseOrderDate(dateStr);
+  if (!parsed) {
+    return res.status(400).json({ error: 'date must be a valid date (YYYY-MM-DD).' });
+  }
+  const dayKey = parsed.toISOString().slice(0, 10);
+
+  try {
+    // Deterministic doc id per owner+day so re-logging overwrites.
+    const safeOwner = String(owner).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const docId = `${safeOwner}__${dayKey}`;
+    await bootstrapCollection().doc(docId).set({
+      userId: userId || null,
+      sessionId: sessionId || null,
+      owner,
+      date: dayKey,
+      orders,
+      delivery_fee: toNumber(req.body?.delivery_fee) ?? null,
+      avg_order_value: toNumber(req.body?.avg_order_value) ?? null,
+      updatedAt: firestoreService.now(),
+      createdAt: firestoreService.now(),
+    }, { merge: true });
+
+    // Return updated count so the UI can advance the progress bar.
+    const snapshot = await bootstrapCollection().where('owner', '==', owner).get();
+    const count = snapshot.size;
+    return res.status(201).json({
+      ok: true,
+      entryCount: count,
+      minEntries: BOOTSTRAP_MIN_ENTRIES,
+      ready: count >= BOOTSTRAP_MIN_ENTRIES,
+    });
+  } catch (err) {
+    return firestoreUnavailable(res, err);
+  }
+});
+
+// Bootstrap status: how many entries logged, how many needed, ready yet.
+app.get('/api/bootstrap/status', async (req, res) => {
+  const userId = getRequestUserId(req);
+  const sessionId = getRequestSessionId(req);
+  const owner = userId || sessionId;
+
+  try {
+    const snapshot = await bootstrapCollection().where('owner', '==', owner).get();
+    const count = snapshot.size;
+    // Also report the most recent date logged so the UI can say "already
+    // logged today" instead of prompting again.
+    let latestDate = null;
+    snapshot.docs.forEach(doc => {
+      const d = doc.data().date;
+      if (d && (!latestDate || d > latestDate)) latestDate = d;
+    });
+    const today = new Date().toISOString().slice(0, 10);
+    return res.json({
+      entryCount: count,
+      minEntries: BOOTSTRAP_MIN_ENTRIES,
+      ready: count >= BOOTSTRAP_MIN_ENTRIES,
+      loggedToday: latestDate === today,
+      latestDate,
+    });
+  } catch (err) {
+    return firestoreUnavailable(res, err);
+  }
+});
+
 app.post('/api/transcribe', async (req, res) => {
   const { audioBase64, mimeType } = req.body || {};
 
@@ -2132,6 +2305,7 @@ app.post('/api/simulate', async (req, res) => {
 async function handleSimulate(req, res) {
   const { question, sheetUrl, csvText, uploadId, manual_inputs: manualInputs = {} } = req.body;
   const sessionId = getRequestSessionId(req);
+  const bootstrapOwner = getRequestUserId(req) || sessionId;
 
   if (!question || typeof question !== 'string' || question.trim().length === 0) {
     return res.status(400).json({ error: 'question is required', kind: 'bad_request' });
@@ -2141,7 +2315,7 @@ async function handleSimulate(req, res) {
     return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server', kind: 'server_error' });
   }
 
-  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText);
+  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner);
 
   if ((sheetUrl && String(sheetUrl).trim()) || (csvText && String(csvText).trim())) {
     const missingFields = missingCriticalFields(question.trim(), dataSource);
