@@ -704,7 +704,7 @@ function applyManualInputs(rows, metricSources, manualInputs = {}) {
   }
 }
 
-function metricDisplayName(field) {
+function metricDisplayName(field, language = 'en') {
   const labels = {
     orders: 'Orders per month',
     repeat_orders: 'Repeat orders',
@@ -713,6 +713,15 @@ function metricDisplayName(field) {
     promo_active: 'Promotions',
     trend: 'Date trend',
   };
+  const labelsHi = {
+    orders: 'प्रति माह ऑर्डर',
+    repeat_orders: 'दोहराए जाने वाले ऑर्डर',
+    avg_order_value: 'ऑर्डर की राशि',
+    delivery_fee: 'डिलीवरी शुल्क',
+    promo_active: 'प्रमोशन',
+    trend: 'दिनांक प्रवृत्ति',
+  };
+  if (language === 'hi') return labelsHi[field] || field.replace(/_/g, ' ');
   return labels[field] || field.replace(/_/g, ' ');
 }
 
@@ -1097,7 +1106,7 @@ function uniqueFiniteCount(values) {
   return new Set(values.filter(Number.isFinite).map(value => String(round(value, 4)))).size;
 }
 
-function regressionEvidence(rows, leverField, outcomeField, model) {
+function regressionEvidence(rows, leverField, outcomeField, model, language = 'en') {
   const xValues = rows.map(row => Number(row[leverField])).filter(Number.isFinite);
   const yValues = rows.map(row => Number(row[outcomeField])).filter(Number.isFinite);
   const uniqueX = uniqueFiniteCount(xValues);
@@ -1123,7 +1132,7 @@ function regressionEvidence(rows, leverField, outcomeField, model) {
 
   const reasons = [];
   if (model.n < 6) reasons.push(`only ${model.n} usable month${model.n === 1 ? '' : 's'} for this comparison`);
-  if (uniqueX < 3) reasons.push(`the ${metricDisplayName(leverField).toLowerCase()} barely changes in this history`);
+  if (uniqueX < 3) reasons.push(`the ${metricDisplayName(leverField, language).toLowerCase()} barely changes in this history`);
   if (tScore < 1.5) reasons.push('the relationship is weak compared with the month-to-month noise');
   if (model.r2 < 0.18) reasons.push('the lever explains very little of the movement in outcomes');
 
@@ -1238,7 +1247,7 @@ function computeRegressionResult(question, data, summary) {
     outcome = computePromoLift(data, scenario.outcomeMetric, scenario);
   } else {
     const model = linearRegression(data, scenario.lever, scenario.outcomeMetric);
-    const evidence = regressionEvidence(data, scenario.lever, scenario.outcomeMetric, model);
+    const evidence = regressionEvidence(data, scenario.lever, scenario.outcomeMetric, model, lang);
     const baseline = model.avgY || mean(data.map(row => row[scenario.outcomeMetric]));
     // When the lever has essentially no real-world variation (it never
     // changed across the history, or changed only once), the regression
@@ -1275,7 +1284,7 @@ function computeRegressionResult(question, data, summary) {
   const straddlesZero = !cannotEstimateOutcome && outcome.low < 0 && outcome.high > 0;
   const hasEvidenceGap = Array.isArray(outcome.evidenceReasons) && outcome.evidenceReasons.length > 0;
   const rangeIsTooWide = cannotEstimateOutcome || width > Math.max(3 * pointAbs, 10) || (straddlesZero && width > Math.max(2 * pointAbs, 10)) || hasEvidenceGap;
-  const leverLabel = metricDisplayName(scenario.lever).toLowerCase();
+  const leverLabel = metricDisplayName(scenario.lever, lang).toLowerCase();
   const lowSignalWarning = cannotEstimateOutcome
     ? (lang === 'hi'
       ? `आपके अपलोड किए गए इतिहास में ${leverLabel} नहीं बदलता, इसलिए Hisaab अभी ईमानदारी से इसका अनुमान नहीं लगा सकता। इसे केवल प्रारंभिक दिशा-निर्देश के रूप में उपयोग करें, निर्णायक पूर्वानुमान के रूप में नहीं।`

@@ -19,6 +19,10 @@
       'result.intent.prompt': 'Are you going to try this?',
       'lowconf.add_data': 'Add your real data',
       'lowconf.try_different': 'Try a different question',
+      'lowconf.updating': 'Updating analysis...',
+      'lowconf.update_data': 'Update data',
+      'data.using_this': 'Using this data',
+      'data.using_this_labeled': 'Using this data: {label}',
       'decisions.title': 'Your decisions',
       'evidence.est_change': 'est change',
       'evidence.worst_case': 'worst case',
@@ -42,6 +46,10 @@
       'result.intent.prompt': 'क्या आप इसे आजमाने वाले हैं?',
       'lowconf.add_data': 'अपना वास्तविक डेटा जोड़ें',
       'lowconf.try_different': 'कोई दूसरा प्रश्न पूछकर देखें',
+      'lowconf.updating': 'विश्लेषण अपडेट हो रहा है...',
+      'lowconf.update_data': 'डेटा अपडेट करें',
+      'data.using_this': 'इस डेटा का उपयोग हो रहा है',
+      'data.using_this_labeled': 'इस डेटा का उपयोग हो रहा है: {label}',
       'decisions.title': 'आपके निर्णय',
       'evidence.est_change': 'अनुमानित बदलाव',
       'evidence.worst_case': 'सबसे खराब स्थिति',
@@ -1832,7 +1840,7 @@
     const startTime = Date.now();
     lowConfidenceActions.classList.add('refreshing-data');
     addRealDataBtn.disabled = true;
-    addRealDataBtn.textContent = 'Updating analysis...';
+    addRealDataBtn.textContent = t('lowconf.updating');
     tryDifferentBtn.disabled = true;
     applyDataBtn.disabled = true;
     applyDataBtn.textContent = 'Applying...';
@@ -2060,14 +2068,14 @@
 
   function renderConnectedDataState(source) {
     const connected = activeDataset.kind !== 'sample';
-    addRealDataBtn.textContent = connected ? 'Update data' : 'Add your real data';
+    addRealDataBtn.textContent = connected ? t('lowconf.update_data') : t('lowconf.add_data');
     connectedDataNote.hidden = !connected;
     if (!connected) {
-      connectedDataText.textContent = 'Using this data';
+      connectedDataText.textContent = t('data.using_this');
       return;
     }
     const label = activeDataset.label || dataLabelFromSource(source);
-    connectedDataText.textContent = `Using this data: ${label}`;
+    connectedDataText.textContent = t('data.using_this_labeled').replace('{label}', label);
   }
 
   function sourceKind(source) {
