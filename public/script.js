@@ -62,12 +62,12 @@
   };
 
   const SUPPORTED_UI_LANGS = ['en', 'hi'];
-  let currentUILang = (() => {
-    try {
-      const stored = localStorage.getItem('hisaabUILang');
-      return SUPPORTED_UI_LANGS.includes(stored) ? stored : 'en';
-    } catch (_err) { return 'en'; }
-  })();
+  // Deliberately NOT persisted across page loads. UI language should always
+  // reflect the CURRENT question's language, every single question — not
+  // whichever language happened to fire first in a session, and not
+  // whatever was left over from a previous visit. A fresh page load (before
+  // any question is asked) always starts in English.
+  let currentUILang = 'en';
 
   function t(key) {
     return (I18N[currentUILang] && I18N[currentUILang][key]) || I18N.en[key] || key;
@@ -76,7 +76,6 @@
   function setUILang(lang) {
     if (!SUPPORTED_UI_LANGS.includes(lang) || lang === currentUILang) return;
     currentUILang = lang;
-    try { localStorage.setItem('hisaabUILang', lang); } catch (_err) { /* noop */ }
     applyI18nToDom();
     document.documentElement.setAttribute('lang', lang);
   }
@@ -913,12 +912,14 @@
   function renderResults(data, elapsed, options = {}) {
     const computed = data.computed || data;
     const generated = data.generated || data;
-    // If the backend detected the question as Hindi, flip the UI chrome to
-    // Hindi so the response and its surrounding UI speak one language, not two.
-    // English detections leave the UI as-is (users may have already been on Hindi
-    // and typed one English question — we don't yank them back).
+    // The UI chrome always mirrors the CURRENT question's detected language —
+    // in both directions. If this question is Hindi, switch to Hindi; if
+    // it's English (or anything else we don't have UI strings for), switch
+    // back to English. Each question gets a consistent single-language
+    // result screen matching what was actually asked, rather than a language
+    // choice "sticking" from an earlier question in the same session.
     const detected = String(generated.detected_language || data.detected_language || '').toLowerCase();
-    if (detected === 'hi') setUILang('hi');
+    setUILang(detected === 'hi' ? 'hi' : 'en');
     const value = finiteNumber(computed.outcome_value);
     const low = finiteNumber(computed.range_low);
     const high = finiteNumber(computed.range_high);
