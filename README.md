@@ -9,9 +9,9 @@ Browser (index.html)
     |  POST /api/simulate { question, sheetUrl? }
     v
 Express server (server.js)
-    |  getHistoricalData() <-- synthetic JSON fallback (BigQuery-ready)
+    |  getHistoricalData() <-- demo-only fixture (never used for real advice)
     |  optional Google Sheets CSV import
-    |  fuzzy column matching + fallback for missing fields
+    |  fuzzy column matching + evidence gates for missing or weak fields
     |  regression / promo lift math computes the numeric result
     v
 Google Gemini Developer API (@google/genai)
@@ -27,6 +27,19 @@ Firebase Firestore
 
 > **BigQuery-ready data layer:** The `getHistoricalData()` function in `server.js` is isolated behind a clear comment. To connect to BigQuery in production, replace the function body with a single `bigquery.query(...)` call. Google Sheets is the near-term bridge for testing with real shop data.
 
+## Evidence-first behavior
+
+Hisaab separates “can calculate a number” from “has enough evidence to show it as an estimate.” Before any numeric result is shown, the server checks:
+
+- **Source:** sample data is `demo_only`; Start Fresh is labelled self-reported; CSV and Google Sheets are labelled imported/connected data.
+- **History:** too few months or bootstrap entries returns `not_enough_evidence`.
+- **Required fields:** price, repeat-customer, promotion, and delivery-fee questions need the corresponding business fields.
+- **Variation:** a lever that never changed cannot support a what-if estimate.
+- **Range:** changes outside the observed historical range are downgraded and paired with a smaller-test suggestion.
+- **Signal strength:** weak regression or promo evidence is shown as an early pattern, not a firm recommendation.
+
+Result categories are `clear_enough`, `weak_signal`, `not_enough_evidence`, `unsupported_question`, and `demo_only`. The frontend puts the simple answer and evidence strength first; sample size, R², slope, and ranges are secondary details.
+
 ## What Is Calculated vs. AI-Written
 
 The API response separates:
@@ -34,11 +47,11 @@ The API response separates:
 - `computed`: server-calculated values from historical data, including `outcome_value`, `range_low`, `range_high`, `confidence`, `monthly_revenue_impact`, `worst_case_revenue_impact`, and `trend_pct`.
 - `generated`: Gemini-written language, including `recommendation`, `why`, `outcome_metric_label`, and `detected_language`.
 
-Gemini is explicitly told not to change the numeric fields.
+Gemini is explicitly told not to change the numeric fields. If Gemini fails, returns malformed JSON, uses the wrong language, or reverses the calculated direction, Hisaab uses a server fallback. A fallback never replaces a missing or weak evidence result with a projection.
 
-## Multilingual Questions
+## Language handling
 
-The app supports multilingual input through Gemini's language understanding. Users can ask questions in English, Hindi, Bengali, Tamil, Hinglish, and other Indian languages without a separate translation service. The current product keeps the generated recommendation and explanation consistent in English; full same-language output is a near-term milestone to make the experience more accessible for regional-language shop owners.
+English, Devanagari Hindi, and Roman-script Hinglish have server-side fallback wording. Other languages are currently detected and safely answered in English until reviewed fallback copy is added. Wrong-language Gemini output is rejected before it reaches the user.
 
 ## Optional Google Sheets Input
 
@@ -53,7 +66,7 @@ Expected columns can be named flexibly:
 - `delivery_fee`, `shipping_fee`, or `delivery_charge`
 - `promo_active`, `promo`, `promotion`, or `discount`
 
-When a Sheet is provided, missing critical fields are not filled with demo data. The API returns `status: "needs_input"` with inline prompts for anything required by the current question. Demo data is used only when no Sheet URL is provided.
+When a Sheet or CSV is provided, missing critical fields are not filled with demo data. The API returns `status: "needs_input"` or an evidence limitation with detected columns, missing business concepts, and compatible capabilities. Users can continue without a capability, choose a detected column, or provide a clearly labelled average bill amount. Demo data is used only in explicit Demo example mode.
 
 Column classification is adaptive: the server sends headers and sample rows to Gemini, which classifies concepts such as order date, order ID, customer identifier, order value, delivery fee, promo flag, and order status. The server then aggregates order-level rows into monthly summaries before running regression.
 
@@ -68,7 +81,7 @@ The project does not ask Gemini to invent the impact number. The server first de
 - The range uses a basic standard-error estimate.
 - The confidence score is based on sample size and fit strength, such as R² for regression.
 
-This is intentionally lightweight, but it is real math from the historical rows. Gemini only explains the computed result in shop-owner language.
+This is intentionally lightweight, but it is real math from the historical rows. Gemini only explains the computed result in shop-owner language. The calculations are directional estimates, not guarantees or causal proof.
 
 ## Installation
 
@@ -149,6 +162,36 @@ npm run seed:demo-decisions
 ```
 
 Then the frontend's empty decision log can load demo entries through `/api/decisions?demo=true`. Demo entries are returned with `isDemo: true` and are badged in the UI.
+
+## Supported data formats
+
+Hisaab accepts:
+
+- CSV uploads with a date/month column and an order ID or order count. Optional columns include total bill amount, delivery fee, customer name/phone/email, customer ID, discount/promo flag, and order status.
+- Public Google Sheets links that export as CSV.
+- Start Fresh daily entries containing order count and optional delivery fee or average bill amount.
+- Explicit Demo example data, which is illustrative only and never saved as a real decision.
+
+Column names do not need to match exactly. Hisaab shows detected columns and asks the user to choose when a business meaning is ambiguous. Cancelled, refunded, and returned rows are excluded when an order-status field is available.
+
+## Tests
+
+Run the lightweight built-in Node test suite:
+
+```bash
+npm test
+```
+
+The suite covers source labels, evidence gates, minimum history, missing fields, lever variation, extrapolation, weak signals, sample wording, language fallback, CSV mapping, bootstrap aggregation, comparison categories, zero/negative baselines, and save-failure copy. It does not require Gemini calls or a network listener.
+
+## Current limitations
+
+- Evidence is directional and statistical; it cannot prove that a lever caused an outcome.
+- A connected sheet must be publicly readable as CSV. Private sheets and malformed exports are rejected.
+- Repeat-customer analysis needs a usable customer identifier and can be weak when most customers appear once.
+- Promo analysis needs both promo and non-promo periods; discount depth and other simultaneous changes may confound it.
+- Start Fresh needs at least 20 daily entries and still supports fewer capabilities than order-level data.
+- No automated browser end-to-end suite or CI workflow is configured yet; the primary flows still need manual QA before a public demo.
 
 ## Run the Project
 

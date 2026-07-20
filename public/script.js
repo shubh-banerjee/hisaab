@@ -13,8 +13,8 @@
       'result.confidence.medium': 'Medium confidence',
       'result.confidence.low': 'Low confidence',
       'result.confidence.unknown': 'Confidence unknown',
-      'result.intent.applied': "Yes, I'll try it",
-      'result.intent.skipped': 'No, skipping',
+      'result.intent.applied': 'Yes, I tried it',
+      'result.intent.skipped': 'No, I skipped it',
       'result.intent.pending': 'Not sure yet',
       'result.intent.prompt': 'Are you going to try this?',
       'lowconf.add_data': 'Add your real data',
@@ -25,25 +25,25 @@
       'data.using_this_labeled': 'Using this data: {label}',
       'decisions.title': 'Your decisions',
       'evidence.est_change': 'est change',
-      'evidence.worst_case': 'worst case',
+      'evidence.lower_estimate': 'lower estimate',
       'evidence.recent_trend': 'recent trend',
       'evidence.chart_label': 'Orders · recent history',
-      'evidence.sample_tag': 'Illustrative sample — not your data',
+      'evidence.sample_tag': 'Illustrative demo — not your data',
       'evidence.earlier': 'Earlier',
       'evidence.now': 'Now',
-      'data_source.sample': 'Using sample order history — no sheet connected',
+      'data_source.sample': 'Demo example',
       'scenarios.you_asked': 'You asked',
       'scenarios.based_on': 'Based on {months} months of your own history.',
       'scenarios.threshold_label': 'Where safe turns risky',
       'scenarios.see_details': 'Show the numbers behind this',
       'track.see_all': 'See all →',
       'track.within': 'Within {pp} points on {hits} of your last {total} calls.',
-      'track.latest': 'Last time we said {predicted}, you got {actual}.',
+      'track.latest': 'After the last change, you got {actual}.',
       'checkback.eyebrow': 'Quick check-in',
-      'checkback.did': 'Yes, I did it',
-      'checkback.didnt': 'No, I decided not to',
-      'checkback.later': 'Not yet — remind me later',
-      'checkback.sub': 'Did you make the change? Your answer sharpens every future prediction.',
+      'checkback.did': 'Yes, I tried it',
+      'checkback.didnt': 'No, I skipped it',
+      'checkback.later': 'Not sure yet',
+      'checkback.sub': 'Did you try this?',
       'checkback.question': 'A while ago, you decided to try: {question}',
       'checkback.followup_label': 'What happened to your orders after that?',
       'checkback.went_up': 'Went up',
@@ -62,6 +62,12 @@
       'bootstrap.ready': "You have enough history now — ask a what-if question below.",
       'bootstrap.saved_today': "Saved. Come back tomorrow and log again — consistency is what makes this work.",
       'bootstrap.already_today': "You've already logged today. Come back tomorrow.",
+      'bootstrap_gate.eyebrow': 'Not enough evidence yet',
+      'bootstrap_gate.title': 'Hisaab needs a little more daily sales history.',
+      'bootstrap_gate.copy': 'You have not added enough daily sales history for Hisaab to estimate this honestly.',
+      'bootstrap_gate.add': 'Add today’s sales',
+      'bootstrap_gate.demo': 'See demo example',
+      'scenarios.based_on_bootstrap': 'Based on {months} months of self-reported daily history.',
     },
     hi: {
       'chrome.new_question': 'नया प्रश्न',
@@ -71,8 +77,8 @@
       'result.confidence.medium': 'मध्यम आत्मविश्वास',
       'result.confidence.low': 'कम आत्मविश्वास',
       'result.confidence.unknown': 'आत्मविश्वास अज्ञात',
-      'result.intent.applied': 'हाँ, मैं आजमाऊँगा',
-      'result.intent.skipped': 'नहीं, छोड़ रहा हूँ',
+      'result.intent.applied': 'हाँ, मैंने आजमाया',
+      'result.intent.skipped': 'नहीं, मैंने छोड़ दिया',
       'result.intent.pending': 'अभी पक्का नहीं है',
       'result.intent.prompt': 'क्या आप इसे आजमाने वाले हैं?',
       'lowconf.add_data': 'अपना वास्तविक डेटा जोड़ें',
@@ -83,25 +89,25 @@
       'data.using_this_labeled': 'इस डेटा का उपयोग हो रहा है: {label}',
       'decisions.title': 'आपके निर्णय',
       'evidence.est_change': 'अनुमानित बदलाव',
-      'evidence.worst_case': 'सबसे खराब स्थिति',
+      'evidence.lower_estimate': 'निचला अनुमान',
       'evidence.recent_trend': 'हाल की प्रवृत्ति',
       'evidence.chart_label': 'ऑर्डर · हाल का इतिहास',
-      'evidence.sample_tag': 'उदाहरण डेटा — आपका डेटा नहीं',
+      'evidence.sample_tag': 'डेमो उदाहरण — आपका डेटा नहीं',
       'evidence.earlier': 'पहले',
       'evidence.now': 'अभी',
-      'data_source.sample': 'नमूना ऑर्डर इतिहास का उपयोग — कोई शीट कनेक्ट नहीं है',
+      'data_source.sample': 'डेमो उदाहरण',
       'scenarios.you_asked': 'आपने पूछा',
       'scenarios.based_on': 'आपके अपने {months} महीनों के इतिहास के आधार पर।',
       'scenarios.threshold_label': 'जहाँ सुरक्षित से जोखिम शुरू होता है',
       'scenarios.see_details': 'इसके पीछे के आंकड़े दिखाएं',
       'track.see_all': 'सभी देखें →',
       'track.within': 'आपके पिछले {total} में से {hits} बार {pp} अंकों के भीतर सही रहे।',
-      'track.latest': 'पिछली बार हमने {predicted} बताया, आपको {actual} मिला।',
+      'track.latest': 'पिछली बार बदलाव के बाद आपको {actual} मिला।',
       'checkback.eyebrow': 'छोटी सी जानकारी',
-      'checkback.did': 'हाँ, मैंने किया',
-      'checkback.didnt': 'नहीं, मैंने न करने का फैसला किया',
-      'checkback.later': 'अभी नहीं — बाद में याद दिलाएं',
-      'checkback.sub': 'क्या आपने बदलाव किया? आपका जवाब हर आगे के अनुमान को बेहतर बनाता है।',
+      'checkback.did': 'हाँ, मैंने आजमाया',
+      'checkback.didnt': 'नहीं, मैंने छोड़ दिया',
+      'checkback.later': 'अभी पक्का नहीं है',
+      'checkback.sub': 'क्या आपने इसे आजमाया?',
       'checkback.question': 'कुछ समय पहले, आपने यह आजमाने का फैसला किया था: {question}',
       'checkback.followup_label': 'उसके बाद आपके ऑर्डर का क्या हुआ?',
       'checkback.went_up': 'बढ़ गए',
@@ -120,6 +126,12 @@
       'bootstrap.ready': 'अब आपके पास पर्याप्त इतिहास है — नीचे कोई what-if सवाल पूछें।',
       'bootstrap.saved_today': 'सहेज लिया। कल फिर आकर दर्ज करें — निरंतरता ही इसे कारगर बनाती है।',
       'bootstrap.already_today': 'आपने आज पहले ही दर्ज कर दिया है। कल फिर आएं।',
+      'bootstrap_gate.eyebrow': 'अभी पर्याप्त सबूत नहीं हैं',
+      'bootstrap_gate.title': 'Hisaab को थोड़े और रोज़ के बिक्री इतिहास की ज़रूरत है।',
+      'bootstrap_gate.copy': 'Hisaab ईमानदारी से अनुमान लगाने के लिए आपके रोज़ के बिक्री इतिहास में अभी पर्याप्त जानकारी नहीं है।',
+      'bootstrap_gate.add': 'आज की बिक्री जोड़ें',
+      'bootstrap_gate.demo': 'डेमो उदाहरण देखें',
+      'scenarios.based_on_bootstrap': 'आपके द्वारा दर्ज किए गए रोज़ के इतिहास के {months} महीनों के आधार पर।',
     },
   };
 
@@ -167,10 +179,17 @@
   const csvFileInput = document.getElementById('csv-file-input');
   const pathSample = document.getElementById('path-sample');
   const pathReal = document.getElementById('path-real');
+  const pathBootstrap = document.getElementById('path-bootstrap');
   const sheetSlot = document.getElementById('sheet-slot');
   const dataDetected = document.getElementById('data-detected');
   const detectedHeadline = document.getElementById('detected-headline');
   const detectedBody = document.getElementById('detected-body');
+  const mappingPanel = document.getElementById('mapping-panel');
+  const mappingFoundGroup = document.getElementById('mapping-found-group');
+  const mappingFound = document.getElementById('mapping-found');
+  const mappingMissingGroup = document.getElementById('mapping-missing-group');
+  const mappingMissing = document.getElementById('mapping-missing');
+  const mappingCapabilities = document.getElementById('mapping-capabilities');
   const capabilityList = document.getElementById('capability-list');
   const detectedCaveat = document.getElementById('detected-caveat');
   const applyDataBtn = document.getElementById('apply-data-btn');
@@ -194,6 +213,25 @@
   const errorBanner = document.getElementById('error-banner');
   const errorMsg = document.getElementById('error-msg');
   const resultsSection = document.getElementById('results');
+  const bootstrapGate = document.getElementById('bootstrap-gate');
+  const bootstrapGateProgress = document.getElementById('bootstrap-gate-progress');
+  const bootstrapGateAdd = document.getElementById('bootstrap-gate-add');
+  const bootstrapGateDemo = document.getElementById('bootstrap-gate-demo');
+  const evidenceLimitation = document.getElementById('evidence-limitation');
+  const evidenceLimitationEyebrow = document.getElementById('evidence-limitation-eyebrow');
+  const evidenceLimitationTitle = document.getElementById('evidence-limitation-title');
+  const evidenceLimitationCopy = document.getElementById('evidence-limitation-copy');
+  const evidenceLimitationDetail = document.getElementById('evidence-limitation-detail');
+  const evidenceLimitationPrimary = document.getElementById('evidence-limitation-primary');
+  const evidenceLimitationSecondary = document.getElementById('evidence-limitation-secondary');
+  const evidenceLimitationTertiary = document.getElementById('evidence-limitation-tertiary');
+  const resultOverview = document.getElementById('result-overview');
+  const overviewAnswer = document.getElementById('overview-answer');
+  const overviewStrength = document.getElementById('overview-strength');
+  const overviewWhy = document.getElementById('overview-why');
+  const overviewAction = document.getElementById('overview-action');
+  const overviewData = document.getElementById('overview-data');
+  const calculationDetails = document.getElementById('calculation-details');
   const dataSourceNote = document.getElementById('data-source-note');
   const dataSourceText = document.getElementById('data-source-text');
   const metricValue = document.getElementById('metric-value');
@@ -230,6 +268,9 @@
   const refineLink = document.getElementById('refine-link');
   const intentMsg = document.getElementById('intent-msg');
   const intentSub = document.getElementById('intent-sub');
+  const intentStartDateRow = document.getElementById('intent-start-date-row');
+  const intentStartDate = document.getElementById('intent-start-date');
+  const intentStartDateSave = document.getElementById('intent-start-date-save');
   const intentError = document.getElementById('intent-error');
   const intentRetry = document.getElementById('intent-retry');
   const viewInLog = document.getElementById('view-in-log');
@@ -275,6 +316,8 @@
   // runQuestionSubmission() / setSubmissionLocked().
   let requestInFlight = false;
   let manualInputs = {};
+  let manualMappings = {};
+  let mappingChoices = {};
   let mediaRecorder = null;
   let mediaChunks = [];
   let recorderStopTimer = null;
@@ -303,6 +346,8 @@
   let activeResultId = null;
   let savedDecisions = [];
   let decisionsCountValue = 0;
+  let activeDecisionFilter = 'all';
+  let lastSavedDecisionId = null;
 
   setupIntro();
   setupSpeech();
@@ -328,8 +373,39 @@
 
   pathSample.addEventListener('click', () => setPath('sample'));
   pathReal.addEventListener('click', () => setPath('real'));
-  const pathBootstrapBtn = document.getElementById('path-bootstrap');
-  if (pathBootstrapBtn) pathBootstrapBtn.addEventListener('click', () => setPath('bootstrap'));
+  if (pathBootstrap) pathBootstrap.addEventListener('click', () => setPath('bootstrap'));
+  if (bootstrapGateAdd) bootstrapGateAdd.addEventListener('click', () => {
+    hideBootstrapGate();
+    hideResults();
+    setPath('bootstrap');
+    document.getElementById('bootstrap-slot')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('bs-orders-input')?.focus();
+  });
+  if (bootstrapGateDemo) bootstrapGateDemo.addEventListener('click', async () => {
+    const demoQuestion = lastQuestion || questionInput.value.trim();
+    hideBootstrapGate();
+    hideResults();
+    setPath('sample');
+    if (demoQuestion) await runSimulation({ questionOverride: demoQuestion, skipValidation: true });
+  });
+  if (evidenceLimitationPrimary) evidenceLimitationPrimary.addEventListener('click', () => {
+    hideEvidenceLimitation();
+    hideResults();
+    setPath('real');
+    sheetUrlInput.focus();
+  });
+  if (evidenceLimitationSecondary) evidenceLimitationSecondary.addEventListener('click', () => {
+    hideEvidenceLimitation();
+    hideResults();
+    setPath('bootstrap');
+    document.getElementById('bootstrap-slot')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+  if (evidenceLimitationTertiary) evidenceLimitationTertiary.addEventListener('click', () => {
+    hideEvidenceLimitation();
+    hideResults();
+    setPath('sample');
+    questionInput.focus();
+  });
   csvUploadLink.addEventListener('click', () => {
     if (uploadedCsv) {
       clearCsvUpload();
@@ -343,6 +419,9 @@
   csvFileInput.addEventListener('change', handleCsvFile);
   sheetUrlInput.addEventListener('input', () => {
     clearCsvUpload();
+    manualMappings = {};
+    mappingChoices = {};
+    manualInputs = {};
     lastUploadId = null;
     connectedDataLabel = sheetUrlInput.value.trim() ? dataLabelFromSheetUrl(sheetUrlInput.value.trim()) : '';
     renderSheetUrlState();
@@ -351,6 +430,9 @@
   });
   clearSheetUrl.addEventListener('click', () => {
     sheetUrlInput.value = '';
+    manualMappings = {};
+    mappingChoices = {};
+    manualInputs = {};
     connectedDataLabel = '';
     lastSheetSummary = null;
     lastUploadId = null;
@@ -387,7 +469,6 @@
   });
 
   simulateBtn.addEventListener('click', async () => {
-    manualInputs = {};
     await runSimulation();
   });
 
@@ -411,6 +492,7 @@
   intentRetry.addEventListener('click', () => {
     if (activeIntent) captureIntent(activeIntent);
   });
+  if (intentStartDateSave) intentStartDateSave.addEventListener('click', saveIntentStartDate);
   viewInLogLink.addEventListener('click', openDecisionLog);
   openDecisions.addEventListener('click', openDecisionLog);
   const trLink = document.getElementById('tr-link');
@@ -441,6 +523,7 @@
   refineSend.addEventListener('click', submitRefinement);
   fetchDecisionsCount();
   wireCheckBack();
+  wireDecisionFilters();
   wireBootstrap();
   checkForPendingCheckBack();
   protectComposerChrome();
@@ -544,6 +627,9 @@
     const isReal = path === 'real';
     const isBootstrap = path === 'bootstrap';
     const isSample = !isReal && !isBootstrap;
+    subtitle.textContent = isSample
+      ? 'Demo example — this is example data for a demo shop. It only shows how Hisaab works after real entries are added.'
+      : 'An honest answer to your business\'s next what-if — reckoned from your own numbers.';
     pathSample.classList.toggle('active', isSample);
     pathReal.classList.toggle('active', isReal);
     const pathBootstrapBtn = document.getElementById('path-bootstrap');
@@ -583,6 +669,9 @@
     const file = csvFileInput.files?.[0];
     if (!file) return;
     setPath('real');
+    manualMappings = {};
+    mappingChoices = {};
+    manualInputs = {};
     sheetUrlInput.value = '';
     uploadedFileName = file.name;
     uploadedCsv = await file.text();
@@ -643,6 +732,7 @@
     return {
       sheetUrl: activeDataset.kind === 'sheet' ? activeDataset.sheetUrl : '',
       csvText: activeDataset.kind === 'csv' ? activeDataset.csvText : '',
+      dataMode: activePath,
     };
   }
 
@@ -750,6 +840,7 @@
     detectedBody.textContent = isInlineRefresh ? 'I will update the result below once the columns are ready.' : 'Checking the columns before I use them.';
     capabilityList.hidden = true;
     capabilityList.innerHTML = '';
+    mappingPanel.hidden = true;
     detectedCaveat.hidden = true;
     detectedDetails.innerHTML = '';
     hideApplyDataCta();
@@ -786,6 +877,7 @@
       detectedBody.textContent = err.message;
       capabilityList.hidden = true;
       capabilityList.innerHTML = '';
+      mappingPanel.hidden = true;
       detectedCaveat.hidden = true;
       detectedDetails.innerHTML = '';
       hideApplyDataCta();
@@ -796,10 +888,11 @@
 
   function renderSheetSummary(summary) {
     const months = Number(summary.months) || 0;
-    detectedHeadline.textContent = months
-      ? `Got it — ${months} month${months === 1 ? '' : 's'} of your orders.`
-      : 'Got it — I found rows, but not monthly order history yet.';
-    detectedBody.textContent = summary.body_line || 'I found your sheet, but need clearer order columns before calculating.';
+    detectedHeadline.textContent = 'I read your file.';
+    detectedBody.textContent = months
+      ? `I found ${summary.raw_rows || 0} rows across ${months} month${months === 1 ? '' : 's'}.`
+      : 'I found the file, but not enough usable order history yet.';
+    renderColumnMapping(summary.column_mapping || {});
     renderCapabilities(summary.capability_map);
 
     if (summary.caveat_line) {
@@ -811,10 +904,122 @@
 
     detectedDetails.classList.remove('open');
     detectedToggle.textContent = 'See what I read from your sheet ↓';
-    detectedDetails.innerHTML = (summary.details || [])
-      .map(item => `<div>· ${escapeHtml(item)}</div>`)
-      .join('');
-    detectedToggle.hidden = !(summary.details || []).length;
+    const mapping = summary.column_mapping || {};
+    const mappingDetails = [
+      ...(mapping.found || []).map(item => `${item.label} — ${item.column}`),
+      ...(mapping.missing || []).map(item => `${item.label} — not found yet`),
+    ];
+    detectedDetails.innerHTML = mappingDetails.map(item => `<div>· ${escapeHtml(item)}</div>`).join('');
+    detectedToggle.hidden = !mappingDetails.length;
+  }
+
+  function renderColumnMapping(mapping) {
+    if (!mappingPanel) return;
+    const found = mapping.found || [];
+    const missing = mapping.missing || [];
+    mappingPanel.hidden = false;
+    mappingFoundGroup.hidden = !found.length;
+    mappingMissingGroup.hidden = !missing.length;
+    mappingFound.innerHTML = found.map(item => `
+      <div class="mapping-row found">
+        <span class="mapping-status-dot"></span>
+        <span class="mapping-label">${escapeHtml(item.label)}</span>
+        <span class="mapping-column">${escapeHtml(item.column)}</span>
+      </div>
+    `).join('');
+    mappingMissing.innerHTML = missing.map(item => renderMissingMapping(item)).join('');
+
+    const available = mapping.available_capabilities || [];
+    const unavailable = mapping.unavailable_capabilities || [];
+    mappingCapabilities.hidden = !available.length && !unavailable.length;
+    mappingCapabilities.innerHTML = `
+      <div class="mapping-capability-title">What Hisaab can answer from this file</div>
+      ${available.map(item => `<div class="mapping-capability available">✓ ${escapeHtml(item.label)}</div>`).join('')}
+      ${unavailable.length ? '<div class="mapping-capability-title cannot">What Hisaab cannot answer yet</div>' : ''}
+      ${unavailable.map(item => `<div class="mapping-capability unavailable"><b>${escapeHtml(item.label)}</b><span>${escapeHtml(item.reason)}</span></div>`).join('')}
+    `;
+    wireMappingControls();
+  }
+
+  function renderMissingMapping(item) {
+    const options = item.options || [];
+    const selected = manualMappings[item.concept] || '';
+    const choice = mappingChoices[item.concept] || '';
+    const optionHtml = options.map(option => `<option value="${escapeHtml(option.column)}" ${selected === option.column ? 'selected' : ''}>${escapeHtml(option.column)}</option>`).join('');
+    let controls = '';
+    if (options.length) {
+      controls += `<label class="mapping-choice-label">Choose a column from your file
+        <select class="mapping-select" data-concept="${escapeHtml(item.concept)}">
+          <option value="">Choose a column…</option>${optionHtml}
+        </select>
+      </label>`;
+    }
+    if (item.concept === 'order_value_or_price') {
+      controls += `<div class="mapping-choice-actions">
+        <button type="button" class="mapping-choice-btn ${choice === 'unavailable' ? 'selected' : ''}" data-choice="unavailable" data-concept="${escapeHtml(item.concept)}">I don’t have this data</button>
+        <button type="button" class="mapping-choice-btn ${choice === 'average_bill' ? 'selected' : ''}" data-choice="average_bill" data-concept="${escapeHtml(item.concept)}">Use my usual average bill</button>
+      </div>
+      <div class="average-bill-control" data-average-control="${escapeHtml(item.concept)}" ${choice === 'average_bill' ? '' : 'hidden'}>
+        <label>What is your usual average bill amount?
+          <input type="number" min="0" step="0.01" data-average-bill-input placeholder="e.g. 450" value="${escapeHtml(manualInputs.user_provided_average_order_value || '')}">
+        </label>
+      </div>`;
+    } else if (item.concept === 'promotional_flag') {
+      controls += `<div class="mapping-choice-actions">
+        <button type="button" class="mapping-choice-btn ${choice === 'unavailable' ? 'selected' : ''}" data-choice="unavailable" data-concept="${escapeHtml(item.concept)}">I don’t track discounts</button>
+        <button type="button" class="mapping-choice-btn ${choice === 'manual_later' ? 'selected' : ''}" data-choice="manual_later" data-concept="${escapeHtml(item.concept)}">Mark promo months later</button>
+      </div>`;
+    } else if (item.concept === 'customer_identifier') {
+      controls += `<div class="mapping-choice-actions">
+        <button type="button" class="mapping-choice-btn ${choice === 'unavailable' ? 'selected' : ''}" data-choice="unavailable" data-concept="${escapeHtml(item.concept)}">I don’t have customer details</button>
+        <button type="button" class="mapping-choice-btn ${choice === 'skip_repeat' ? 'selected' : ''}" data-choice="skip_repeat" data-concept="${escapeHtml(item.concept)}">Continue without repeat-customer analysis</button>
+      </div>`;
+    }
+    return `<div class="mapping-row missing">
+      <div class="mapping-missing-title"><span class="mapping-status-dot"></span><span>${escapeHtml(item.label)}</span></div>
+      <div class="mapping-missing-reason">${escapeHtml(item.reason)}</div>
+      ${controls}
+    </div>`;
+  }
+
+  function wireMappingControls() {
+    mappingPanel.querySelectorAll('.mapping-select').forEach(select => {
+      select.addEventListener('change', () => {
+        const concept = select.dataset.concept;
+        if (select.value) {
+          manualMappings[concept] = select.value;
+          mappingChoices[concept] = 'mapped';
+        } else {
+          delete manualMappings[concept];
+          delete mappingChoices[concept];
+        }
+        renderMappingControlsState();
+      });
+    });
+    mappingPanel.querySelectorAll('.mapping-choice-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const concept = button.dataset.concept;
+        const choice = button.dataset.choice;
+        mappingChoices[concept] = choice;
+        delete manualMappings[concept];
+        if (choice !== 'average_bill') delete manualInputs.user_provided_average_order_value;
+        renderMappingControlsState();
+      });
+    });
+    mappingPanel.querySelectorAll('[data-average-bill-input]').forEach(input => {
+      input.addEventListener('input', () => {
+        const value = Number(input.value);
+        if (Number.isFinite(value) && value >= 0) {
+          manualInputs.user_provided_average_order_value = value;
+          mappingChoices.order_value_or_price = 'average_bill';
+        }
+      });
+    });
+  }
+
+  function renderMappingControlsState() {
+    const mapping = lastSheetSummary?.column_mapping;
+    if (mapping) renderColumnMapping(mapping);
   }
 
   // SINGLE SOURCE OF TRUTH for naming the currently-active dataset. This is
@@ -908,7 +1113,7 @@
         <div class="capability-item ${escapeHtml(item.status)}">
           <span class="capability-dot"></span>
           <span class="capability-text">
-            <span class="capability-label">${escapeHtml(item.label)}</span>
+            <span class="capability-label">${escapeHtml(plainCapabilityLabel(item))}</span>
             <span class="capability-reason">${escapeHtml(capabilityStatusText(item))}</span>
           </span>
         </div>
@@ -919,8 +1124,27 @@
 
   function capabilityStatusText(item) {
     if (item.status === 'ready') return 'Ready';
-    if (item.status === 'limited') return `Limited · ${item.reason || 'needs more signal'}`;
-    return `Missing · ${item.reason || 'needs another column'}`;
+    if (item.status === 'limited') return `Limited · ${plainCapabilityReason(item.reason || 'needs more signal')}`;
+    return `Missing · ${plainCapabilityReason(item.reason || 'needs another column')}`;
+  }
+
+  function plainCapabilityLabel(item) {
+    const labels = {
+      'Pricing changes': 'Price changes',
+      'Promos and discounts': 'Discounts and offers',
+      'Repeat customers': 'Repeat customers',
+      'Orders and sales trend': 'Orders going up or down',
+      'Delivery fee changes': 'Delivery fee changes',
+    };
+    return labels[item.label] || item.label || 'Business data';
+  }
+
+  function plainCapabilityReason(reason) {
+    return String(reason || '')
+      .replace(/order value or price/gi, 'total bill amount')
+      .replace(/promo or discount flag/gi, 'discount or offer details')
+      .replace(/customer identifier/gi, 'customer name, phone, or ID')
+      .replace(/order count/gi, 'order count or ID');
   }
 
   async function runSimulation(options = {}) {
@@ -974,6 +1198,8 @@
           // screen to leak into an answer, no matter which button triggered it.
           ...getActiveDatasetPayload(),
           manual_inputs: manualInputs,
+          manual_mappings: manualMappings,
+          mapping_choices: mappingChoices,
         }),
       });
       const body = await readJsonResponse(res);
@@ -986,6 +1212,16 @@
         if (body.sheet_summary) renderSheetSummary(body.sheet_summary);
         showMissingInputs(body);
         updateAwayFromLandingState();
+        return;
+      }
+
+      if (body.status === 'needs_bootstrap_history') {
+        renderBootstrapGate(body);
+        return;
+      }
+
+      if (body.status === 'evidence_limited') {
+        renderEvidenceLimitation(body);
         return;
       }
 
@@ -1005,8 +1241,10 @@
   }
 
   function renderResults(data, elapsed, options = {}) {
+    hideBootstrapGate();
+    hideEvidenceLimitation();
     const computed = data.computed || data;
-    const generated = data.generated || data;
+    let generated = data.generated || data;
     // The UI chrome always mirrors the CURRENT question's detected language —
     // in both directions. If this question is Hindi, switch to Hindi; if
     // it's English (or anything else we don't have UI strings for), switch
@@ -1015,6 +1253,8 @@
     // choice "sticking" from an earlier question in the same session.
     const detected = String(generated.detected_language || data.detected_language || '').toLowerCase();
     setUILang(detected === 'hi' ? 'hi' : 'en');
+
+    renderSimpleOverview(data, computed, generated);
 
     // Render the new scenarios/threshold block BEFORE the existing dense
     // stats layout. When scenarios_bundle is absent (weak data, unsupported
@@ -1035,7 +1275,8 @@
     lastSimulationPersistence = data.persistence || null;
     activeResultId = crypto.randomUUID ? crypto.randomUUID() : `result-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-    const isSampleData = data.chart_meta?.is_sample === true;
+    const isSampleData = data.chart_meta?.is_sample === true || data.data_source?.source_type === 'demo';
+    if (isSampleData) generated = sanitizeDemoGenerated(generated);
     drawSparkline(data.chart_series || data.series || [], isWeak, isSampleData);
 
     metricValue.textContent = value === null ? 'Unknown' : formatPct(value);
@@ -1131,6 +1372,147 @@
     updateAwayFromLandingState();
   }
 
+  function evidenceStrength(category, confidence) {
+    if (category === 'weak_signal') return 'Weak evidence';
+    if (category === 'not_enough_evidence') return 'Not enough evidence';
+    if (category === 'unsupported_question') return 'Missing key data';
+    if (category === 'demo_only') return 'Demo only';
+    return Number(confidence) >= 0.7 ? 'Strong evidence' : 'Medium evidence';
+  }
+
+  function renderSimpleOverview(data, computed, generated) {
+    if (!resultOverview) return;
+    const category = data.evidence_category || data.evidence?.category || 'clear_enough';
+    const isWeak = category === 'weak_signal';
+    const strength = evidenceStrength(category, computed.confidence);
+    const action = data.evidence?.next_action || (isWeak
+      ? 'Try a small change for 3–5 days and compare orders before changing it for everyone.'
+      : 'Use this as a cautious test, then record what actually happens.');
+    const answer = isWeak
+      ? 'This is an early pattern — I would test it before changing it for everyone.'
+      : generated.recommendation || 'Use this as a cautious test, not a guarantee.';
+    const why = generated.why || data.evidence?.message || 'The available history gives a directional signal, but it is not a guarantee.';
+    const source = data.data_source || {};
+    const sourceLabel = source?.mode === 'bootstrap'
+      ? 'Self-reported daily history'
+      : source?.mode === 'demo_fallback' || data.chart_meta?.is_sample
+        ? 'Demo example'
+        : source?.csv_used ? 'Imported CSV'
+          : source?.sheet_url_used ? 'Connected Google Sheet'
+            : 'Connected data';
+    const months = Number(data.summary?.months);
+    const rows = Number(source.sheet_rows_used || source.bootstrap_entries_used || computed.sample_size);
+    const history = Number.isFinite(months) && months > 0
+      ? `${months} month${months === 1 ? '' : 's'}${Number.isFinite(rows) && rows > 0 ? ` · ${rows} rows/entries` : ''}`
+      : Number.isFinite(rows) && rows > 0 ? `${rows} rows/entries` : 'Limited history';
+    const quality = category === 'clear_enough'
+      ? 'Enough for a cautious test'
+      : category === 'weak_signal' ? 'Limited — early pattern only' : 'Missing key fields';
+
+    overviewAnswer.textContent = answer;
+    overviewStrength.textContent = strength;
+    overviewStrength.className = `overview-strength ${category}`;
+    overviewWhy.textContent = why;
+    overviewAction.textContent = action;
+    overviewData.innerHTML = '';
+    [
+      ['Source', sourceLabel],
+      ['History used', history],
+      ['Data quality', quality],
+    ].forEach(([label, value]) => {
+      const item = document.createElement('div');
+      item.className = 'overview-data-item';
+      item.innerHTML = `<span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>`;
+      overviewData.appendChild(item);
+    });
+    resultOverview.hidden = false;
+    if (calculationDetails) calculationDetails.open = false;
+  }
+
+  function renderBootstrapGate(data) {
+    if (!bootstrapGate || !bootstrapGateProgress) return;
+    const entryCount = Number(data.bootstrap?.entry_count ?? data.data_source?.bootstrap_entries_used) || 0;
+    const minimum = Number(data.bootstrap?.minimum_entries ?? data.data_source?.bootstrap_min_entries) || 20;
+    bootstrapGateProgress.textContent = `You have ${entryCount} of ${minimum} daily entries.`;
+    bootstrapGate.hidden = false;
+    resultsSection.hidden = false;
+    resultsSection.classList.add('show');
+    stage.classList.add('has-result');
+    document.getElementById('scenarios-block')?.setAttribute('hidden', '');
+    resultOverview.hidden = true;
+    if (calculationDetails) calculationDetails.hidden = true;
+    document.getElementById('evidence-block')?.setAttribute('hidden', '');
+    confidenceBlock.hidden = true;
+    document.querySelector('.explain')?.setAttribute('hidden', '');
+    intentPrompt.classList.remove('show', 'captured');
+    viewInLog.hidden = true;
+    currentResult = null;
+    lastSimulationPersistence = data.persistence || null;
+    dataSourceNote.classList.remove('demo');
+    dataSourceText.textContent = 'Self-reported daily history is still being built';
+    updateAwayFromLandingState();
+    bootstrapGate.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function hideBootstrapGate() {
+    if (!bootstrapGate) return;
+    bootstrapGate.hidden = true;
+    document.getElementById('evidence-block')?.removeAttribute('hidden');
+    confidenceBlock.hidden = false;
+    document.querySelector('.explain')?.removeAttribute('hidden');
+    if (calculationDetails) calculationDetails.hidden = false;
+  }
+
+  function renderEvidenceLimitation(data) {
+    if (!evidenceLimitation) return;
+    const evidence = data.evidence || {};
+    const category = data.evidence_category || evidence.category || 'not_enough_evidence';
+    const isDemo = category === 'demo_only';
+    const isUnsupported = category === 'unsupported_question';
+    evidenceLimitationEyebrow.textContent = isDemo
+      ? 'Demo only'
+      : isUnsupported ? 'Data needed' : category === 'weak_signal' ? 'Early pattern' : 'Not enough evidence yet';
+    evidenceLimitationTitle.textContent = evidence.title || 'Not enough evidence yet';
+    evidenceLimitationCopy.textContent = evidence.message || 'Hisaab cannot estimate this honestly from the available data yet.';
+    evidenceLimitationDetail.textContent = evidence.next_action || '';
+    evidenceLimitationPrimary.textContent = isDemo ? 'Add my own data' : 'Add the missing data';
+    evidenceLimitationSecondary.textContent = isDemo ? 'Start daily entry' : 'Ask another question';
+    if (evidenceLimitationTertiary) {
+      evidenceLimitationTertiary.hidden = !isDemo;
+      evidenceLimitationTertiary.textContent = 'Try another demo question';
+    }
+    evidenceLimitation.hidden = false;
+    hideBootstrapGate();
+    resultsSection.hidden = false;
+    resultsSection.classList.add('show');
+    stage.classList.add('has-result');
+    document.getElementById('scenarios-block')?.setAttribute('hidden', '');
+    resultOverview.hidden = true;
+    if (calculationDetails) calculationDetails.hidden = true;
+    document.getElementById('evidence-block')?.setAttribute('hidden', '');
+    confidenceBlock.hidden = true;
+    document.querySelector('.explain')?.setAttribute('hidden', '');
+    intentPrompt.classList.remove('show', 'captured');
+    viewInLog.hidden = true;
+    currentResult = null;
+    dataSourceNote.classList.toggle('demo', isDemo);
+    dataSourceText.textContent = isDemo
+      ? 'Demo example'
+      : sourceNote(data.data_source);
+    updateAwayFromLandingState();
+    evidenceLimitation.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function hideEvidenceLimitation() {
+    if (!evidenceLimitation) return;
+    evidenceLimitation.hidden = true;
+    document.getElementById('evidence-block')?.removeAttribute('hidden');
+    confidenceBlock.hidden = false;
+    document.querySelector('.explain')?.removeAttribute('hidden');
+    if (calculationDetails) calculationDetails.hidden = false;
+    if (evidenceLimitationTertiary) evidenceLimitationTertiary.hidden = true;
+  }
+
   // Render the scenarios block from data.scenarios_bundle. If bundle is
   // missing, hide the block entirely and remove the .with-scenarios modifier
   // so existing evidence/confidence stats render exactly as they did before.
@@ -1138,34 +1520,21 @@
   // the scenarios-block/threshold-line-block/scenarios-details elements.
   function renderScenariosBlock(data) {
     const block = document.getElementById('scenarios-block');
+    const results = document.getElementById('results');
+    if (!block || !results) return;
+
+    // Phase 4 keeps scenario cards out of the first screen. They present
+    // polished choices before the owner has seen the evidence strength and
+    // next action, so the simple overview is now the primary result.
+    block.hidden = true;
+    results.classList.remove('with-scenarios');
+    return;
+
+    /* Legacy scenario-card renderer retained below for reference while the
+       simpler result hierarchy is being rolled out. */
     const grid = document.getElementById('scenario-grid');
     const thresholdBlock = document.getElementById('threshold-line-block');
-    const results = document.getElementById('results');
-    if (!block || !grid || !results) return;
-
     const bundle = data && data.scenarios_bundle;
-    if (!bundle || !Array.isArray(bundle.scenarios) || bundle.scenarios.length === 0) {
-      block.hidden = true;
-      results.classList.remove('with-scenarios');
-      grid.innerHTML = '';
-      if (thresholdBlock) thresholdBlock.hidden = true;
-      // If a previous render moved evidence/conf/explain INTO the details
-      // disclosure, put them back where they belong so weak-data mode shows
-      // them at their normal position. Order matters — the DOM order of
-      // evidence → conf → explain in #results is what today's flow expects.
-      const details = document.getElementById('scenarios-details');
-      if (details && details.contains(document.getElementById('evidence-block'))) {
-        const evidence = document.getElementById('evidence-block');
-        const confBlock = document.getElementById('confidence-block');
-        const explainBlock = document.querySelector('.explain');
-        // Reinsert after the .result-top div, before the intent-prompt.
-        const intentPromptEl = document.getElementById('intent-prompt');
-        if (evidence && intentPromptEl) results.insertBefore(evidence, intentPromptEl);
-        if (confBlock && intentPromptEl) results.insertBefore(confBlock, intentPromptEl);
-        if (explainBlock && intentPromptEl) results.insertBefore(explainBlock, intentPromptEl);
-      }
-      return;
-    }
 
     // Question echo — the exact user question, plus a "based on N months" line.
     const qText = document.getElementById('scenarios-q-text');
@@ -1173,7 +1542,8 @@
     if (qText) qText.textContent = lastQuestion || '';
     if (qSub) {
       const months = Number(data.summary?.months || 0);
-      let subText = months > 0 ? t('scenarios.based_on').replace('{months}', months) : '';
+      const basedOnKey = data.data_source?.mode === 'bootstrap' ? 'scenarios.based_on_bootstrap' : 'scenarios.based_on';
+      let subText = months > 0 ? t(basedOnKey).replace('{months}', months) : '';
       // When low-confidence, append the honest caption so the "rough
       // direction, not final numbers" framing sits right under the question,
       // before the cards.
@@ -1375,6 +1745,19 @@
       .replace(/'/g, '&#39;');
   }
 
+  function sanitizeDemoGenerated(generated = {}) {
+    const sanitize = value => String(value || '')
+      .replace(/best fit for your data/gi, 'best fit in this example')
+      .replace(/your (data|history|shop|business|orders)/gi, 'this demo shop’s example data')
+      .replace(/your/gi, 'the demo shop’s')
+      .replace(/prediction/gi, 'illustrative estimate');
+    return {
+      ...generated,
+      recommendation: sanitize(generated.recommendation),
+      why: sanitize(generated.why),
+    };
+  }
+
   function drawSparkline(series, isWeak, isSampleData) {
     const svg = document.getElementById('sparkline');
     const values = (series || []).map(point => Number(point.value ?? point.orders)).filter(Number.isFinite);
@@ -1403,6 +1786,15 @@
     const computed = data.computed || data;
     const generated = data.generated || data;
     const confidence = Number.isFinite(Number(computed.confidence)) ? Number(computed.confidence) : null;
+    const source = data.data_source || {};
+    const resultCategory = data.evidence_category || computed.evidence_category || data.evidence?.category || null;
+    const sourceCsv = source.csv_used === true || activeDataset.kind === 'csv';
+    const simpleAnswer = generated.recommendation || data.recommendation || '';
+    const sourceLabel = source.mode === 'bootstrap'
+      ? 'Self-reported daily history'
+      : sourceCsv ? 'Imported CSV'
+        : source.mode === 'sheet' ? 'Google Sheet'
+          : 'Demo example';
     return {
       id: meta.id,
       question: meta.question,
@@ -1429,6 +1821,16 @@
         high: finiteNumber(computed.range_high),
       },
       confidence,
+      resultCategory,
+      evidenceCategory: resultCategory,
+      evidenceStrength: evidenceStrength(resultCategory, confidence),
+      simpleAnswer,
+      suggestedAction: data.evidence?.next_action || 'Record what happens after you try it.',
+      explanation: generated.why || data.why || '',
+      dataMaturity: data.data_maturity || data.evidence?.maturity || null,
+      sourceLabel,
+      csvUsed: sourceCsv,
+      bootstrapEntries: Number(source.bootstrap_entries_used) || 0,
     };
   }
 
@@ -1554,7 +1956,15 @@
 
   async function captureIntent(intent) {
     if (!currentResult) return;
+    if (currentResult.dataSourceKind === 'sample') {
+      intentPrompt.classList.add('captured');
+      intentMsg.textContent = 'Demo decision not saved.';
+      intentSub.textContent = 'Demo decisions are not saved because this is not real business data.';
+      return;
+    }
     activeIntent = intent;
+    if (intentStartDateRow) intentStartDateRow.hidden = true;
+    if (intentStartDate) intentStartDate.value = '';
     intentError.hidden = true;
     viewInLog.hidden = true;
     document.querySelectorAll('.intent-btn').forEach(btn => { btn.disabled = true; });
@@ -1578,26 +1988,31 @@
       ]);
       const saved = await readJsonResponse(decisionRes);
       if (!decisionRes.ok) throw new Error(saved.error || `Server error (HTTP ${decisionRes.status})`);
+      if (saved.demo_only || saved.saved === false) {
+        throw new Error('Demo decisions are not saved because this is not real business data.');
+      }
+      lastSavedDecisionId = saved.id;
       const wasKnown = savedDecisions.some(item => item.id === saved.id);
       savedDecisions = [saved, ...savedDecisions.filter(item => item.id !== saved.id)];
       decisionsCountValue = wasKnown ? decisionsCountValue : decisionsCountValue + 1;
       renderDecisionCount(decisionsCountValue || 1);
       intentPrompt.classList.add('captured');
       if (intent === 'applied') {
-        intentMsg.textContent = "Saved · noted you'll try it.";
-        intentSub.textContent = 'Hisaab will check the outcome next month.';
+        intentMsg.textContent = 'Saved · marked as tried.';
+        intentSub.textContent = 'Hisaab will help check what happened when newer data is available.';
+        if (intentStartDateRow) intentStartDateRow.hidden = false;
       } else if (intent === 'skipped') {
-        intentMsg.textContent = "Saved · noted you're not trying it.";
-        intentSub.textContent = 'You can revisit this later.';
+        intentMsg.textContent = 'Saved · marked as skipped.';
+        intentSub.textContent = 'Hisaab will not ask for an outcome for this decision.';
       } else {
-        intentMsg.textContent = "Saved · we'll ask again later.";
-        intentSub.textContent = '';
+        intentMsg.textContent = 'Saved · marked as unsure.';
+        intentSub.textContent = 'You can come back after a few days.';
       }
       viewInLog.hidden = false;
     } catch (err) {
       intentPrompt.classList.remove('captured');
       intentError.hidden = false;
-      intentError.querySelector('span').textContent = err.message || "Couldn't save that — try again?";
+      intentError.querySelector('span').textContent = err.message || "Calculated, but this decision was not saved. Try again?";
     } finally {
       document.querySelectorAll('.intent-btn').forEach(btn => { btn.disabled = false; });
     }
@@ -1613,13 +2028,42 @@
       predictedMetric: snapshot.predictedMetric,
       predictedRange: snapshot.predictedRange,
       confidence: snapshot.confidence,
+      resultCategory: snapshot.resultCategory,
+      evidenceCategory: snapshot.resultCategory,
+      evidenceStrength: snapshot.evidenceStrength,
+      simpleAnswer: snapshot.simpleAnswer,
+      suggestedAction: snapshot.suggestedAction,
+      explanation: snapshot.explanation,
+      dataMaturity: snapshot.dataMaturity,
+      sourceLabel: snapshot.sourceLabel,
+      csvUsed: snapshot.csvUsed,
+      bootstrapEntries: snapshot.bootstrapEntries,
       dataSource: snapshot.dataSourceKind,
+      sourceType: snapshot.dataSourceKind === 'sample' ? 'demo' : 'real',
       sheetUrl: snapshot.sheetUrl,
       status: intent,
       askedAt: snapshot.askedAt,
       intentSetAt: new Date().toISOString(),
       actualValue: null,
     };
+  }
+
+  async function saveIntentStartDate() {
+    if (!lastSavedDecisionId || !intentStartDate?.value) return;
+    try {
+      const res = await fetch(`/api/decisions/${encodeURIComponent(lastSavedDecisionId)}`, {
+        method: 'PATCH',
+        headers: apiHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ startedAt: intentStartDate.value }),
+      });
+      const body = await readJsonResponse(res);
+      if (!res.ok) throw new Error(body.error || 'Could not save the start date.');
+      intentSub.textContent = 'Start date saved. Hisaab will help check what happened when newer data is available.';
+      intentStartDateSave.textContent = 'Saved';
+      intentStartDateSave.disabled = true;
+    } catch (err) {
+      intentSub.textContent = err.message || 'The decision was calculated, but the start date was not saved.';
+    }
   }
 
   async function fetchDecisionsCount() {
@@ -1683,31 +2127,34 @@
       if (followup) followup.hidden = false;
     });
     if (didnt) didnt.addEventListener('click', async () => {
-      await submitCheckBack({ didApply: false });
-      showCheckBackDone(t('checkback.thanks_noted'));
+      const saved = await submitCheckBack({ didApply: false });
+      showCheckBackDone(saved ? t('checkback.thanks_noted') : 'Could not save this update. Please try again.');
     });
     if (later) later.addEventListener('click', () => { card.hidden = true; });
     if (skip) skip.addEventListener('click', () => { card.hidden = true; });
     card.querySelectorAll('.cb-outcome').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const outcome = btn.getAttribute('data-outcome');
-        await submitCheckBack({ didApply: true, outcome });
-        showCheckBackDone(t('checkback.thanks'));
+        const saved = await submitCheckBack({ didApply: true, outcome });
+        showCheckBackDone(saved ? t('checkback.thanks') : 'Could not save this update. Please try again.');
       });
     });
   }
 
   async function submitCheckBack(payload) {
-    if (!checkBackDecisionId) return;
+    if (!checkBackDecisionId) return false;
     try {
-      await fetch(`/api/decisions/${encodeURIComponent(checkBackDecisionId)}/checkback`, {
+      const res = await fetch(`/api/decisions/${encodeURIComponent(checkBackDecisionId)}/checkback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...apiHeaders() },
         body: JSON.stringify(payload),
       });
+      const body = await readJsonResponse(res);
+      if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);
       fetchDecisionsCount();
+      return true;
     } catch (_err) {
-      /* fail silent — card still closes, user not blocked */
+      return false;
     }
   }
 
@@ -1842,21 +2289,22 @@
     const count = Number(track?.matchedCount) || 0;
     if (!count) {
       trackRecord.hidden = true;
-      decisionLogSub.textContent = "This is where your saved decisions live. When you tell me what actually happened, I'll compare it with what I predicted.";
+      decisionLogSub.textContent = "This is where your saved decisions live. When you tell me what happened, I'll compare it with the earlier estimate.";
       return;
     }
     const avg = Number(track.averageAbsoluteDifference).toFixed(1);
     trackRecord.hidden = false;
-    decisionLogSub.textContent = 'Every prediction Hisaab has made for you, and what actually happened after.';
-    trackRecordText.innerHTML = `<span class="num-hi">${count} outcome${count === 1 ? '' : 's'} recorded</span> — Hisaab's predictions were off by an average of <span class="num-hi">${avg} pp</span>.`;
+    decisionLogSub.textContent = 'See what happened after past decisions. Demo examples are not included.';
+    trackRecordText.innerHTML = `<span class="num-hi">${count} outcome${count === 1 ? '' : 's'} recorded</span> — past estimates differed from outcomes by an average of <span class="num-hi">${avg} pp</span>.`;
   }
 
   function renderDecisionList(decisions) {
-    if (!decisions.length) {
-      decisionList.innerHTML = '<div class="log-empty-note">This is where your saved decisions live. When you tell me what actually happened, I\'ll compare it with what I predicted.</div>';
+    const visible = decisions.filter(decision => decisionFilterMatches(decision, activeDecisionFilter));
+    if (!visible.length) {
+      decisionList.innerHTML = '<div class="log-empty-note">No decisions in this view yet.</div>';
       return;
     }
-    decisionList.innerHTML = decisions.map(decision => decisionCardHtml(decision)).join('');
+    decisionList.innerHTML = visible.map(decision => decisionCardHtml(decision)).join('');
     decisionList.querySelectorAll('[data-compare-id]').forEach(btn => {
       btn.addEventListener('click', () => compareDecision(btn.dataset.compareId));
     });
@@ -1867,8 +2315,9 @@
 
   function decisionCardHtml(decision) {
     const status = decision.status || 'pending';
-    const valueClass = Number(decision.predictedValue) >= 0 ? 'good' : 'bad';
     const hasActual = decision.actualValue !== null && decision.actualValue !== undefined;
+    const evidence = decision.evidenceStrength || evidenceStrength(decision.resultCategory, decision.confidence);
+    const source = decisionSourceLabel(decision);
     return `
       <div class="dl-card" id="decision-${escapeHtml(decision.id)}">
         <div class="top-row">
@@ -1877,9 +2326,11 @@
         </div>
         <div class="status-row">
           <span class="status-badge status-${escapeHtml(status)}">${escapeHtml(statusLabel(status, hasActual))}</span>
-          <span class="intent-tag">· ${escapeHtml(intentTag(status))}</span>
+          <span class="intent-tag">${escapeHtml(intentTag(status))}</span>
         </div>
-        <div class="dl-pred">Predicted <span class="num ${valueClass}">${escapeHtml(formatPct(decision.predictedValue))}</span> ${escapeHtml(plainMetricLabel(decision.predictedMetric))} · <b>${escapeHtml(confidenceText(decision.confidence))}</b></div>
+        <div class="dl-answer"><span>Simple answer</span><strong>${escapeHtml(decision.simpleAnswer || 'A cautious test was suggested.')}</strong></div>
+        <div class="dl-meta-row"><span class="evidence-pill">${escapeHtml(evidence)}</span><span class="source-pill">${escapeHtml(source)}</span></div>
+        <div class="dl-explanation">${escapeHtml(decision.explanation || '')}</div>
         ${hasActual ? comparisonHtml(decision, false) : decisionActionHtml(decision)}
       </div>
     `;
@@ -1890,25 +2341,14 @@
       return `
         <div class="dl-actions">
           <div class="new-data-cta">
-            <div class="msg">Ready to compare with the latest sheet data?</div>
-            <button data-compare-id="${escapeHtml(decision.id)}" type="button">Compare with actual</button>
+            <div class="msg">Newer sales data is available.</div>
+            <button data-compare-id="${escapeHtml(decision.id)}" type="button">Check what happened</button>
           </div>
         </div>
       `;
     }
-    if (decision.status === 'applied' && decision.dataSource === 'sample') {
-      return `
-        <form class="manual-outcome" data-manual-id="${escapeHtml(decision.id)}">
-          <span>What actually happened?</span>
-          <select name="direction" aria-label="Direction">
-            <option value="up">Up</option>
-            <option value="down">Down</option>
-            <option value="flat">Flat</option>
-          </select>
-          <input name="magnitude" type="number" step="0.1" min="0" placeholder="Rough %" aria-label="Rough magnitude">
-          <button type="submit">Save outcome</button>
-        </form>
-      `;
+    if (decision.status === 'applied') {
+      return '<div class="dl-waiting">We need newer sales data to check what actually happened.</div>';
     }
     return '';
   }
@@ -1925,7 +2365,7 @@
       const body = await readJsonResponse(res);
       if (!res.ok) {
         if (res.status === 409) {
-          actions.innerHTML = '<div class="log-empty-note">No new data since you saved this — check back once your sheet has a new month of orders.</div>';
+          actions.innerHTML = '<div class="log-empty-note">We need newer sales data to check what actually happened.</div>';
           return;
         }
         throw new Error(body.error || `Server error (HTTP ${res.status})`);
@@ -2385,6 +2825,8 @@
           uploadId: lastUploadId,
           ...getActiveDatasetPayload(),
           manual_inputs: manualInputs,
+          manual_mappings: manualMappings,
+          mapping_choices: mappingChoices,
         }),
       });
       const body = await readJsonResponse(res);
@@ -2434,6 +2876,8 @@
     window.clearTimeout(parseTimer);
     window.clearTimeout(intentPromptTimer);
     manualInputs = {};
+    manualMappings = {};
+    mappingChoices = {};
     lastSheetSummary = null;
     connectedDataLabel = '';
     lastUploadId = null;
@@ -2468,6 +2912,7 @@
     detectedBody.textContent = '';
     capabilityList.hidden = true;
     capabilityList.innerHTML = '';
+    mappingPanel.hidden = true;
     detectedCaveat.hidden = true;
     detectedDetails.classList.remove('open');
     detectedDetails.innerHTML = '';
@@ -2517,6 +2962,8 @@
   }
 
   function hideResults(options = {}) {
+    hideBootstrapGate();
+    hideEvidenceLimitation();
     resultsSection.hidden = true;
     resultsSection.classList.remove('show');
     // Also remove the scenarios-layout modifier: a subsequent weak-data
@@ -2542,12 +2989,20 @@
   }
 
   function showMissingInputs(body) {
-    missingSummary.textContent = body.partial_data_summary || 'We need a little more information before calculating this.';
+    missingSummary.textContent = body.evidence?.message || body.partial_data_summary || 'We need a little more information before calculating this.';
     missingFields.innerHTML = '';
     (body.missing_fields || []).forEach(item => {
       const label = document.createElement('label');
       label.className = 'missing-field';
       label.textContent = item.prompt;
+      if (['orders', 'avg_order_value', 'customer_identifier', 'promo_active'].includes(item.field)) {
+        const note = document.createElement('span');
+        note.className = 'missing-field-note';
+        note.textContent = 'Choose an option in the file summary above.';
+        label.appendChild(note);
+        missingFields.appendChild(label);
+        return;
+      }
       const input = document.createElement('input');
       input.dataset.field = item.field;
       input.type = item.input_type === 'number' ? 'number' : item.input_type === 'boolean' ? 'checkbox' : 'text';
@@ -2609,6 +3064,7 @@
   }
 
   function sourceKind(source) {
+    if (source?.mode === 'bootstrap') return 'bootstrap';
     return source && source.mode === 'sheet' ? 'sheet' : 'sample';
   }
 
@@ -2631,6 +3087,7 @@
   }
 
   function sourceNote(source) {
+    if (source?.mode === 'bootstrap') return 'Self-reported daily history';
     if (activeDataset.kind === 'sample') return t('data_source.sample');
     // activeDataset says this is a real sheet/CSV, but we don't have a
     // server response with the full field list yet (e.g. right after a
@@ -2639,9 +3096,13 @@
     if (source.warning) return `Sheet note: ${source.warning}`;
     if (source.mode === 'sheet') {
       const fields = realFieldList(source);
-      return `Using your sheet${fields ? ` · ${fields}` : ''}`;
+      const origin = source.csv_used ? 'Using imported CSV data' : 'Using connected Google Sheet data';
+      const averageBill = source.field_sources?.avg_order_value?.source === 'user_provided_average_order_value'
+        ? ' · Estimated from your average bill amount, not exact order values'
+        : '';
+      return `${origin}${fields ? ` · ${fields}` : ''}${averageBill}`;
     }
-    return 'Using your sheet';
+    return 'Using connected data';
   }
 
   function realFieldList(source) {
@@ -2676,7 +3137,7 @@
     if (low === null || high === null) {
       return isHindi
         ? 'संभावित सीमा: अज्ञात — गणना ने पर्याप्त सीमा डेटा नहीं दिया।'
-        : 'Likely range: unknown — the calculation did not return enough range data.';
+        : 'Estimate range: unknown — the calculation did not return enough range data.';
     }
     // A range that is flat at (or essentially at) zero on both ends is not
     // "pointing" anywhere — it means the calculation could not produce any
@@ -2703,7 +3164,7 @@
         : value !== null && value >= 0
           ? 'mostly points upward.'
           : 'mostly points downward.';
-    return `Likely range: ${formatPct(low)} to ${formatPct(high)} — ${isWeak ? interpretation : interpretation}`;
+    return `Estimate range: ${formatPct(low)} to ${formatPct(high)} — ${isWeak ? interpretation : interpretation}`;
   }
 
   function generateRefinement(question) {
@@ -2748,34 +3209,74 @@
   }
 
   function statusLabel(status, hasActual) {
-    if (hasActual) return 'Applied · outcome recorded';
-    if (status === 'applied') return 'Applied';
+    if (hasActual) return 'Compared';
+    if (status === 'applied') return 'Waiting for outcome';
     if (status === 'skipped') return 'Skipped';
-    return 'Pending';
+    return 'Not recorded';
   }
 
   function intentTag(status) {
-    if (status === 'applied') return "You said you'll try it";
-    if (status === 'skipped') return "You said you're skipping it";
-    return 'You were not sure yet';
+    if (status === 'applied') return 'Tried';
+    if (status === 'skipped') return 'Skipped';
+    return 'Unsure';
+  }
+
+  function decisionFilterMatches(decision, filter) {
+    const hasActual = decision.actualValue !== null && decision.actualValue !== undefined;
+    if (filter === 'tried') return decision.status === 'applied';
+    if (filter === 'waiting') return decision.status === 'applied' && !hasActual;
+    if (filter === 'compared') return hasActual;
+    if (filter === 'skipped') return decision.status === 'skipped';
+    return true;
+  }
+
+  function decisionSourceLabel(decision) {
+    if (decision.sourceLabel) return decision.sourceLabel;
+    if (decision.dataSource === 'bootstrap') return 'Self-reported daily history';
+    if (decision.dataSource === 'sheet') return decision.csvUsed ? 'Imported CSV' : 'Google Sheet';
+    return 'Connected data';
+  }
+
+  function wireDecisionFilters() {
+    document.querySelectorAll('.decision-filter').forEach(button => {
+      button.addEventListener('click', () => {
+        activeDecisionFilter = button.dataset.filter || 'all';
+        document.querySelectorAll('.decision-filter').forEach(item => item.classList.toggle('active', item === button));
+        renderDecisionList(savedDecisions);
+      });
+    });
   }
 
   function comparisonHtml(decision, fresh) {
-    const actualClass = Number(decision.actualValue) >= 0 ? 'good' : 'bad';
-    const predictedClass = Number(decision.predictedValue) >= 0 ? 'good' : 'bad';
-    const diff = finiteNumber(decision.differencePp ?? (Number(decision.actualValue) - Number(decision.predictedValue)));
-    const verdict = decision.verdict || `Off by ${formatPp(Math.abs(diff || 0))}.`;
+    const category = decision.comparisonCategory || comparisonCategoryClient(decision.predictedValue, decision.actualValue);
+    const message = decision.comparisonMessage || comparisonMessageClient(category, decision.predictedMetric);
     return `
       <div class="comparison-wrap">
-        ${fresh ? '<div class="fresh-badge"><span class="dot"></span>Just recalculated from your sheet</div>' : ''}
+        ${fresh ? '<div class="fresh-badge"><span class="dot"></span>Checked against newer sales data</div>' : ''}
         <div class="dl-comparison">
-          <div class="dl-cell"><div class="lbl">Predicted</div><div class="v ${predictedClass}">${escapeHtml(formatPct(decision.predictedValue))}</div></div>
+          <div class="dl-cell"><div class="lbl">Hisaab estimated</div><div class="v">${escapeHtml(formatPct(decision.predictedValue))}</div></div>
           <div class="dl-arrow">→</div>
-          <div class="dl-cell"><div class="lbl">Actually happened</div><div class="v ${actualClass}">${escapeHtml(formatPct(decision.actualValue))}</div></div>
+          <div class="dl-cell"><div class="lbl">After the change</div><div class="v">${escapeHtml(formatPct(decision.actualValue))}</div></div>
         </div>
-        <div class="dl-verdict"><span class="dot"></span>${escapeHtml(verdict)}</div>
+        <div class="dl-verdict ${escapeHtml(category)}"><span class="dot"></span>${escapeHtml(message)}</div>
       </div>
     `;
+  }
+
+  function comparisonCategoryClient(predictedValue, actualValue) {
+    const predicted = Number(predictedValue);
+    const actual = Number(actualValue);
+    if (!Number.isFinite(predicted) || !Number.isFinite(actual)) return 'not_enough_new_data';
+    if (Math.abs(actual) < 0.5) return 'no_clear_change';
+    return Math.sign(predicted) === Math.sign(actual) ? 'matched_direction' : 'opposite_direction';
+  }
+
+  function comparisonMessageClient(category, metric) {
+    const label = plainMetricLabel(metric || 'orders').toLowerCase();
+    if (category === 'matched_direction') return `The result matched the direction for ${label}.`;
+    if (category === 'opposite_direction') return `The result did not clearly match: ${label} moved in the other direction.`;
+    if (category === 'no_clear_change') return `After the change, ${label} were mostly stable.`;
+    return 'There is not enough new data to compare.';
   }
 
   function formatPp(value) {

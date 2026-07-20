@@ -44,11 +44,11 @@
     <section class="checkback-card" id="checkback-card" hidden>
       <div class="cb-eyebrow" data-i18n="checkback.eyebrow">Quick check-in</div>
       <h2 class="cb-question" id="cb-question"></h2>
-      <p class="cb-sub" id="cb-sub" data-i18n="checkback.sub">Did you make the change? Your answer sharpens every future prediction.</p>
+      <p class="cb-sub" id="cb-sub" data-i18n="checkback.sub">Did you try this?</p>
       <div class="cb-options" id="cb-options">
-        <button class="cb-opt primary" id="cb-did" type="button" data-i18n="checkback.did">Yes, I did it</button>
-        <button class="cb-opt" id="cb-didnt" type="button" data-i18n="checkback.didnt">No, I decided not to</button>
-        <button class="cb-opt" id="cb-later" type="button" data-i18n="checkback.later">Not yet — remind me later</button>
+        <button class="cb-opt primary" id="cb-did" type="button" data-i18n="checkback.did">Yes, I tried it</button>
+        <button class="cb-opt" id="cb-didnt" type="button" data-i18n="checkback.didnt">No, I skipped it</button>
+        <button class="cb-opt" id="cb-later" type="button" data-i18n="checkback.later">Not sure yet</button>
       </div>
       <div class="cb-followup" id="cb-followup" hidden>
         <div class="cb-followup-label" id="cb-followup-label" data-i18n="checkback.followup_label">What happened to your orders?</div>
@@ -134,6 +134,18 @@
       </button>
       <div class="dd-headline"><span class="pulse"></span><span id="detected-headline"></span></div>
       <div class="dd-body" id="detected-body"></div>
+      <section class="mapping-panel" id="mapping-panel" hidden>
+        <div class="mapping-heading">I read your file.</div>
+        <div class="mapping-group" id="mapping-found-group" hidden>
+          <div class="mapping-group-title">Found</div>
+          <div class="mapping-list" id="mapping-found"></div>
+        </div>
+        <div class="mapping-group" id="mapping-missing-group" hidden>
+          <div class="mapping-group-title">Missing</div>
+          <div class="mapping-list" id="mapping-missing"></div>
+        </div>
+        <div class="mapping-capabilities" id="mapping-capabilities" hidden></div>
+      </section>
       <div class="capability-list" id="capability-list" hidden></div>
       <div class="dd-caveat" id="detected-caveat" hidden></div>
       <div class="dd-actions">
@@ -208,6 +220,50 @@
         <span id="data-source-note" class="src demo"><span class="dot"></span><span id="data-source-text" data-i18n="data_source.sample">Using sample order history — no sheet connected</span></span>
       </div>
 
+      <section class="bootstrap-gate" id="bootstrap-gate" hidden aria-live="polite">
+        <div class="bootstrap-gate-eyebrow" data-i18n="bootstrap_gate.eyebrow">Not enough evidence yet</div>
+        <h2 class="bootstrap-gate-title" data-i18n="bootstrap_gate.title">Hisaab needs a little more daily sales history.</h2>
+        <p class="bootstrap-gate-copy" data-i18n="bootstrap_gate.copy">You have not added enough daily sales history for Hisaab to estimate this honestly.</p>
+        <p class="bootstrap-gate-progress" id="bootstrap-gate-progress"></p>
+        <div class="bootstrap-gate-actions">
+          <button class="cta-primary" id="bootstrap-gate-add" type="button" data-i18n="bootstrap_gate.add">Add today’s sales</button>
+          <button class="cta-secondary" id="bootstrap-gate-demo" type="button" data-i18n="bootstrap_gate.demo">See demo example</button>
+        </div>
+      </section>
+
+      <section class="evidence-limitation" id="evidence-limitation" hidden aria-live="polite">
+        <div class="evidence-limitation-eyebrow" id="evidence-limitation-eyebrow">Not enough evidence yet</div>
+        <h2 class="evidence-limitation-title" id="evidence-limitation-title"></h2>
+        <p class="evidence-limitation-copy" id="evidence-limitation-copy"></p>
+        <p class="evidence-limitation-detail" id="evidence-limitation-detail"></p>
+        <div class="evidence-limitation-actions">
+          <button class="cta-primary" id="evidence-limitation-primary" type="button">Add my own data</button>
+          <button class="cta-secondary" id="evidence-limitation-secondary" type="button">Start daily entry</button>
+          <button class="cta-tertiary" id="evidence-limitation-tertiary" type="button" hidden>Try another demo question</button>
+        </div>
+      </section>
+
+      <section class="result-overview" id="result-overview" hidden aria-live="polite">
+        <div class="overview-eyebrow">Simple answer</div>
+        <h1 class="overview-answer" id="overview-answer"></h1>
+        <div class="overview-trust-row">
+          <span class="overview-trust-label">Can you trust this?</span>
+          <span class="overview-strength" id="overview-strength"></span>
+        </div>
+        <section class="overview-section">
+          <h2>Why?</h2>
+          <p id="overview-why"></p>
+        </section>
+        <section class="overview-section overview-action-section">
+          <h2>What should you do next?</h2>
+          <p id="overview-action"></p>
+        </section>
+        <section class="overview-section overview-data-section">
+          <h2>Data used</h2>
+          <div class="overview-data-grid" id="overview-data"></div>
+        </section>
+      </section>
+
       <!-- Scenarios block: the new decision-engine view. Only visible when the
            backend response includes scenarios_bundle (confident + numeric lever).
            When absent, this block stays hidden and the existing evidence /
@@ -248,6 +304,8 @@
         </details>
       </div>
 
+      <details class="calculation-details" id="calculation-details">
+        <summary>Show calculation details</summary>
       <!-- Existing evidence + confidence + explain layout. Stays unchanged. -->
       <div class="evidence" id="evidence-block">
         <div class="ev-left">
@@ -260,7 +318,7 @@
             </div>
             <div class="stat" id="downside-card" hidden>
               <div id="downside-value" class="v bad"></div>
-              <div class="l" data-i18n="evidence.worst_case">worst case</div>
+              <div class="l" data-i18n="evidence.lower_estimate">lower estimate</div>
             </div>
             <div class="stat" id="trend-chip" hidden>
               <div class="v"><span id="trend-arrow"></span> <span id="trend-text"></span></div>
@@ -300,13 +358,14 @@
         <p id="recommendation-text" class="rec"></p>
         <p id="why-text" class="why"></p>
       </div>
+      </details>
 
       <div class="intent-prompt" id="intent-prompt">
         <div class="intent-q" data-i18n="result.intent.prompt">Are you going to try this?</div>
         <div class="intent-btns">
-          <button class="intent-btn primary" data-intent="applied" type="button" data-i18n="result.intent.applied">Yes, I'll try it</button>
-          <button class="intent-btn" data-intent="skipped" type="button" data-i18n="result.intent.skipped">No, skipping</button>
-          <button class="intent-btn" data-intent="pending" type="button" data-i18n="result.intent.pending">Not sure yet</button>
+        <button class="intent-btn primary" data-intent="applied" type="button" data-i18n="result.intent.applied">Yes, I tried it</button>
+        <button class="intent-btn" data-intent="skipped" type="button" data-i18n="result.intent.skipped">No, I skipped it</button>
+        <button class="intent-btn" data-intent="pending" type="button" data-i18n="result.intent.pending">Not sure yet</button>
         </div>
         <div class="refine-link" id="refine-row" hidden>
           Or refine: <button id="refine-link" type="button"></button>
@@ -314,6 +373,13 @@
         <div class="intent-captured-msg">
           <span class="icon">✓</span>
           <span class="intent-copy"><span id="intent-msg">Saved.</span><span class="sub" id="intent-sub"></span></span>
+          <div class="intent-start-date" id="intent-start-date-row" hidden>
+            <label for="intent-start-date">When did you start? <span>(optional)</span></label>
+            <div class="intent-start-date-controls">
+              <input id="intent-start-date" type="date">
+              <button id="intent-start-date-save" type="button">Save date</button>
+            </div>
+          </div>
         </div>
         <div class="intent-error" id="intent-error" hidden>
           <span>Couldn't save that — try again?</span>
@@ -332,11 +398,18 @@
       </button>
       <div class="dl-header">
         <h2 data-i18n="decisions.title">Your decisions</h2>
-        <div class="sub" id="decision-log-sub">This is where your saved decisions live. When you tell me what actually happened, I'll compare it with what I predicted.</div>
+        <div class="sub" id="decision-log-sub">This is where your saved decisions live. When you tell me what happened, I'll compare it with the earlier estimate.</div>
       </div>
       <div class="track-record" id="track-record" hidden>
         <div class="tr-label">Your Hisaab so far</div>
         <p class="tr-text" id="track-record-text"></p>
+      </div>
+      <div class="decision-filters" id="decision-filters" aria-label="Decision filters">
+        <button class="decision-filter active" data-filter="all" type="button">All</button>
+        <button class="decision-filter" data-filter="tried" type="button">Tried</button>
+        <button class="decision-filter" data-filter="waiting" type="button">Waiting</button>
+        <button class="decision-filter" data-filter="compared" type="button">Compared</button>
+        <button class="decision-filter" data-filter="skipped" type="button">Skipped</button>
       </div>
       <div class="dl-list" id="decision-list"></div>
     </section>

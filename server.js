@@ -183,14 +183,17 @@ function normalizeGeneratedResponse(parsed) {
 
 function detectFallbackLanguage(question) {
   const text = String(question || '').toLowerCase();
-  // Only Hindi and English are launch-ready in the fallback wording layer.
+  // Hindi, English, and Roman-script Hinglish are launch-ready in the fallback wording layer.
   // Other Indian scripts (Tamil/Bengali/Telugu/Kannada) can be detected in
   // the input, but the safety-net wording falls back to English until those
   // languages are added to fallbackGeneratedResponse with native-speaker
   // review — matching our stated scope of "shipping fewer languages well
   // rather than more languages poorly."
-  if (/[\u0900-\u097F]/.test(text) || /\b(agar|main|badha|doon|toh|kya|asar|padega|hoga|nahi|dukandar)\b/.test(text)) {
+  if (/[\u0900-\u097F]/.test(text)) {
     return 'hi';
+  }
+  if (/\b(agar|main|badha|badhaon|doon|toh|kya|asar|padega|hoga|nahi|dukandar|mere|apne)\b/.test(text)) {
+    return 'hinglish';
   }
   return 'en';
 }
@@ -200,15 +203,23 @@ function fallbackGeneratedResponse(computed, language = 'en') {
   const metricHi = computed.outcome_metric === 'repeat_orders' ? 'दोहराए जाने वाले ग्राहक ऑर्डर' : 'कुल ऑर्डर';
   const smallEffect = Math.abs(computed.outcome_value) < 1 || computed.confidence < 0.45;
   const isHindi = language === 'hi';
+  const isHinglish = language === 'hinglish';
+  const estimateNote = computed.uses_user_provided_average_bill
+    ? (isHindi ? ' यह अनुमान आपके औसत बिल पर आधारित है, हर ऑर्डर की असली राशि पर नहीं।' : isHinglish ? ' Yeh estimate aapke average bill amount par based hai, exact order values par nahi.' : ' Estimated from your average bill amount, not exact order values.')
+    : '';
 
   if (smallEffect) {
     return {
       recommendation: isHindi
         ? 'इस पैटर्न के आधार पर अभी कोई बड़ा निर्णय न लें।'
+        : isHinglish
+          ? 'Is pattern par abhi koi bada decision mat lein.'
         : 'Do not make a big decision from this pattern yet.',
       why: isHindi
-        ? `आपके अपलोड किए गए डेटा में अभी तक इस बदलाव से ${metricHi} पर कोई विश्वसनीय असर नहीं दिख रहा है, इसलिए इसे पूरी तरह लागू करने से पहले एक छोटा नियंत्रित परीक्षण करें।`
-        : `Your uploaded data does not yet show a reliable ${metric} effect from this lever, so use a small controlled test before rollout.`,
+        ? `आपके अपलोड किए गए डेटा में अभी तक इस बदलाव से ${metricHi} पर कोई विश्वसनीय असर नहीं दिख रहा है, इसलिए इसे पूरी तरह लागू करने से पहले एक छोटा नियंत्रित परीक्षण करें।${estimateNote}`
+        : isHinglish
+          ? `Aapke uploaded data mein abhi ${metric} par is change ka clear effect nahi dikh raha, isliye pehle chhota test karein.${estimateNote}`
+        : `Your uploaded data does not yet show a reliable ${metric} effect from this lever, so use a small controlled test before rollout.${estimateNote}`,
       outcome_metric_label: isHindi ? metricHi : metric,
       detected_language: language,
       source: 'server_fallback_for_low_confidence',
@@ -220,10 +231,14 @@ function fallbackGeneratedResponse(computed, language = 'en') {
     return {
       recommendation: isHindi
         ? 'इस बदलाव को सावधानी से जांचें; ऑर्डर घट सकते हैं।'
+        : isHinglish
+          ? 'Is change ko dhyan se test karein; orders kam ho sakte hain.'
         : 'Be careful with this change; the data points to fewer orders.',
       why: isHindi
-        ? `आपके इतिहास के अनुसार इस बदलाव से ${metricHi} में लगभग ${magnitude}% की कमी आ सकती है।`
-        : `Your history links this lever with about ${magnitude}% fewer ${metric}.`,
+        ? `आपके इतिहास के अनुसार इस बदलाव से ${metricHi} में लगभग ${magnitude}% की कमी आ सकती है।${estimateNote}`
+        : isHinglish
+          ? `Aapke history ke hisaab se is change se ${metric} mein lagbhag ${magnitude}% ki kami aa sakti hai.${estimateNote}`
+        : `Your history links this lever with about ${magnitude}% fewer ${metric}.${estimateNote}`,
       outcome_metric_label: isHindi ? metricHi : metric,
       detected_language: language,
       source: 'server_fallback',
@@ -233,10 +248,14 @@ function fallbackGeneratedResponse(computed, language = 'en') {
   return {
     recommendation: isHindi
       ? 'इस बदलाव को पहले एक छोटे परीक्षण से आजमाएं, फिर व्यापक रूप से लागू करें।'
+      : isHinglish
+        ? 'Is change ko pehle chhote test se try karein, phir sabke liye lagu karein.'
       : 'This change looks worth a small test before rolling it out widely.',
     why: isHindi
-      ? `आपके इतिहास के अनुसार इस बदलाव से ${metricHi} में लगभग ${computed.outcome_value}% की बढ़ोतरी हो सकती है।`
-      : `Your history links this lever with about ${computed.outcome_value}% more ${metric}.`,
+      ? `आपके इतिहास के अनुसार इस बदलाव से ${metricHi} में लगभग ${computed.outcome_value}% की बढ़ोतरी हो सकती है।${estimateNote}`
+      : isHinglish
+        ? `Aapke history ke hisaab se is change se ${metric} mein lagbhag ${computed.outcome_value}% ki badhotri ho sakti hai.${estimateNote}`
+      : `Your history links this lever with about ${computed.outcome_value}% more ${metric}.${estimateNote}`,
     outcome_metric_label: isHindi ? metricHi : metric,
     detected_language: language,
     source: 'server_fallback',
@@ -258,7 +277,8 @@ function alignGeneratedWithComputed(generated, computed, expectedLanguage = 'en'
   const hasDevanagari = /[\u0900-\u097F]/.test(combinedText);
   const languageMismatch =
     (expected === 'en' && !['en', 'eng', 'english'].includes(language)) ||
-    (expected === 'hi' && !hasDevanagari);
+    (expected === 'hi' && !hasDevanagari) ||
+    (expected === 'hinglish' && (hasDevanagari || language !== 'hinglish'));
 
   if (smallEffect || languageMismatch || (computed.outcome_value > 0 && saysDecrease) || (computed.outcome_value < 0 && saysIncrease)) {
     return fallbackGeneratedResponse(computed, expected);
@@ -451,6 +471,24 @@ function getColumnByConcept(classification, concept, minConfidence = 0.55) {
   return candidates[0]?.[0];
 }
 
+const CONCEPT_COPY = {
+  order_date: { label: 'Order date', missing: 'I could not find the dates for your orders.' },
+  order_count_identifier: { label: 'Order count / order ID', missing: 'I could not find a way to count your orders.' },
+  order_value_or_price: { label: 'Total bill amount', missing: 'I could not find the total bill amount in your file.' },
+  shipping_or_delivery_fee: { label: 'Delivery fee', missing: 'I could not find delivery fee history.' },
+  customer_identifier: { label: 'Customer name, phone, or ID', missing: 'I do not see customer name, phone, email, or customer ID.' },
+  promotional_flag: { label: 'Discount or offer details', missing: 'I do not see which orders had discounts or offers.' },
+  order_status: { label: 'Order status', missing: 'I could not find order status details.' },
+};
+
+function conceptCopy(concept) {
+  return CONCEPT_COPY[concept] || { label: String(concept || '').replace(/_/g, ' '), missing: 'This information was not found.' };
+}
+
+function isAmbiguousHeader(header) {
+  return /^(amount|finalprice|subtotal|total|value)$/.test(normalizeHeader(header));
+}
+
 function normalizeClassification(parsed, headers) {
   const normalized = {};
   const source = Array.isArray(parsed?.columns) ? parsed.columns : Object.entries(parsed || {}).map(([header, value]) => ({ header, ...value }));
@@ -460,7 +498,9 @@ function normalizeClassification(parsed, headers) {
     if (!headers.includes(header)) continue;
     normalized[header] = {
       classification: String(item.classification || item.concept || 'none_of_these'),
-      confidence: clamp(Number(item.confidence) || 0, 0, 1),
+      confidence: isAmbiguousHeader(header)
+        ? Math.min(0.45, clamp(Number(item.confidence) || 0, 0, 1))
+        : clamp(Number(item.confidence) || 0, 0, 1),
     };
   }
 
@@ -474,6 +514,9 @@ function normalizeClassification(parsed, headers) {
 }
 
 async function classifySheetColumns(headers, samples) {
+  if (process.env.HISAAB_TEST_MODE === '1') {
+    return classifySheetColumnsFallback(headers);
+  }
   const prompt = `Here are column headers and sample rows from a small business's order data spreadsheet.
 
 Headers:
@@ -531,7 +574,8 @@ function classifySheetColumnsFallback(headers) {
     else if (/orderno|orderid|invoice|receipt/.test(key)) [classification, confidence] = ['order_count_identifier', 0.75];
     else if (/buyer|customer|client|phone|email/.test(key)) [classification, confidence] = ['customer_identifier', 0.7];
     else if (/ship|delivery|courier|freight/.test(key) && /fee|charge|cost|amount/.test(key)) [classification, confidence] = ['shipping_or_delivery_fee', 0.72];
-    else if (/price|total|amount|revenue|sales/.test(key)) [classification, confidence] = ['order_value_or_price', 0.65];
+    else if (/^(amount|finalprice|subtotal|total|value)$/.test(key)) [classification, confidence] = ['order_value_or_price', 0.45];
+    else if (/price|revenue|sales|bill|invoiceamount/.test(key)) [classification, confidence] = ['order_value_or_price', 0.65];
     else if (/coupon|promo|discount|sale/.test(key)) [classification, confidence] = ['promotional_flag', 0.65];
     else if (/^(order)?status$|orderstate/.test(key)) [classification, confidence] = ['order_status', 0.65];
     normalized[header] = { classification, confidence };
@@ -539,7 +583,7 @@ function classifySheetColumnsFallback(headers) {
   return normalized;
 }
 
-async function parseSheetData(csvText, manualOrderColumn = null) {
+async function parseSheetData(csvText, manualMappings = {}) {
   const rows = parseCsv(csvText);
   if (rows.length < 2) {
     return {
@@ -573,18 +617,16 @@ async function parseSheetData(csvText, manualOrderColumn = null) {
   // patch — aggregateSheetRows buckets every row by month using whichever
   // column is classified as order_date, so fixing this after the fact is
   // structurally too late; the monthly rows would already be empty.
-  let manualColumnMatch = null;
-  let manualColumnUnmatched = null;
-  if (manualOrderColumn) {
-    const matchedHeader = findMatchingHeader(headers, manualOrderColumn);
+  const manualColumnMatches = {};
+  const manualColumnUnmatched = {};
+  for (const [concept, rawHeader] of Object.entries(manualMappings || {})) {
+    if (!Object.prototype.hasOwnProperty.call(CONCEPT_COPY, concept)) continue;
+    const matchedHeader = findMatchingHeader(headers, rawHeader);
     if (matchedHeader) {
-      classification[matchedHeader] = { classification: 'order_date', confidence: 1, source: 'manual' };
-      manualColumnMatch = matchedHeader;
+      classification[matchedHeader] = { classification: concept, confidence: 1, source: 'manual' };
+      manualColumnMatches[concept] = matchedHeader;
     } else {
-      // The typed value didn't match any real header — this is worth
-      // surfacing distinctly from "we still can't find order data at all",
-      // since the fix here is "check your spelling," not "add more data."
-      manualColumnUnmatched = manualOrderColumn;
+      manualColumnUnmatched[concept] = String(rawHeader || '');
     }
   }
 
@@ -593,22 +635,22 @@ async function parseSheetData(csvText, manualOrderColumn = null) {
     headers,
     rawRows,
     classification,
-    classification_source: manualColumnMatch ? 'manual_override' : classificationSource,
+    classification_source: Object.keys(manualColumnMatches).length ? 'manual_override' : classificationSource,
     monthlyRows: monthly.rows,
     metricSources: monthly.metricSources,
     columns: monthly.columns,
-    manual_column_match: manualColumnMatch,
+    manual_column_matches: manualColumnMatches,
     manual_column_unmatched: manualColumnUnmatched,
   };
 }
 
-async function getUserSheetData(sheetUrl, manualInputs = {}, csvText = '') {
-  const manualOrderColumn = typeof manualInputs?.orders === 'string' && manualInputs.orders.trim()
-    ? manualInputs.orders.trim()
-    : null;
+async function getUserSheetData(sheetUrl, manualInputs = {}, csvText = '', manualMappings = {}) {
+  const selectedMappings = manualMappings && typeof manualMappings === 'object'
+    ? manualMappings
+    : manualInputs?.column_mappings || {};
 
   if (csvText && String(csvText).trim()) {
-    const parsed = await parseSheetData(String(csvText), manualOrderColumn);
+    const parsed = await parseSheetData(String(csvText), selectedMappings);
     applyManualInputs(parsed.monthlyRows, parsed.metricSources, manualInputs);
     return { parsed, error: null };
   }
@@ -647,7 +689,7 @@ async function getUserSheetData(sheetUrl, manualInputs = {}, csvText = '') {
     throw new Error("Couldn't read that sheet — it looks private or restricted. Make sure it's shared as \"Anyone with the link can view\" in Google Sheets, then try again.");
   }
 
-  const parsed = await parseSheetData(text, manualOrderColumn);
+  const parsed = await parseSheetData(text, selectedMappings);
   applyManualInputs(parsed.monthlyRows, parsed.metricSources, manualInputs);
   return { parsed, error: null };
 }
@@ -743,7 +785,22 @@ function aggregateSheetRows(rawRows, classification) {
 }
 
 function applyManualInputs(rows, metricSources, manualInputs = {}) {
+  if (Object.prototype.hasOwnProperty.call(manualInputs || {}, 'user_provided_average_order_value')) {
+    const value = toNumber(manualInputs.user_provided_average_order_value);
+    if (value !== undefined && value >= 0) {
+      for (const row of rows) row.avg_order_value = value;
+      metricSources.avg_order_value = {
+        status: 'derived_manual',
+        source: 'user_provided_average_order_value',
+        column: null,
+        confidence: 0.55,
+        user_provided: true,
+      };
+    }
+  }
+
   for (const [field, rawValue] of Object.entries(manualInputs || {})) {
+    if (field === 'user_provided_average_order_value' || field === 'mapping_choices' || field === 'column_mappings') continue;
     if (field === 'repeat_orders_proxy' && toBool(rawValue)) {
       for (const row of rows) row.repeat_orders = row.orders;
       metricSources.repeat_orders = { status: 'derived_manual', source: 'manual_proxy', column: null, confidence: 0.45 };
@@ -760,10 +817,10 @@ function applyManualInputs(rows, metricSources, manualInputs = {}) {
 function metricDisplayName(field, language = 'en') {
   const labels = {
     orders: 'Orders per month',
-    repeat_orders: 'Repeat orders',
-    avg_order_value: 'Order value',
+    repeat_orders: 'Repeat customer orders',
+    avg_order_value: 'Total bill amount',
     delivery_fee: 'Delivery fee',
-    promo_active: 'Promotions',
+    promo_active: 'Discount or offer details',
     trend: 'Date trend',
   };
   const labelsHi = {
@@ -891,6 +948,88 @@ function buildAnalyticsCapabilities(parsed) {
   };
 }
 
+function buildColumnMapping(parsed) {
+  const headers = parsed.headers || [];
+  const classification = parsed.classification || {};
+  const sources = parsed.metricSources || {};
+  const conceptForSource = {
+    orders: 'order_count_identifier',
+    avg_order_value: 'order_value_or_price',
+    delivery_fee: 'shipping_or_delivery_fee',
+    repeat_orders: 'customer_identifier',
+    promo_active: 'promotional_flag',
+    trend: 'order_date',
+  };
+  const found = [];
+  const ambiguous = [];
+  const matchedHeaders = new Set();
+
+  for (const [header, details] of Object.entries(classification)) {
+    const copy = conceptCopy(details.classification);
+    if (details.classification !== 'none_of_these' && Number(details.confidence) >= 0.55) {
+      found.push({
+        concept: details.classification,
+        label: copy.label,
+        column: header,
+        confidence: Number(details.confidence),
+      });
+      matchedHeaders.add(header);
+    } else if (details.classification !== 'none_of_these' || isAmbiguousHeader(header)) {
+      ambiguous.push({
+        column: header,
+        suggested_concept: details.classification === 'none_of_these' ? null : details.classification,
+        suggested_label: details.classification === 'none_of_these' ? null : copy.label,
+        confidence: Number(details.confidence) || 0,
+      });
+    }
+  }
+
+  const missing = [];
+  for (const [field, concept] of Object.entries(conceptForSource)) {
+    const source = sources[field];
+    if (source?.status === 'unavailable') {
+      const copy = conceptCopy(concept);
+      const options = headers.filter(header => !matchedHeaders.has(header)).map(header => ({
+        column: header,
+        confidence: Number(classification[header]?.confidence) || 0,
+      }));
+      missing.push({
+        concept,
+        label: copy.label,
+        reason: copy.missing,
+        options,
+      });
+    }
+  }
+
+  const availableCapabilities = [
+    { key: 'sales_trend', label: 'Are my orders going up or down?', requires: ['orders', 'trend'] },
+    { key: 'delivery_fee', label: 'What happens if I change delivery fee?', requires: ['orders', 'delivery_fee'] },
+    { key: 'best_worst_month', label: 'What was my best or worst month?', requires: ['orders', 'trend'] },
+    { key: 'pricing', label: 'What happens if I change my prices?', requires: ['orders', 'avg_order_value'] },
+    { key: 'promotions', label: 'Do discounts bring more orders?', requires: ['orders', 'promo_active'] },
+    { key: 'repeat_customers', label: 'Are customers coming back?', requires: ['orders', 'repeat_orders'] },
+  ];
+  const canUse = field => ['derived', 'derived_manual', 'derived_low_confidence'].includes(sources[field]?.status);
+  const available = availableCapabilities.filter(item => item.requires.every(canUse));
+  const unavailable = availableCapabilities
+    .filter(item => !item.requires.every(canUse))
+    .map(item => ({
+      label: item.label,
+      reason: item.requires.filter(field => !canUse(field)).map(field => conceptCopy(conceptForSource[field]).missing).join(' '),
+    }));
+
+  return {
+    headers,
+    found,
+    ambiguous,
+    missing,
+    available_capabilities: available.map(({ key, label }) => ({ key, label })),
+    unavailable_capabilities: unavailable,
+    manual_column_matches: parsed.manual_column_matches || {},
+  };
+}
+
 function summarizeSheetParse(parsed) {
   const sources = parsed.metricSources || {};
   const months = parsed.monthlyRows?.length || 0;
@@ -949,6 +1088,7 @@ function summarizeSheetParse(parsed) {
           ? `${firstMissing.label.toLowerCase()} is not available yet: ${firstMissing.reason}`
           : '',
     capability_map: capabilityMap,
+    column_mapping: buildColumnMapping(parsed),
     capability_line: `${capabilityMap.ready_count} ready · ${capabilityMap.limited_count} limited · ${capabilityMap.missing_count} missing`,
     details,
   };
@@ -977,43 +1117,60 @@ function formatMonthLabel(month) {
   return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' }).replace(' ', " '");
 }
 
-async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '', bootstrapOwner = null) {
+async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '', bootstrapOwner = null, dataMode = 'sample', manualMappings = {}) {
   const fallback = getHistoricalData();
   let sheetError = null;
 
   const noSheet = (!sheetUrl || !String(sheetUrl).trim()) && (!csvText || !String(csvText).trim());
 
-  // Bootstrap path: no sheet/csv, but the user has logged daily entries.
-  // Only used when there's actually enough to attempt a regression — below
-  // the minimum we fall through to the sample-data demo so the UI still
-  // works, and the bootstrap progress UI (frontend) drives them to keep
-  // logging rather than asking questions prematurely.
-  if (noSheet && bootstrapOwner) {
+  // Start Fresh is a real-data path, never a demo path. If it is not mature
+  // enough to support a calculation, return an explicit gate response from
+  // here rather than falling through to the synthetic demo rows.
+  if (noSheet && dataMode === 'bootstrap' && bootstrapOwner) {
+    let entries = [];
     try {
       const snapshot = await bootstrapCollection().where('owner', '==', bootstrapOwner).get();
-      if (snapshot.size >= BOOTSTRAP_MIN_ENTRIES) {
-        const entries = snapshot.docs.map(d => d.data());
-        const agg = aggregateBootstrapEntries(entries);
-        if (agg.rows.length >= 2) {
-          return {
-            data: agg.rows,
-            sheetSummary: null,
-            dataSource: {
-              mode: 'bootstrap',
-              sheet_url_used: false,
-              bootstrap_entries_used: snapshot.size,
-              aggregated_rows_used: agg.rows.length,
-              field_sources: agg.metricSources,
-              columns: agg.columns,
-              warning: null,
-            },
-          };
-        }
-      }
+      entries = snapshot.docs.map(d => d.data());
     } catch (err) {
-      // Bootstrap read failed — fall through to demo, never hard-fail here.
+      // A bootstrap read failure must remain a gate, never become a demo
+      // result that looks like an answer about the user.
       sheetError = err.message;
     }
+
+    const agg = aggregateBootstrapEntries(entries);
+    const entryCount = entries.length;
+    if (entryCount >= BOOTSTRAP_MIN_ENTRIES && agg.rows.length >= 2) {
+      return {
+        data: agg.rows,
+        sheetSummary: null,
+        dataSource: {
+          mode: 'bootstrap',
+          source_label: 'Self-reported daily history',
+          sheet_url_used: false,
+          bootstrap_entries_used: entryCount,
+          aggregated_rows_used: agg.rows.length,
+          field_sources: agg.metricSources,
+          columns: agg.columns,
+          warning: null,
+        },
+      };
+    }
+
+    return {
+      data: [],
+      sheetSummary: null,
+      dataSource: {
+        mode: 'bootstrap_insufficient',
+        source_label: 'Self-reported daily history',
+        sheet_url_used: false,
+        bootstrap_entries_used: entryCount,
+        bootstrap_min_entries: BOOTSTRAP_MIN_ENTRIES,
+        aggregated_rows_used: agg.rows.length,
+        field_sources: agg.metricSources,
+        columns: agg.columns,
+        warning: sheetError || null,
+      },
+    };
   }
 
   if (noSheet) {
@@ -1021,6 +1178,7 @@ async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '', boot
       data: fallback,
       dataSource: {
         mode: 'demo_fallback',
+        source_type: 'demo',
         sheet_url_used: false,
         sheet_rows_used: 0,
         fallback_rows_used: fallback.length,
@@ -1031,7 +1189,7 @@ async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '', boot
   }
 
   try {
-    const sheetData = await getUserSheetData(sheetUrl, manualInputs, csvText);
+    const sheetData = await getUserSheetData(sheetUrl, manualInputs, csvText, manualMappings);
     const sheetSummary = summarizeSheetParse(sheetData.parsed);
     return {
       data: sheetData.parsed.monthlyRows,
@@ -1046,7 +1204,7 @@ async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '', boot
         classification: sheetData.parsed.classification,
         columns: sheetData.parsed.columns,
         field_sources: sheetData.parsed.metricSources,
-        manual_column_match: sheetData.parsed.manual_column_match || null,
+        manual_column_matches: sheetData.parsed.manual_column_matches || {},
         manual_column_unmatched: sheetData.parsed.manual_column_unmatched || null,
         warning: null,
       },
@@ -1148,21 +1306,9 @@ function missingCriticalFields(question, dataSource) {
   }
 
   if (!isAvailable('orders')) {
-    let prompt;
-    if (dataSource.manual_column_unmatched) {
-      // The user already typed something, but it didn't match any real
-      // header in this sheet — the fix is "check the spelling," not "we
-      // still don't have enough data," so say that plainly instead of
-      // repeating the original generic prompt verbatim.
-      prompt = `We couldn't find a column named "${dataSource.manual_column_unmatched}" in your sheet. Please type the exact column header for your order date (check spelling/spacing).`;
-    } else if (dataSource.manual_column_match) {
-      // We found the column they named and used it, but no dates could
-      // actually be parsed from it — this is a different, more specific
-      // problem than "we don't know which column to use."
-      prompt = `We used "${dataSource.manual_column_match}" as your order date column, but couldn't read any valid dates from it. Please check that column contains real dates, or type a different column name.`;
-    } else {
-      prompt = 'Which column contains your order date? Type the exact column header from your sheet (for example: "Order Date").';
-    }
+    const prompt = dataSource.manual_column_unmatched?.order_date
+      ? 'I could not use that selection for the order date. Choose the column that contains the dates of your orders.'
+      : 'I could not find readable order dates in this file. Choose the column that contains the dates of your orders.';
     missing.push({ field: 'orders', prompt, input_type: 'text' });
   }
   if (!isAvailable(scenario.lever)) {
@@ -1176,12 +1322,185 @@ function missingCriticalFields(question, dataSource) {
   if (scenario.outcomeMetric === 'repeat_orders' && !isAvailable('repeat_orders')) {
     const repeatSource = sources.repeat_orders;
     const prompt = repeatSource?.status === 'derived_low_confidence'
-      ? `Repeat customer tracking looks too sparse in this sheet (${Math.round((repeatSource.unique_buyer_fraction || 0) * 100)}% of buyers appear only once). Use total orders as a rough proxy instead?`
-      : 'We could not identify repeat customers. Use total orders as a rough proxy for this answer?';
-    missing.push({ field: 'repeat_orders_proxy', prompt, input_type: 'boolean' });
+      ? `Repeat customer tracking looks too sparse in this sheet (${Math.round((repeatSource.unique_buyer_fraction || 0) * 100)}% of buyers appear only once). Hisaab needs a reliable customer identifier before it can answer this.`
+      : 'We could not identify a customer identifier. Hisaab needs customer name, phone, email, or ID data before it can answer this honestly.';
+    missing.push({ field: 'customer_identifier', prompt, input_type: 'text' });
   }
 
   return missing;
+}
+
+function dataMaturity(dataSource = {}, data = []) {
+  if (dataSource.mode === 'demo_fallback') {
+    return { level: 0, label: 'Sample demo data', source_kind: 'sample' };
+  }
+  if (dataSource.mode === 'bootstrap' || dataSource.mode === 'bootstrap_insufficient') {
+    return { level: 1, label: 'Self-reported daily data', source_kind: 'bootstrap' };
+  }
+
+  const sources = dataSource.field_sources || {};
+  const usable = field => ['derived', 'derived_manual', 'derived_low_confidence'].includes(sources[field]?.status);
+  let level = usable('orders') ? 2 : 0;
+  if (usable('avg_order_value')) level = Math.max(level, 3);
+  if (usable('repeat_orders')) level = Math.max(level, 4);
+  if (usable('promo_active')) level = Math.max(level, 5);
+
+  return {
+    level,
+    label: level >= 5 ? 'Promo and discount data'
+      : level >= 4 ? 'Customer and repeat data'
+        : level >= 3 ? 'Sales and order value data'
+          : level >= 2 ? 'Basic order data'
+            : 'No usable data',
+    source_kind: dataSource.csv_used ? 'csv' : dataSource.sheet_url_used ? 'sheet' : 'connected',
+    rows: data.length,
+  };
+}
+
+function observedLeverValues(data, lever) {
+  return data.map(row => Number(row[lever])).filter(Number.isFinite);
+}
+
+function assessEvidence(question, data, summary, dataSource, computed) {
+  const maturity = dataMaturity(dataSource, data);
+  if (dataSource.mode === 'demo_fallback') {
+    return {
+      category: 'demo_only',
+      maturity,
+      title: 'Demo example only',
+      message: 'This is an example-data exercise for a demo shop, not a real business result.',
+      next_action: 'Add my own data or start daily entry to see how Hisaab works with real entries.',
+    };
+  }
+
+  const scenario = detectScenario(question, data);
+  const requiredFields = missingCriticalFields(question, dataSource);
+  if (requiredFields.length) {
+    return {
+      category: 'unsupported_question',
+      maturity,
+      required_fields: requiredFields,
+      title: 'Hisaab cannot measure this yet',
+      message: 'This question needs a data field that is not available or reliable in the connected data.',
+      next_action: requiredFields.map(item => item.prompt).join(' '),
+    };
+  }
+
+  const minimumMonths = scenario.lever === 'promo_active' ? 6 : 4;
+  if (data.length < minimumMonths) {
+    return {
+      category: 'not_enough_evidence',
+      maturity,
+      title: 'Not enough evidence yet',
+      message: `Hisaab found ${data.length} month${data.length === 1 ? '' : 's'} of usable history. It needs at least ${minimumMonths} months before estimating this honestly.`,
+      next_action: 'Keep collecting the same fields and try again when there is more history.',
+    };
+  }
+
+  if (scenario.lever === 'cash_on_delivery') {
+    return {
+      category: 'unsupported_question',
+      maturity,
+      title: 'Hisaab cannot measure this yet',
+      message: 'There is no cash-on-delivery history to compare, so Hisaab cannot estimate this change honestly.',
+      next_action: 'Collect whether each order used cash on delivery before asking again.',
+    };
+  }
+
+  if (scenario.lever === 'promo_active') {
+    const promoValues = data.map(row => row.promo_active).filter(value => value !== undefined);
+    if (new Set(promoValues).size < 2) {
+      return {
+        category: 'not_enough_evidence',
+        maturity,
+        title: 'Not enough evidence yet',
+        message: 'Hisaab needs both promo and non-promo periods before it can compare them.',
+        next_action: 'Mark a few promo periods and non-promo periods in your data, then try again.',
+      };
+    }
+  } else {
+    const values = observedLeverValues(data, scenario.lever);
+    const uniqueValues = new Set(values.map(value => String(round(value, 4))));
+    if (uniqueValues.size < 2) {
+      const leverName = metricDisplayName(scenario.lever).toLowerCase();
+      const observed = values.length ? ` It stayed at about ${values[0]}.` : '';
+      return {
+        category: 'not_enough_evidence',
+        maturity,
+        title: 'Not enough evidence yet',
+        message: `Your ${leverName} did not change in the available history, so Hisaab cannot know what happens when it changes.${observed}`,
+        next_action: `Try a small controlled change and keep recording orders before asking again.`,
+      };
+    }
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const current = Number(scenario.lever === 'avg_order_value' ? data[data.length - 1]?.avg_order_value : data[data.length - 1]?.delivery_fee);
+    const requested = current + Number(scenario.delta || 0);
+    if (Number.isFinite(current) && Number.isFinite(requested) && (requested < min || requested > max)) {
+      return {
+        category: 'weak_signal',
+        maturity,
+        title: 'This is outside the observed range',
+        message: `Your history shows this lever between ${min} and ${max}. The requested change would go to ${round(requested, 2)}, so Hisaab should not present a confident estimate.`,
+        next_action: `Test a smaller change within the observed ${min}–${max} range and record what happens.`,
+        observed_range: { min, max },
+      };
+    }
+  }
+
+  if (computed?.method === 'unsupported_lever_no_variance' || computed?.method === 'unsupported_lever_no_cod_signal') {
+    return {
+      category: 'not_enough_evidence',
+      maturity,
+      title: 'Not enough evidence yet',
+      message: computed.low_signal_warning || 'The available history does not contain enough variation for Hisaab to estimate this honestly.',
+      next_action: 'Collect more varied history and try again.',
+    };
+  }
+
+  if (computed?.low_signal_warning || Number(computed?.confidence) < 0.45 || (Number(computed?.range_low) < 0 && Number(computed?.range_high) > 0)) {
+    return {
+      category: 'weak_signal',
+      maturity,
+      title: 'Early pattern, not a firm answer',
+      message: 'The available history points in a direction, but the month-to-month noise is too high for a confident recommendation.',
+      next_action: 'Treat this as an early pattern and run a small, controlled test before making a larger change.',
+    };
+  }
+
+  return {
+    category: 'clear_enough',
+    maturity,
+    title: 'Clear enough for a cautious test',
+    message: 'The available history contains enough signal for a directional estimate.',
+    next_action: 'Use this as a cautious test, then record what actually happens.',
+  };
+}
+
+async function sendEvidenceLimitation(res, { sessionId, uploadId, question, dataSource, summary = null, evidence }) {
+  const questionPersistence = await firestoreService.saveQuestion({
+    sessionId,
+    uploadId: uploadId || null,
+    question,
+    answer: evidence.message,
+  });
+  await firestoreService.saveEvent({
+    type: 'ask',
+    sessionId,
+    uploadId: uploadId || null,
+    questionId: questionPersistence.id,
+    metadata: { status: 'evidence_limited', category: evidence.category, maturity: evidence.maturity },
+  });
+  return res.json({
+    session_id: sessionId,
+    status: 'evidence_limited',
+    evidence_category: evidence.category,
+    evidence,
+    data_source: dataSource,
+    summary,
+    persistence: { question: questionPersistence },
+  });
 }
 
 function partialDataSummary(dataSource) {
@@ -1509,20 +1828,47 @@ function serializeDecision(doc, isDemo = false) {
     predictedMetric: data.predictedMetric,
     predictedRange: data.predictedRange || { low: null, high: null },
     confidence: data.confidence,
+    evidenceCategory: data.evidenceCategory || data.resultCategory || null,
+    evidenceStrength: data.evidenceStrength || evidenceStrengthLabel(data.evidenceCategory || data.resultCategory, data.confidence),
+    resultCategory: data.resultCategory || data.evidenceCategory || null,
+    simpleAnswer: data.simpleAnswer || data.recommendation || '',
+    suggestedAction: data.suggestedAction || '',
+    explanation: data.explanation || data.why || '',
+    dataMaturity: data.dataMaturity || null,
+    sourceLabel: data.sourceLabel || sourceLabelForDecision(data),
     dataSource: data.dataSource,
+    sourceType: isDemoDecision(data) ? 'demo' : (data.sourceType || 'real'),
     sheetUrl: data.sheetUrl || '',
     status: data.status,
     appliedAt: serializeTimestamp(data.appliedAt),
     intentSetAt: serializeTimestamp(data.intentSetAt),
+    startedAt: serializeTimestamp(data.startedAt),
     actualValue: data.actualValue ?? null,
     actualNote: data.actualNote || '',
     outcomeRecordedAt: serializeTimestamp(data.outcomeRecordedAt),
     differencePp: data.differencePp ?? null,
     verdict: data.verdict || '',
+    comparisonCategory: data.comparisonCategory || null,
+    comparisonMessage: data.comparisonMessage || '',
     compareEligible,
     compareMinDays: config.compareMinDays,
     isDemo,
   };
+}
+
+function evidenceStrengthLabel(category, confidence) {
+  if (category === 'weak_signal') return 'Weak evidence';
+  if (category === 'not_enough_evidence') return 'Not enough evidence';
+  if (category === 'unsupported_question') return 'Missing key data';
+  if (category === 'demo_only') return 'Demo only';
+  return Number(confidence) >= 0.7 ? 'Strong evidence' : 'Medium evidence';
+}
+
+function sourceLabelForDecision(data = {}) {
+  if (isDemoDecision(data)) return 'Demo example';
+  if (data.dataSource === 'bootstrap') return 'Self-reported daily history';
+  if (data.dataSource === 'sheet') return data.csvUsed ? 'Imported CSV' : 'Google Sheet';
+  return 'Connected data';
 }
 
 function normalizeDecisionPayload(body) {
@@ -1537,7 +1883,18 @@ function normalizeDecisionPayload(body) {
       high: Number(predictedRange.high),
     },
     confidence: Number(body.confidence),
-    dataSource: body.dataSource === 'sheet' ? 'sheet' : 'sample',
+    dataSource: ['sheet', 'bootstrap'].includes(body.dataSource) ? body.dataSource : 'sample',
+    sourceType: body.sourceType === 'demo' || body.dataSource === 'sample' ? 'demo' : 'real',
+    resultCategory: String(body.resultCategory || body.evidenceCategory || '').trim() || null,
+    evidenceStrength: String(body.evidenceStrength || '').trim() || null,
+    simpleAnswer: String(body.simpleAnswer || body.recommendation || '').trim(),
+    suggestedAction: String(body.suggestedAction || '').trim(),
+    explanation: String(body.explanation || body.why || '').trim(),
+    dataMaturity: body.dataMaturity || null,
+    sourceLabel: String(body.sourceLabel || '').trim(),
+    csvUsed: body.csvUsed === true,
+    startedAt: toFirestoreTimestamp(body.startedAt),
+    bootstrapEntries: Number(body.bootstrapEntries),
     sheetUrl: String(body.sheetUrl || '').trim(),
     status,
     askedAt: toFirestoreTimestamp(body.askedAt) || firestoreService.now(),
@@ -1545,6 +1902,10 @@ function normalizeDecisionPayload(body) {
     simulationId: body.simulationId ? String(body.simulationId) : null,
     questionId: body.questionId ? String(body.questionId) : null,
   };
+}
+
+function isDemoDecision(data = {}) {
+  return data.sourceType === 'demo' || data.dataSource === 'sample';
 }
 
 function detectedMetricsFromDataSource(dataSource = {}) {
@@ -1586,24 +1947,18 @@ app.use(express.json({ limit: '8mb' }));
 // ─────────────────────────────────────────────────────────────────────────────
 function getHistoricalData() {
   return [
-    { month: '2024-01', orders: 1240, repeat_orders: 412, avg_order_value: 385, delivery_fee: 40, promo_active: false },
-    { month: '2024-02', orders: 1180, repeat_orders: 390, avg_order_value: 372, delivery_fee: 40, promo_active: false },
-    { month: '2024-03', orders: 1310, repeat_orders: 445, avg_order_value: 398, delivery_fee: 40, promo_active: true  },
-    { month: '2024-04', orders: 1420, repeat_orders: 498, avg_order_value: 412, delivery_fee: 40, promo_active: true  },
-    { month: '2024-05', orders: 1380, repeat_orders: 476, avg_order_value: 405, delivery_fee: 40, promo_active: false },
-    { month: '2024-06', orders: 1290, repeat_orders: 437, avg_order_value: 391, delivery_fee: 45, promo_active: false },
-    { month: '2024-07', orders: 1210, repeat_orders: 388, avg_order_value: 382, delivery_fee: 45, promo_active: false },
-    { month: '2024-08', orders: 1190, repeat_orders: 371, avg_order_value: 379, delivery_fee: 45, promo_active: false },
-    { month: '2024-09', orders: 1350, repeat_orders: 459, avg_order_value: 403, delivery_fee: 45, promo_active: false },
-    { month: '2024-10', orders: 1480, repeat_orders: 521, avg_order_value: 426, delivery_fee: 45, promo_active: true  },
-    { month: '2024-11', orders: 1620, repeat_orders: 584, avg_order_value: 451, delivery_fee: 45, promo_active: true  },
-    { month: '2024-12', orders: 1890, repeat_orders: 680, avg_order_value: 523, delivery_fee: 45, promo_active: true  },
-    { month: '2025-01', orders: 1260, repeat_orders: 428, avg_order_value: 392, delivery_fee: 50, promo_active: false },
-    { month: '2025-02', orders: 1190, repeat_orders: 401, avg_order_value: 384, delivery_fee: 50, promo_active: false },
-    { month: '2025-03', orders: 1340, repeat_orders: 462, avg_order_value: 407, delivery_fee: 50, promo_active: true  },
-    { month: '2025-04', orders: 1410, repeat_orders: 488, avg_order_value: 419, delivery_fee: 50, promo_active: false },
-    { month: '2025-05', orders: 1370, repeat_orders: 471, avg_order_value: 411, delivery_fee: 50, promo_active: false },
-    { month: '2025-06', orders: 1300, repeat_orders: 446, avg_order_value: 402, delivery_fee: 50, promo_active: false },
+    { month: '2025-01', orders: 360, repeat_orders: 96, avg_order_value: 220, delivery_fee: 20, promo_active: false },
+    { month: '2025-02', orders: 410, repeat_orders: 112, avg_order_value: 235, delivery_fee: 20, promo_active: false },
+    { month: '2025-03', orders: 470, repeat_orders: 128, avg_order_value: 250, delivery_fee: 30, promo_active: true },
+    { month: '2025-04', orders: 520, repeat_orders: 145, avg_order_value: 265, delivery_fee: 30, promo_active: false },
+    { month: '2025-05', orders: 480, repeat_orders: 136, avg_order_value: 255, delivery_fee: 30, promo_active: false },
+    { month: '2025-06', orders: 450, repeat_orders: 124, avg_order_value: 275, delivery_fee: 40, promo_active: false },
+    { month: '2025-07', orders: 430, repeat_orders: 119, avg_order_value: 280, delivery_fee: 40, promo_active: false },
+    { month: '2025-08', orders: 500, repeat_orders: 141, avg_order_value: 290, delivery_fee: 50, promo_active: true },
+    { month: '2025-09', orders: 560, repeat_orders: 158, avg_order_value: 305, delivery_fee: 50, promo_active: false },
+    { month: '2025-10', orders: 620, repeat_orders: 176, avg_order_value: 330, delivery_fee: 60, promo_active: false },
+    { month: '2025-11', orders: 680, repeat_orders: 194, avg_order_value: 360, delivery_fee: 60, promo_active: true },
+    { month: '2025-12', orders: 720, repeat_orders: 208, avg_order_value: 390, delivery_fee: 80, promo_active: true },
   ];
 }
 
@@ -1612,10 +1967,24 @@ app.get('/health', (_req, res) => {
 });
 
 app.post('/api/decisions', async (req, res) => {
+  if (req.body?.sourceType === 'demo' || req.body?.dataSource === 'sample') {
+    return res.json({
+      saved: false,
+      demo_only: true,
+      message: 'Demo decisions are not saved because this is not real business data.',
+    });
+  }
   const userId = getRequestUserId(req);
   const sessionId = getRequestSessionId(req);
 
   const payload = normalizeDecisionPayload(req.body || {});
+  const validCategories = new Set(['clear_enough', 'weak_signal']);
+  if (payload.sourceType !== 'real' || !['sheet', 'bootstrap'].includes(payload.dataSource) || !validCategories.has(payload.resultCategory)) {
+    return res.status(400).json({ error: 'Only real decisions with enough or weak evidence can be saved.' });
+  }
+  if (payload.dataSource === 'bootstrap' && (!Number.isFinite(payload.bootstrapEntries) || payload.bootstrapEntries < BOOTSTRAP_MIN_ENTRIES)) {
+    return res.status(400).json({ error: 'Self-reported history is not mature enough to save as a decision yet.' });
+  }
   if (
     !payload.question ||
     !payload.predictedMetric ||
@@ -1651,11 +2020,22 @@ app.post('/api/decisions', async (req, res) => {
       predictedMetric: payload.predictedMetric,
       predictedRange: payload.predictedRange,
       confidence: clamp(payload.confidence, 0, 1),
+      evidenceCategory: payload.resultCategory,
+      evidenceStrength: payload.evidenceStrength || evidenceStrengthLabel(payload.resultCategory, payload.confidence),
+      resultCategory: payload.resultCategory,
+      simpleAnswer: payload.simpleAnswer,
+      suggestedAction: payload.suggestedAction,
+      explanation: payload.explanation,
+      dataMaturity: payload.dataMaturity,
+      sourceLabel: payload.sourceLabel,
+      csvUsed: payload.csvUsed,
       dataSource: payload.dataSource,
+      sourceType: payload.sourceType,
       sheetUrl: payload.dataSource === 'sheet' ? payload.sheetUrl : '',
       status: payload.status,
       appliedAt: payload.status === 'applied' ? payload.intentSetAt : null,
       intentSetAt: payload.intentSetAt,
+      startedAt: payload.startedAt,
       actualValue: null,
       actualNote: '',
       outcomeRecordedAt: null,
@@ -1679,17 +2059,18 @@ app.get('/api/decisions', async (req, res) => {
     let query = decisionsCollection();
     query = userId ? query.where('userId', '==', userId) : query.where('sessionId', '==', sessionId);
     const snapshot = await query.get();
-    const docs = snapshot.docs.sort((a, b) => {
+    const visibleDocs = snapshot.docs.filter(doc => isDemoDecision(doc.data()) === isDemo);
+    const docs = visibleDocs.sort((a, b) => {
       const aTime = a.data().askedAt?.toDate ? a.data().askedAt.toDate().getTime() : new Date(a.data().askedAt || 0).getTime();
       const bTime = b.data().askedAt?.toDate ? b.data().askedAt.toDate().getTime() : new Date(b.data().askedAt || 0).getTime();
       return bTime - aTime;
     });
     if (req.query.countOnly === 'true') {
-      return res.json({ count: snapshot.size, isDemo });
+      return res.json({ count: visibleDocs.length, isDemo });
     }
     return res.json({
       decisions: docs.map(doc => serializeDecision(doc, isDemo)),
-      count: snapshot.size,
+      count: visibleDocs.length,
       isDemo,
     });
   } catch (err) {
@@ -1705,6 +2086,7 @@ app.patch('/api/decisions/:id', async (req, res) => {
   const updates = {};
   const status = req.body?.status;
   const hasActual = Object.prototype.hasOwnProperty.call(req.body || {}, 'actualValue');
+  const hasStartedAt = Object.prototype.hasOwnProperty.call(req.body || {}, 'startedAt');
 
   if (status !== undefined) {
     if (!allowedStatuses.has(status)) {
@@ -1727,6 +2109,10 @@ app.patch('/api/decisions/:id', async (req, res) => {
     updates.appliedAt = toFirestoreTimestamp(req.body.appliedAt) || firestoreService.now();
   }
 
+  if (hasStartedAt) {
+    updates.startedAt = toFirestoreTimestamp(req.body.startedAt);
+  }
+
   if (!Object.keys(updates).length) {
     return res.status(400).json({ error: 'No supported decision updates provided.' });
   }
@@ -1740,6 +2126,9 @@ app.patch('/api/decisions/:id', async (req, res) => {
     const data = doc.data();
     if ((userId && data.userId !== userId) || (!userId && data.sessionId !== sessionId)) {
       return res.status(404).json({ error: 'Decision not found.' });
+    }
+    if (isDemoDecision(data)) {
+      return res.status(400).json({ error: 'Demo decisions are not saved or checked back against real outcomes.' });
     }
 
     await ref.update(updates);
@@ -1759,6 +2148,7 @@ app.get('/api/decisions/track-record', async (req, res) => {
     query = userId ? query.where('userId', '==', userId) : query.where('sessionId', '==', sessionId);
     const snapshot = await query.get();
     const matched = snapshot.docs
+      .filter(doc => isDemoDecision(doc.data()) === isDemo)
       .map(doc => serializeDecision(doc, isDemo))
       .filter(decision => decision.actualValue !== null
         && decision.actualValue !== undefined
@@ -1857,6 +2247,23 @@ function comparisonVerdict(predictedValue, actualValue, confidence) {
   return conf < 0.45 ? 'Prediction missed direction, and confidence was low at the time.' : 'Prediction was off directionally; worth reviewing the underlying change.';
 }
 
+function comparisonCategory(predictedValue, actualValue) {
+  const predicted = Number(predictedValue);
+  const actual = Number(actualValue);
+  if (!Number.isFinite(predicted) || !Number.isFinite(actual)) return 'not_enough_new_data';
+  if (Math.abs(actual) < 0.5) return 'no_clear_change';
+  if (Math.sign(predicted) === Math.sign(actual)) return 'matched_direction';
+  return 'opposite_direction';
+}
+
+function comparisonMessage(category, predictedMetric = 'orders') {
+  const metric = String(predictedMetric || 'orders').replace(/_/g, ' ');
+  if (category === 'matched_direction') return `The result matched the direction for ${metric}.`;
+  if (category === 'opposite_direction') return `The result did not clearly match: ${metric} moved in the other direction.`;
+  if (category === 'no_clear_change') return `After the change, ${metric} were mostly stable.`;
+  return 'There is not enough new data to compare.';
+}
+
 app.post('/api/decisions/:id/compare', async (req, res) => {
   const userId = getRequestUserId(req);
   const sessionId = getRequestSessionId(req);
@@ -1869,6 +2276,9 @@ app.post('/api/decisions/:id/compare', async (req, res) => {
     const decision = doc.data();
     if ((userId && decision.userId !== userId) || (!userId && decision.sessionId !== sessionId)) {
       return res.status(404).json({ error: 'Decision not found.' });
+    }
+    if (isDemoDecision(decision)) {
+      return res.status(400).json({ error: 'Demo decisions cannot be compared with real data.' });
     }
     if (decision.status !== 'applied') {
       return res.status(400).json({ error: 'Only applied decisions can be compared.' });
@@ -1888,7 +2298,8 @@ app.post('/api/decisions/:id/compare', async (req, res) => {
     const actualValue = Number(actualComputed.outcome_value);
     const predictedValue = Number(decision.predictedValue);
     const differencePp = round(actualValue - predictedValue, 1);
-    const verdict = comparisonVerdict(predictedValue, actualValue, decision.confidence);
+    const comparisonCategoryValue = comparisonCategory(predictedValue, actualValue);
+    const verdict = comparisonMessage(comparisonCategoryValue, decision.predictedMetric);
 
     await ref.update({
       actualValue,
@@ -1896,6 +2307,8 @@ app.post('/api/decisions/:id/compare', async (req, res) => {
       outcomeRecordedAt: firestoreService.now(),
       differencePp,
       verdict,
+      comparisonCategory: comparisonCategoryValue,
+      comparisonMessage: verdict,
       updatedAt: firestoreService.now(),
     });
 
@@ -1904,6 +2317,8 @@ app.post('/api/decisions/:id/compare', async (req, res) => {
       actualValue,
       differencePp,
       verdict,
+      comparisonCategory: comparisonCategoryValue,
+      comparisonMessage: verdict,
     });
   } catch (err) {
     if (/Google Sheet CSV export|Sheets URL|fetch/i.test(err.message || '')) {
@@ -1928,6 +2343,7 @@ app.get('/api/decisions/check-back', async (req, res) => {
     const minAgeMs = config.checkBackMinDays * 86400000;
     const now = Date.now();
     const candidates = snapshot.docs
+      .filter(doc => isDemoDecision(doc.data()) === isDemo)
       .map(doc => serializeDecision(doc, isDemo))
       .filter(d =>
         d.status === 'applied' &&
@@ -1981,6 +2397,9 @@ app.post('/api/decisions/:id/checkback', async (req, res) => {
     if ((userId && decision.userId !== userId) || (!userId && decision.sessionId !== sessionId)) {
       return res.status(404).json({ error: 'Decision not found.' });
     }
+    if (isDemoDecision(decision)) {
+      return res.status(400).json({ error: 'Demo decisions are not saved or checked back against real outcomes.' });
+    }
 
     // Case 1: user says they did NOT actually make the change. We can't
     // reconcile a prediction against a change that never happened — mark the
@@ -2014,7 +2433,8 @@ app.post('/api/decisions/:id/checkback', async (req, res) => {
     else actualValue = -magnitude;
 
     const differencePp = round(actualValue - predictedValue, 1);
-    const verdict = comparisonVerdict(predictedValue, actualValue, decision.confidence);
+    const comparisonCategoryValue = comparisonCategory(predictedValue, actualValue);
+    const verdict = comparisonMessage(comparisonCategoryValue, decision.predictedMetric);
     const noteBase = Number.isFinite(Number(roughMagnitude))
       ? `Self-reported via check-in: ${outcome.replace('_', ' ')}, about ${magnitude}%.`
       : `Self-reported via check-in: ${outcome.replace('_', ' ')} (rough direction, no exact figure).`;
@@ -2025,6 +2445,8 @@ app.post('/api/decisions/:id/checkback', async (req, res) => {
       outcomeRecordedAt: firestoreService.now(),
       differencePp,
       verdict,
+      comparisonCategory: comparisonCategoryValue,
+      comparisonMessage: verdict,
       updatedAt: firestoreService.now(),
     });
 
@@ -2034,6 +2456,8 @@ app.post('/api/decisions/:id/checkback', async (req, res) => {
       actualValue,
       differencePp,
       verdict,
+      comparisonCategory: comparisonCategoryValue,
+      comparisonMessage: verdict,
     });
   } catch (err) {
     return firestoreUnavailable(res, err);
@@ -2232,7 +2656,7 @@ app.post('/api/transcribe', async (req, res) => {
 });
 
 app.post('/api/parse-sheet', async (req, res) => {
-  const { sheetUrl, csvText, fileName } = req.body || {};
+  const { sheetUrl, csvText, fileName, manual_mappings: manualMappings = {} } = req.body || {};
   const sessionId = getRequestSessionId(req);
 
   if ((!sheetUrl || !String(sheetUrl).trim()) && (!csvText || !String(csvText).trim())) {
@@ -2240,7 +2664,7 @@ app.post('/api/parse-sheet', async (req, res) => {
   }
 
   try {
-    const sheetData = await getUserSheetData(sheetUrl, {}, csvText);
+    const sheetData = await getUserSheetData(sheetUrl, {}, csvText, manualMappings);
     const sheetSummary = summarizeSheetParse(sheetData.parsed);
     const dataSource = {
       mode: 'sheet',
@@ -2251,6 +2675,8 @@ app.post('/api/parse-sheet', async (req, res) => {
       classification_source: sheetData.parsed.classification_source,
       classification: sheetData.parsed.classification,
       columns: sheetData.parsed.columns,
+      manual_column_matches: sheetData.parsed.manual_column_matches || {},
+      manual_column_unmatched: sheetData.parsed.manual_column_unmatched || {},
       field_sources: sheetData.parsed.metricSources,
       warning: null,
     };
@@ -2303,7 +2729,7 @@ app.post('/api/simulate', async (req, res) => {
 });
 
 async function handleSimulate(req, res) {
-  const { question, sheetUrl, csvText, uploadId, manual_inputs: manualInputs = {} } = req.body;
+  const { question, sheetUrl, csvText, uploadId, dataMode = 'sample', manual_inputs: manualInputs = {}, manual_mappings: manualMappings = {}, mapping_choices: mappingChoices = {} } = req.body;
   const sessionId = getRequestSessionId(req);
   const bootstrapOwner = getRequestUserId(req) || sessionId;
 
@@ -2311,11 +2737,50 @@ async function handleSimulate(req, res) {
     return res.status(400).json({ error: 'question is required', kind: 'bad_request' });
   }
 
-  if (!config.geminiApiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server', kind: 'server_error' });
+  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner, dataMode, manualMappings);
+  dataSource.mapping_choices = mappingChoices;
+
+  if (dataSource.mode === 'bootstrap_insufficient') {
+    const entryCount = Number(dataSource.bootstrap_entries_used) || 0;
+    const minimum = Number(dataSource.bootstrap_min_entries) || BOOTSTRAP_MIN_ENTRIES;
+    const questionPersistence = await firestoreService.saveQuestion({
+      sessionId,
+      uploadId: uploadId || null,
+      question: question.trim(),
+      answer: 'Not enough evidence yet. Bootstrap history is still being collected.',
+    });
+    await firestoreService.saveEvent({
+      type: 'ask',
+      sessionId,
+      uploadId: uploadId || null,
+      questionId: questionPersistence.id,
+      metadata: { status: 'needs_bootstrap_history', entryCount, minimum },
+    });
+    return res.json({
+      session_id: sessionId,
+      status: 'needs_bootstrap_history',
+      bootstrap: {
+        entry_count: entryCount,
+        minimum_entries: minimum,
+        ready: false,
+      },
+      data_source: dataSource,
+      persistence: { question: questionPersistence },
+    });
   }
 
-  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner);
+  const summary = summarizeData(data);
+
+  if (dataSource.mode === 'demo_fallback') {
+    return sendEvidenceLimitation(res, {
+      sessionId,
+      uploadId,
+      question: question.trim(),
+      dataSource,
+      summary: null,
+      evidence: assessEvidence(question.trim(), data, summary, dataSource, null),
+    });
+  }
 
   if ((sheetUrl && String(sheetUrl).trim()) || (csvText && String(csvText).trim())) {
     const missingFields = missingCriticalFields(question.trim(), dataSource);
@@ -2344,6 +2809,13 @@ async function handleSimulate(req, res) {
           { field: 'orders', prompt: 'We could not build monthly order history from this sheet. Which column identifies an order?', input_type: 'text' },
         ],
         partial_data_summary: answer,
+        evidence_category: 'unsupported_question',
+        evidence: {
+          category: 'unsupported_question',
+          title: 'Hisaab cannot measure this yet',
+          message: answer,
+          required_fields: missingFields,
+        },
         data_source: dataSource,
         sheet_summary: sheetSummary,
         analytics_capabilities: sheetSummary?.capability_map || null,
@@ -2354,9 +2826,29 @@ async function handleSimulate(req, res) {
     }
   }
 
-  const summary = summarizeData(data);
   const computed = computeRegressionResult(question.trim(), data, summary);
+  computed.uses_user_provided_average_bill = dataSource.field_sources?.avg_order_value?.source === 'user_provided_average_order_value';
+  const evidence = assessEvidence(question.trim(), data, summary, dataSource, computed);
+  computed.evidence_category = evidence.category;
+  computed.data_maturity = evidence.maturity;
+
+  if (evidence.category !== 'clear_enough') {
+    return sendEvidenceLimitation(res, {
+      sessionId,
+      uploadId,
+      question: question.trim(),
+      dataSource,
+      summary,
+      evidence,
+    });
+  }
+
+  if (!config.geminiApiKey) {
+    return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server', kind: 'server_error' });
+  }
+
   const fallbackLanguage = detectFallbackLanguage(question);
+  const isDemoSource = dataSource.source_type === 'demo' || dataSource.mode === 'demo_fallback';
 
   const userPrompt = `The business owner asks: "${question.trim()}"
 
@@ -2366,9 +2858,18 @@ ${JSON.stringify(summary, null, 2)}
 Server-computed result from real math:
 ${JSON.stringify(computed, null, 2)}
 
+Data maturity and provenance:
+${JSON.stringify(evidence.maturity, null, 2)}
+${isDemoSource
+  ? 'This is demo data for an example shop. Never refer to the user’s real data, history, shop, or business. Use “this demo shop” and “illustrative only”.'
+  : ''}
+${dataSource.field_sources?.avg_order_value?.source === 'user_provided_average_order_value'
+  ? 'Important: the sales estimate uses the owner’s usual average bill amount, not exact order values. Say this plainly if mentioning sales or revenue.'
+  : ''}
+
 Important: Do NOT change, reinterpret, round, or replace any numeric fields. The server already calculated them from historical data. Your only job is to write a clear recommendation and a short explanation for a small shop owner.
 
-Detect the language the user's question is written in. If the question is in English (including Hinglish written in Roman script), respond in English. If the question is in Hindi (Devanagari script), respond in natural everyday Hindi that a small shop owner would actually use — not stiff literal translation, and always in Devanagari script (never romanized Hinglish). For any other language (Tamil, Bengali, Telugu, Marathi, Kannada, or anything else), respond in clear plain English for now — do not attempt other languages. All programmatic fields and numeric fields stay in English/numeric on the server. If the computed outcome_value is close to 0 or confidence is low, say in the response language that the data does not show a clear effect. Never call a positive computed outcome a decrease, and never call a negative computed outcome an increase.
+Detect the language the user's question is written in. If the question is in English, respond in English. If it is Hinglish written in Roman script, respond in natural everyday Hinglish written in Roman script. If the question is in Hindi (Devanagari script), respond in natural everyday Hindi that a small shop owner would actually use — not stiff literal translation. For any other language (Tamil, Bengali, Telugu, Marathi, Kannada, or anything else), respond in clear plain English for now — do not attempt other languages. All programmatic fields and numeric fields stay in English/numeric on the server. If the computed outcome_value is close to 0 or confidence is low, say in the response language that the data does not show a clear effect. Never call a positive computed outcome a decrease, and never call a negative computed outcome an increase.
 
 This business operates in India. If you mention any money amount in the recommendation or why fields, always use the ₹ (Indian Rupee) symbol and Indian digit grouping (e.g. ₹1,03,000 or ₹45,000 — lakh/crore style), never $ or USD and never Western digit grouping like ₹103,000.
 
@@ -2518,7 +3019,7 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
     (Number(computed.range_low) < 0 && Number(computed.range_high) > 0);
 
   let scenariosBundle = null;
-  if (scenariosSupported) {
+  if (scenariosSupported && evidence.category === 'clear_enough') {
     const isHindi = generated.detected_language === 'hi';
     const asked = computed.assumed_change;
     const bigger = asked * 2;
@@ -2691,6 +3192,9 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
     sheet_summary: sheetSummary,
     analytics_capabilities: sheetSummary?.capability_map || null,
     scenarios_bundle: scenariosBundle,
+    evidence_category: evidence.category,
+    evidence,
+    data_maturity: evidence.maturity,
     chart_series: chartSeries(data, computed.outcome_metric),
     chart_meta: {
       label: chartMetaLabel,
@@ -2745,6 +3249,8 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
         method: computed.method,
         sample_size: computed.sample_size,
         manual_inputs: manualInputs,
+        manual_mappings: manualMappings,
+        mapping_choices: mappingChoices,
       },
       calculatedOutput: computed,
       recommendation: generated.recommendation,
@@ -2856,6 +3362,42 @@ app.use(express.static(path.join(__dirname, 'public'), {
   },
 }));
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Hisaab running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Hisaab running on http://localhost:${PORT}`);
+  });
+}
+
+// Export calculation and evidence helpers for the lightweight Node test suite.
+// The production entry point above still starts exactly as before with npm start.
+module.exports = {
+  app,
+  aggregateBootstrapEntries,
+  aggregateSheetRows,
+  alignGeneratedWithComputed,
+  assessEvidence,
+  buildAnalyticsCapabilities,
+  buildColumnMapping,
+  classifySheetColumnsFallback,
+  comparisonCategory,
+  comparisonMessage,
+  computePromoLift,
+  computeRegressionResult,
+  dataMaturity,
+  detectFallbackLanguage,
+  detectScenario,
+  fallbackGeneratedResponse,
+  getHistoricalData,
+  isDemoDecision,
+  linearRegression,
+  missingCriticalFields,
+  normalizeDecisionPayload,
+  normalizeGeneratedResponse,
+  normalizeHeader,
+  parseCsv,
+  parseSheetData,
+  parseSimulationResponse,
+  regressionEvidence,
+  sourceLabelForDecision,
+  summarizeData,
+};
