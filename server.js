@@ -2142,12 +2142,34 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
   // the slope has a real sign; if the slope is ~0 there is no crossover to
   // find and returning any threshold would be a made-up precision.
   // ────────────────────────────────────────────────────────────────────────
+  // Scenarios are the DEFAULT result view for any numeric-lever question,
+  // not a reward for strong data. The gate here is purely STRUCTURAL — is
+  // this the kind of question we can lay out as three concrete options at
+  // all? — not a confidence judgement. Confidence is handled separately
+  // below via isLowConfidenceScenarios, which drives an honest visual
+  // downgrade (muted numbers, a "rough directional read" tone) rather than
+  // hiding the scenarios entirely. A fruit vendor is better served by three
+  // concrete options with an honest "we're not sure yet" flag than by being
+  // dropped into the denser stats screen.
+  //
+  // We still fully bail out (scenariosBundle = null -> old UI) when the
+  // question genuinely isn't a numeric-lever what-if: unsupported levers
+  // (promo_active, cash_on_delivery), a zero/File assumed change, or a
+  // non-finite slope. Those aren't "low confidence scenarios", they're
+  // "not scenarios at all".
   const scenariosSupported =
-    Number.isFinite(computed.confidence) && computed.confidence >= 0.45 &&
-    Number.isFinite(computed.outcome_value) && Math.abs(computed.outcome_value) >= 1 &&
     Number.isFinite(computed.assumed_change) && Math.abs(computed.assumed_change) > 0 &&
     ['delivery_fee', 'avg_order_value'].includes(computed.lever) &&
-    Number.isFinite(computed.slope);
+    Number.isFinite(computed.slope) &&
+    Number.isFinite(computed.outcome_value);
+
+  // Low-confidence scenarios still render, but with muted numbers and honest
+  // "directional read" language instead of confident rupee projections. Same
+  // threshold the rest of the app uses for "weak" (0.45 / low_signal_warning).
+  const isLowConfidenceScenarios =
+    !Number.isFinite(computed.confidence) || computed.confidence < 0.45 ||
+    Boolean(computed.low_signal_warning) ||
+    (Number(computed.range_low) < 0 && Number(computed.range_high) > 0);
 
   let scenariosBundle = null;
   if (scenariosSupported) {
@@ -2235,6 +2257,8 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
       currency_symbol: currencySymbol,
       current_value: Number.isFinite(currentValue) ? currentValue : null,
       lever_label: metricDisplayName(computed.lever, generated.detected_language).toLowerCase(),
+      is_low_confidence: isLowConfidenceScenarios,
+      confidence_pct: Number.isFinite(computed.confidence) ? Math.round(computed.confidence * 100) : null,
       scenarios: [
         {
           id: 'baseline',
@@ -2294,6 +2318,22 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
       ],
       threshold,
     };
+
+    // When confidence is low, the rupee projections are real arithmetic but
+    // rest on a weak signal — presenting them as crisp "+₹3,200" numbers
+    // would overclaim. Downgrade honestly: keep the numbers (they're the
+    // best directional estimate we have) but relabel them as a rough read,
+    // and add a bundle-level caption the frontend shows above the cards.
+    // The baseline card stays exact (no change really is no change).
+    if (isLowConfidenceScenarios) {
+      scenariosBundle.low_confidence_caption = isHindi
+        ? 'आपका डेटा अभी इतना मजबूत नहीं है कि पक्का बताया जा सके — ये केवल एक शुरुआती दिशा हैं, अंतिम आंकड़े नहीं।'
+        : 'Your data isn\'t strong enough for a firm answer yet — treat these as a rough direction, not final numbers.';
+      scenariosBundle.scenarios.forEach((s) => {
+        if (s.id === 'baseline') return;
+        s.headline_note = isHindi ? 'मोटा अनुमान — पक्का नहीं' : 'Rough estimate — not certain';
+      });
+    }
   }
 
   const responseBody = {

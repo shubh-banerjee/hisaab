@@ -1089,16 +1089,30 @@
     if (qText) qText.textContent = lastQuestion || '';
     if (qSub) {
       const months = Number(data.summary?.months || 0);
-      qSub.textContent = months > 0 ? t('scenarios.based_on').replace('{months}', months) : '';
+      let subText = months > 0 ? t('scenarios.based_on').replace('{months}', months) : '';
+      // When low-confidence, append the honest caption so the "rough
+      // direction, not final numbers" framing sits right under the question,
+      // before the cards.
+      if (bundle.is_low_confidence && bundle.low_confidence_caption) {
+        subText = subText
+          ? `${subText} ${bundle.low_confidence_caption}`
+          : bundle.low_confidence_caption;
+      }
+      qSub.textContent = subText;
     }
+
+    const lowConf = bundle.is_low_confidence === true;
 
     // Render the three scenario cards.
     grid.innerHTML = '';
     bundle.scenarios.forEach((s) => {
       const card = document.createElement('div');
-      card.className = 'scenario' + (s.is_best_fit ? ' best' : '');
+      card.className = 'scenario' + (s.is_best_fit ? ' best' : '') + (lowConf ? ' low-conf' : '');
       const revenue = Number(s.headline_revenue) || 0;
-      const revenueClass = revenue > 0 ? 'good' : revenue < 0 ? 'bad' : '';
+      // When low-confidence, don't paint the number green/red — muted grey
+      // signals "directional, not a firm gain/loss". The baseline (₹0) is
+      // always neutral regardless.
+      const revenueClass = lowConf ? 'muted' : (revenue > 0 ? 'good' : revenue < 0 ? 'bad' : '');
       const symbol = bundle.currency_symbol || '₹';
       const revenueFormatted = revenue === 0
         ? `${symbol}0`

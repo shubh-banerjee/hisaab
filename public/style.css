@@ -1136,6 +1136,10 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 }
 .s-outcome.good{ color:var(--good); }
 .s-outcome.bad{ color:var(--bad); }
+.s-outcome.muted{ color:var(--ink-soft); }
+.scenario.low-conf .s-outcome{ color:var(--ink-mute); }
+.scenario.low-conf .best-flag{ background:var(--warn); }
+.scenario.low-conf.best{ border-color:var(--warn); }
 .s-outcome-note{
   font-size:12px;
   color:var(--ink-mute);
