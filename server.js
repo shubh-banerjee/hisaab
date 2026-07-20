@@ -33,6 +33,9 @@ const config = {
   geminiApiKey: process.env.GEMINI_API_KEY,
   geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite',
   compareMinDays: Number(process.env.HISAAB_COMPARE_MIN_DAYS || process.env.DECISION_COMPARE_MIN_DAYS || 20),
+  // Check-back is a lightweight qualitative "did you do it / what happened"
+  // ask, not a full sheet re-fetch, so it surfaces sooner than compare.
+  checkBackMinDays: Number(process.env.HISAAB_CHECKBACK_MIN_DAYS || 14),
   defaultPromoDiscountPct: Number(process.env.HISAAB_DEFAULT_PROMO_DISCOUNT_PCT || 10),
 };
 const DEMO_USER_ID = 'hisaab-demo-user';
@@ -1871,6 +1874,133 @@ app.post('/api/decisions/:id/compare', async (req, res) => {
     if (/Google Sheet CSV export|Sheets URL|fetch/i.test(err.message || '')) {
       return res.status(502).json({ error: err.message || 'Could not reach your sheet just now.' });
     }
+    return firestoreUnavailable(res, err);
+  }
+});
+
+// Check-back: find the single oldest decision that the user applied but
+// never told us the outcome of, and that's old enough to have a real result
+// by now. Returns one at a time — a shopkeeper should never face a backlog
+// of check-ins. Null when there's nothing to ask about (the common case).
+app.get('/api/decisions/check-back', async (req, res) => {
+  const isDemo = req.query.demo === 'true';
+  const { userId, sessionId } = getDecisionOwner(req);
+
+  try {
+    let query = decisionsCollection();
+    query = userId ? query.where('userId', '==', userId) : query.where('sessionId', '==', sessionId);
+    const snapshot = await query.get();
+    const minAgeMs = config.checkBackMinDays * 86400000;
+    const now = Date.now();
+    const candidates = snapshot.docs
+      .map(doc => serializeDecision(doc, isDemo))
+      .filter(d =>
+        d.status === 'applied' &&
+        (d.actualValue === null || d.actualValue === undefined) &&
+        d.appliedAt &&
+        (now - new Date(d.appliedAt).getTime()) >= minAgeMs)
+      .sort((a, b) => new Date(a.appliedAt).getTime() - new Date(b.appliedAt).getTime());
+
+    const pending = candidates[0] || null;
+    return res.json({
+      pending: pending ? {
+        id: pending.id,
+        question: pending.question,
+        predictedValue: pending.predictedValue,
+        predictedMetric: pending.predictedMetric,
+        confidence: pending.confidence,
+        appliedAt: pending.appliedAt,
+      } : null,
+      isDemo,
+    });
+  } catch (err) {
+    return firestoreUnavailable(res, err);
+  }
+});
+
+// Check-back reconciliation: the user answers "did you do it / what happened"
+// qualitatively (went_up / stayed_same / went_down), optionally with a rough
+// magnitude. We map that to a usable actualValue so it feeds the same
+// predicted-vs-actual track record the compare endpoint populates.
+//
+// The qualitative→numeric mapping is deliberately conservative: we do NOT
+// invent a precise number the user didn't give. When they only say a
+// direction, we use the SIGN they reported combined with a modest default
+// magnitude, and we record actualNote so the imprecision is visible in the
+// log. This keeps the track record honest — it reflects what the user
+// actually told us, flagged as a rough self-report, not a measured figure.
+app.post('/api/decisions/:id/checkback', async (req, res) => {
+  const userId = getRequestUserId(req);
+  const sessionId = getRequestSessionId(req);
+
+  const outcome = String(req.body?.outcome || '').trim();
+  const didApply = req.body?.didApply;
+  const roughMagnitude = req.body?.roughMagnitudePct;
+  const validOutcomes = new Set(['went_up', 'stayed_same', 'went_down']);
+
+  try {
+    const ref = decisionsCollection().doc(req.params.id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Decision not found.' });
+    const decision = doc.data();
+    if ((userId && decision.userId !== userId) || (!userId && decision.sessionId !== sessionId)) {
+      return res.status(404).json({ error: 'Decision not found.' });
+    }
+
+    // Case 1: user says they did NOT actually make the change. We can't
+    // reconcile a prediction against a change that never happened — mark the
+    // decision skipped so it stops surfacing for check-back, but never fold
+    // it into the accuracy track record (nothing was tested).
+    if (didApply === false) {
+      await ref.update({
+        status: 'skipped',
+        actualNote: 'User reported they did not make this change.',
+        outcomeRecordedAt: firestoreService.now(),
+        updatedAt: firestoreService.now(),
+      });
+      return res.json({ reconciled: false, status: 'skipped' });
+    }
+
+    // Case 2: user did make the change and reported an outcome.
+    if (!validOutcomes.has(outcome)) {
+      return res.status(400).json({ error: 'outcome must be went_up, stayed_same, or went_down.' });
+    }
+
+    const predictedValue = Number(decision.predictedValue);
+    // Map qualitative direction to a numeric actualValue. If the user gave a
+    // rough magnitude, use it with the reported sign; otherwise use a modest
+    // default magnitude that reflects "some movement" without overclaiming.
+    const DEFAULT_MAGNITUDE_PP = 3;
+    let magnitude = Number(roughMagnitude);
+    if (!Number.isFinite(magnitude) || magnitude < 0) magnitude = DEFAULT_MAGNITUDE_PP;
+    let actualValue;
+    if (outcome === 'stayed_same') actualValue = 0;
+    else if (outcome === 'went_up') actualValue = magnitude;
+    else actualValue = -magnitude;
+
+    const differencePp = round(actualValue - predictedValue, 1);
+    const verdict = comparisonVerdict(predictedValue, actualValue, decision.confidence);
+    const noteBase = Number.isFinite(Number(roughMagnitude))
+      ? `Self-reported via check-in: ${outcome.replace('_', ' ')}, about ${magnitude}%.`
+      : `Self-reported via check-in: ${outcome.replace('_', ' ')} (rough direction, no exact figure).`;
+
+    await ref.update({
+      actualValue,
+      actualNote: noteBase,
+      outcomeRecordedAt: firestoreService.now(),
+      differencePp,
+      verdict,
+      updatedAt: firestoreService.now(),
+    });
+
+    return res.json({
+      reconciled: true,
+      predictedValue,
+      actualValue,
+      differencePp,
+      verdict,
+    });
+  } catch (err) {
     return firestoreUnavailable(res, err);
   }
 });

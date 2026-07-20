@@ -39,6 +39,19 @@
       'track.see_all': 'See all →',
       'track.within': 'Within {pp} points on {hits} of your last {total} calls.',
       'track.latest': 'Last time we said {predicted}, you got {actual}.',
+      'checkback.eyebrow': 'Quick check-in',
+      'checkback.did': 'Yes, I did it',
+      'checkback.didnt': 'No, I decided not to',
+      'checkback.later': 'Not yet — remind me later',
+      'checkback.sub': 'Did you make the change? Your answer sharpens every future prediction.',
+      'checkback.question': 'A while ago, you decided to try: {question}',
+      'checkback.followup_label': 'What happened to your orders after that?',
+      'checkback.went_up': 'Went up',
+      'checkback.stayed_same': 'Stayed about the same',
+      'checkback.went_down': 'Went down',
+      'checkback.skip': 'Skip this check-in',
+      'checkback.thanks': 'Thanks — saved. This now counts toward your track record.',
+      'checkback.thanks_noted': 'Got it — noted that you skipped this one.',
     },
     hi: {
       'chrome.new_question': 'नया प्रश्न',
@@ -74,6 +87,19 @@
       'track.see_all': 'सभी देखें →',
       'track.within': 'आपके पिछले {total} में से {hits} बार {pp} अंकों के भीतर सही रहे।',
       'track.latest': 'पिछली बार हमने {predicted} बताया, आपको {actual} मिला।',
+      'checkback.eyebrow': 'छोटी सी जानकारी',
+      'checkback.did': 'हाँ, मैंने किया',
+      'checkback.didnt': 'नहीं, मैंने न करने का फैसला किया',
+      'checkback.later': 'अभी नहीं — बाद में याद दिलाएं',
+      'checkback.sub': 'क्या आपने बदलाव किया? आपका जवाब हर आगे के अनुमान को बेहतर बनाता है।',
+      'checkback.question': 'कुछ समय पहले, आपने यह आजमाने का फैसला किया था: {question}',
+      'checkback.followup_label': 'उसके बाद आपके ऑर्डर का क्या हुआ?',
+      'checkback.went_up': 'बढ़ गए',
+      'checkback.stayed_same': 'लगभग वैसे ही रहे',
+      'checkback.went_down': 'घट गए',
+      'checkback.skip': 'इस जानकारी को छोड़ें',
+      'checkback.thanks': 'धन्यवाद — सहेज लिया। यह अब आपके ट्रैक रिकॉर्ड में गिना जाएगा।',
+      'checkback.thanks_noted': 'समझ गए — नोट कर लिया कि आपने इसे छोड़ दिया।',
     },
   };
 
@@ -392,6 +418,8 @@
   });
   refineSend.addEventListener('click', submitRefinement);
   fetchDecisionsCount();
+  wireCheckBack();
+  checkForPendingCheckBack();
   protectComposerChrome();
   window.addEventListener('resize', alignDataPanelToSheetSlot);
   window.addEventListener('scroll', alignDataPanelToSheetSlot, { passive: true });
@@ -876,6 +904,10 @@
 
     const startTime = Date.now();
     lastQuestion = question;
+    // Dismiss the check-back card if it's showing — a new question means the
+    // user has moved on from the returning-visitor prompt.
+    const cbCardEl = document.getElementById('checkback-card');
+    if (cbCardEl) cbCardEl.hidden = true;
     setLoading(true, options.isRefine);
     if (!options.isRefine) {
       trajectoryItems = [];
@@ -1560,6 +1592,83 @@
       renderDecisionCount(decisionsCountValue);
     } catch (_err) {
       renderDecisionCount(0);
+    }
+  }
+
+  let checkBackDecisionId = null;
+  async function checkForPendingCheckBack() {
+    const card = document.getElementById('checkback-card');
+    if (!card) return;
+    card.hidden = true;
+    try {
+      const res = await fetch('/api/decisions/check-back', { headers: apiHeaders() });
+      if (!res.ok) return;
+      const body = await readJsonResponse(res);
+      if (!body || !body.pending || !body.pending.id) return;
+      checkBackDecisionId = body.pending.id;
+      const qEl = document.getElementById('cb-question');
+      if (qEl) qEl.textContent = t('checkback.question').replace('{question}', body.pending.question || '');
+      const followup = document.getElementById('cb-followup');
+      const done = document.getElementById('cb-done');
+      const options = document.getElementById('cb-options');
+      if (followup) followup.hidden = true;
+      if (done) done.hidden = true;
+      if (options) options.hidden = false;
+      card.hidden = false;
+    } catch (_err) {
+      card.hidden = true;
+    }
+  }
+
+  function wireCheckBack() {
+    const card = document.getElementById('checkback-card');
+    if (!card) return;
+    const did = document.getElementById('cb-did');
+    const didnt = document.getElementById('cb-didnt');
+    const later = document.getElementById('cb-later');
+    const skip = document.getElementById('cb-skip');
+    const followup = document.getElementById('cb-followup');
+    const options = document.getElementById('cb-options');
+    const done = document.getElementById('cb-done');
+
+    function showCheckBackDone(message) {
+      if (options) options.hidden = true;
+      if (followup) followup.hidden = true;
+      if (done) { done.hidden = false; done.textContent = message; }
+      if (skip) skip.hidden = true;
+      window.setTimeout(() => { card.hidden = true; if (skip) skip.hidden = false; }, 2600);
+    }
+
+    if (did) did.addEventListener('click', () => {
+      if (options) options.hidden = true;
+      if (followup) followup.hidden = false;
+    });
+    if (didnt) didnt.addEventListener('click', async () => {
+      await submitCheckBack({ didApply: false });
+      showCheckBackDone(t('checkback.thanks_noted'));
+    });
+    if (later) later.addEventListener('click', () => { card.hidden = true; });
+    if (skip) skip.addEventListener('click', () => { card.hidden = true; });
+    card.querySelectorAll('.cb-outcome').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const outcome = btn.getAttribute('data-outcome');
+        await submitCheckBack({ didApply: true, outcome });
+        showCheckBackDone(t('checkback.thanks'));
+      });
+    });
+  }
+
+  async function submitCheckBack(payload) {
+    if (!checkBackDecisionId) return;
+    try {
+      await fetch(`/api/decisions/${encodeURIComponent(checkBackDecisionId)}/checkback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...apiHeaders() },
+        body: JSON.stringify(payload),
+      });
+      fetchDecisionsCount();
+    } catch (_err) {
+      /* fail silent — card still closes, user not blocked */
     }
   }
 

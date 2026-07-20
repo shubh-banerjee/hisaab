@@ -37,6 +37,31 @@
       <p class="subtitle" id="subtitle">An honest answer to your business's next what-if — reckoned from your own numbers.</p>
     </div>
 
+    <!-- Check-back card: appears on session start when the user has an applied
+         decision old enough to have a real outcome, that they haven't told us
+         about yet. Closes the prediction loop and feeds the track record.
+         Hidden by default; populated + shown by checkForPendingCheckBack(). -->
+    <section class="checkback-card" id="checkback-card" hidden>
+      <div class="cb-eyebrow" data-i18n="checkback.eyebrow">Quick check-in</div>
+      <h2 class="cb-question" id="cb-question"></h2>
+      <p class="cb-sub" id="cb-sub" data-i18n="checkback.sub">Did you make the change? Your answer sharpens every future prediction.</p>
+      <div class="cb-options" id="cb-options">
+        <button class="cb-opt primary" id="cb-did" type="button" data-i18n="checkback.did">Yes, I did it</button>
+        <button class="cb-opt" id="cb-didnt" type="button" data-i18n="checkback.didnt">No, I decided not to</button>
+        <button class="cb-opt" id="cb-later" type="button" data-i18n="checkback.later">Not yet — remind me later</button>
+      </div>
+      <div class="cb-followup" id="cb-followup" hidden>
+        <div class="cb-followup-label" id="cb-followup-label" data-i18n="checkback.followup_label">What happened to your orders?</div>
+        <div class="cb-outcome-btns">
+          <button class="cb-outcome" data-outcome="went_up" type="button" data-i18n="checkback.went_up">Went up</button>
+          <button class="cb-outcome" data-outcome="stayed_same" type="button" data-i18n="checkback.stayed_same">Stayed about the same</button>
+          <button class="cb-outcome" data-outcome="went_down" type="button" data-i18n="checkback.went_down">Went down</button>
+        </div>
+      </div>
+      <div class="cb-done" id="cb-done" hidden></div>
+      <button class="cb-skip" id="cb-skip" type="button" data-i18n="checkback.skip">Skip this check-in</button>
+    </section>
+
     <div class="path-chooser" id="path-chooser">
       <button class="path active" id="path-sample" type="button">
         <span class="path-icon" aria-hidden="true">
