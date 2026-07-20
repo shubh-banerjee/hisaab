@@ -1137,7 +1137,35 @@ function regressionEvidence(rows, leverField, outcomeField, model) {
   };
 }
 
-function lowSignalMessage({ leverLabel, reasons }) {
+// The `reasons` array is a small, bounded set of English phrase templates
+// produced by regressionEvidence() (see the 4 `reasons.push(...)` call sites
+// above). Rather than touch the confidence math to make it language-aware,
+// we translate the known output patterns here — presentation-layer only.
+function translateReasonToHindi(reason) {
+  const monthMatch = reason.match(/^only (\d+) usable months? for this comparison$/);
+  if (monthMatch) {
+    return `इस तुलना के लिए केवल ${monthMatch[1]} महीनों का उपयोग करने योग्य डेटा है`;
+  }
+  const leverMatch = reason.match(/^the (.+) barely changes in this history$/);
+  if (leverMatch) {
+    return `इस इतिहास में ${leverMatch[1]} शायद ही बदलता है`;
+  }
+  if (reason === 'the relationship is weak compared with the month-to-month noise') {
+    return 'महीने-दर-महीने के उतार-चढ़ाव की तुलना में यह संबंध कमज़ोर है';
+  }
+  if (reason === 'the lever explains very little of the movement in outcomes') {
+    return 'यह बदलाव परिणामों में हलचल का बहुत कम हिस्सा बताता है';
+  }
+  return reason; // Unknown pattern — surface the English fragment rather than nothing.
+}
+
+function lowSignalMessage({ leverLabel, reasons }, language = 'en') {
+  if (language === 'hi') {
+    const lead = `आपके अपलोड किए गए डेटा में अभी तक ${leverLabel} और परिणामों के बीच कोई विश्वसनीय संबंध नहीं दिखता है।`;
+    if (!reasons.length) return `${lead} इसे केवल प्रारंभिक दिशा-निर्देश के रूप में उपयोग करें, निर्णायक पूर्वानुमान के रूप में नहीं।`;
+    const translatedReason = translateReasonToHindi(reasons[0]);
+    return `${lead} ${translatedReason.charAt(0).toUpperCase()}${translatedReason.slice(1)}। इसे केवल प्रारंभिक दिशा-निर्देश के रूप में उपयोग करें, निर्णायक पूर्वानुमान के रूप में नहीं।`;
+  }
   const lead = `Your uploaded data does not yet show a reliable relationship between ${leverLabel} and results.`;
   if (!reasons.length) return `${lead} Hisaab is showing this as an early directional read, not a decision-grade forecast.`;
   return `${lead} ${reasons[0].charAt(0).toUpperCase()}${reasons[0].slice(1)}. Use this as an early directional read, not a decision-grade forecast.`;
@@ -1181,6 +1209,7 @@ function computePromoLift(data, outcomeMetric, scenario = {}) {
 
 function computeRegressionResult(question, data, summary) {
   const scenario = detectScenario(question, data);
+  const lang = detectFallbackLanguage(question);
   let outcome;
 
   if (scenario.lever === 'cash_on_delivery') {
@@ -1199,7 +1228,9 @@ function computeRegressionResult(question, data, summary) {
       r2: 0,
       slope: 0,
       assumed_change: 0,
-      low_signal_warning: 'This data does not include cash-on-delivery history, so Hisaab cannot honestly estimate that change yet.',
+      low_signal_warning: lang === 'hi'
+        ? 'इस डेटा में कैश-ऑन-डिलीवरी का इतिहास शामिल नहीं है, इसलिए Hisaab अभी ईमानदारी से इस बदलाव का अनुमान नहीं लगा सकता।'
+        : 'This data does not include cash-on-delivery history, so Hisaab cannot honestly estimate that change yet.',
     };
   }
 
@@ -1246,9 +1277,11 @@ function computeRegressionResult(question, data, summary) {
   const rangeIsTooWide = cannotEstimateOutcome || width > Math.max(3 * pointAbs, 10) || (straddlesZero && width > Math.max(2 * pointAbs, 10)) || hasEvidenceGap;
   const leverLabel = metricDisplayName(scenario.lever).toLowerCase();
   const lowSignalWarning = cannotEstimateOutcome
-    ? `${leverLabel.charAt(0).toUpperCase()}${leverLabel.slice(1)} does not change in your uploaded history, so Hisaab cannot honestly estimate this yet. Use this as an early directional read, not a decision-grade forecast.`
+    ? (lang === 'hi'
+      ? `आपके अपलोड किए गए इतिहास में ${leverLabel} नहीं बदलता, इसलिए Hisaab अभी ईमानदारी से इसका अनुमान नहीं लगा सकता। इसे केवल प्रारंभिक दिशा-निर्देश के रूप में उपयोग करें, निर्णायक पूर्वानुमान के रूप में नहीं।`
+      : `${leverLabel.charAt(0).toUpperCase()}${leverLabel.slice(1)} does not change in your uploaded history, so Hisaab cannot honestly estimate this yet. Use this as an early directional read, not a decision-grade forecast.`)
     : rangeIsTooWide
-      ? lowSignalMessage({ leverLabel, reasons: outcome.evidenceReasons || [] })
+      ? lowSignalMessage({ leverLabel, reasons: outcome.evidenceReasons || [] }, lang)
       : null;
   if (rangeIsTooWide) {
     outcome.confidence = Math.min(outcome.confidence, 0.28);
@@ -2106,7 +2139,22 @@ app.post('/api/feedback', async (req, res) => {
   });
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    // index.html must never be served stale — this is what determines which
+    // script.js/data-i18n markup a visitor actually gets. A cached HTML page
+    // referencing an old bundle is exactly the kind of silent bug that's easy
+    // to miss until someone (a judge, a shopkeeper) hits it live.
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else {
+      // JS/CSS/assets: short-lived cache, always revalidate with the server
+      // before trusting a cached copy. Not a long-lived immutable cache since
+      // these files aren't content-hashed.
+      res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+    }
+  },
+}));
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Hisaab running on http://localhost:${PORT}`);

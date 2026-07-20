@@ -20,6 +20,13 @@
       'lowconf.add_data': 'Add your real data',
       'lowconf.try_different': 'Try a different question',
       'decisions.title': 'Your decisions',
+      'evidence.est_change': 'est change',
+      'evidence.worst_case': 'worst case',
+      'evidence.recent_trend': 'recent trend',
+      'evidence.chart_label': 'Orders · recent history',
+      'evidence.earlier': 'Earlier',
+      'evidence.now': 'Now',
+      'data_source.sample': 'Using sample order history — no sheet connected',
     },
     hi: {
       'chrome.new_question': 'नया प्रश्न',
@@ -36,6 +43,13 @@
       'lowconf.add_data': 'अपना वास्तविक डेटा जोड़ें',
       'lowconf.try_different': 'कोई दूसरा प्रश्न पूछकर देखें',
       'decisions.title': 'आपके निर्णय',
+      'evidence.est_change': 'अनुमानित बदलाव',
+      'evidence.worst_case': 'सबसे खराब स्थिति',
+      'evidence.recent_trend': 'हाल की प्रवृत्ति',
+      'evidence.chart_label': 'ऑर्डर · हाल का इतिहास',
+      'evidence.earlier': 'पहले',
+      'evidence.now': 'अभी',
+      'data_source.sample': 'नमूना ऑर्डर इतिहास का उपयोग — कोई शीट कनेक्ट नहीं है',
     },
   };
 
@@ -963,9 +977,12 @@
     renderConnectedDataState(data.data_source);
 
     const chartMeta = data.chart_meta || {};
-    chartLabel.textContent = chartMeta.label || `Orders · ${data.summary?.months || 'recent'} months`;
-    chartStart.textContent = chartMeta.start_label || 'Earlier';
-    chartEnd.textContent = chartMeta.end_label || 'Now';
+    const isHindiUI = currentUILang === 'hi';
+    chartLabel.textContent = isHindiUI
+      ? `ऑर्डर · पिछले ${data.summary?.months || 'हाल के'} महीनों के`
+      : (chartMeta.label || `Orders · ${data.summary?.months || 'recent'} months`);
+    chartStart.textContent = isHindiUI ? (chartMeta.start_label || t('evidence.earlier')) : (chartMeta.start_label || 'Earlier');
+    chartEnd.textContent = isHindiUI ? (chartMeta.end_label || t('evidence.now')) : (chartMeta.end_label || 'Now');
     chartCaption.innerHTML = chartSummary(isWeak, low, high, value);
 
     recommendText.textContent = generated.recommendation || 'No recommendation available.';
@@ -2076,7 +2093,7 @@
   }
 
   function sourceNote(source) {
-    if (activeDataset.kind === 'sample') return 'Using sample order history — no sheet connected';
+    if (activeDataset.kind === 'sample') return t('data_source.sample');
     // activeDataset says this is a real sheet/CSV, but we don't have a
     // server response with the full field list yet (e.g. right after a
     // home-screen auto-apply, before the first question is asked).
@@ -2097,18 +2114,32 @@
   }
 
   function chartSummary(isWeak, low, high, value) {
+    const isHindi = currentUILang === 'hi';
     if (value === null || low === null || high === null) {
-      return 'There was not enough reliable history to draw a numeric chart interpretation.';
+      return isHindi
+        ? 'संख्यात्मक चार्ट व्याख्या बनाने के लिए पर्याप्त विश्वसनीय इतिहास नहीं था।'
+        : 'There was not enough reliable history to draw a numeric chart interpretation.';
     }
     if (isWeak || (low < 0 && high > 0)) {
-      return `The line moves up and down without a clear enough relationship yet. <b>That's why the ${formatPct(value)} above should be treated carefully.</b>`;
+      return isHindi
+        ? `यह रेखा ऊपर-नीचे होती रहती है, लेकिन अभी तक कोई स्पष्ट संबंध स्थापित नहीं हो पाया है। <b>इसीलिए ऊपर दिए गए ${formatPct(value)} के आंकड़े को सावधानीपूर्वक लेना चाहिए।</b>`
+        : `The line moves up and down without a clear enough relationship yet. <b>That's why the ${formatPct(value)} above should be treated carefully.</b>`;
+    }
+    if (isHindi) {
+      const directionHi = value >= 0 ? 'बढ़े' : 'घटे';
+      return `हाल का ऑर्डर पैटर्न गणना को उसकी दिशा देता है। <b>इस बदलाव से सबसे ज्यादा जुड़े महीनों में ऑर्डर ${directionHi}।</b>`;
     }
     const direction = value >= 0 ? 'rose' : 'dipped';
     return `The recent order pattern gives the calculation its direction. <b>Orders ${direction} in the months most relevant to this change.</b>`;
   }
 
   function rangeText(low, high, value, isWeak) {
-    if (low === null || high === null) return 'Likely range: unknown — the calculation did not return enough range data.';
+    const isHindi = currentUILang === 'hi';
+    if (low === null || high === null) {
+      return isHindi
+        ? 'संभावित सीमा: अज्ञात — गणना ने पर्याप्त सीमा डेटा नहीं दिया।'
+        : 'Likely range: unknown — the calculation did not return enough range data.';
+    }
     // A range that is flat at (or essentially at) zero on both ends is not
     // "pointing" anywhere — it means the calculation could not produce any
     // directional signal at all (e.g. an unsupported lever, or a lever with
@@ -2117,6 +2148,16 @@
     // basis, so it gets its own honest phrase instead of falling into the
     // directional branches below.
     const isFlatZero = Math.abs(low) < 0.05 && Math.abs(high) < 0.05;
+    if (isHindi) {
+      const interpretationHi = isFlatZero
+        ? 'इस डेटा से कोई मापने योग्य दिशा नहीं दिखती।'
+        : low < 0 && high > 0
+          ? 'शून्य को पार करती है, इसलिए कोई स्पष्ट दिशा नहीं है।'
+          : value !== null && value >= 0
+            ? 'ज्यादातर ऊपर की ओर इशारा करती है।'
+            : 'ज्यादातर नीचे की ओर इशारा करती है।';
+      return `संभावित सीमा: ${formatPct(low)} से ${formatPct(high)} — ${interpretationHi}`;
+    }
     const interpretation = isFlatZero
       ? 'shows no measurable direction from this data.'
       : low < 0 && high > 0

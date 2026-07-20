@@ -152,7 +152,7 @@
 
     <section class="results" id="results" hidden>
       <div class="result-top">
-        <span id="data-source-note" class="src demo"><span class="dot"></span><span id="data-source-text">Using sample order history — no sheet connected</span></span>
+        <span id="data-source-note" class="src demo"><span class="dot"></span><span id="data-source-text" data-i18n="data_source.sample">Using sample order history — no sheet connected</span></span>
       </div>
 
       <div class="evidence">
@@ -162,22 +162,22 @@
           <div class="stats">
             <div class="stat" id="revenue-impact" hidden>
               <div id="revenue-value" class="v"></div>
-              <div class="l">est change</div>
+              <div class="l" data-i18n="evidence.est_change">est change</div>
             </div>
             <div class="stat" id="downside-card" hidden>
               <div id="downside-value" class="v bad"></div>
-              <div class="l">worst case</div>
+              <div class="l" data-i18n="evidence.worst_case">worst case</div>
             </div>
             <div class="stat" id="trend-chip" hidden>
               <div class="v"><span id="trend-arrow"></span> <span id="trend-text"></span></div>
-              <div class="l">recent trend</div>
+              <div class="l" data-i18n="evidence.recent_trend">recent trend</div>
             </div>
           </div>
         </div>
         <div class="ev-right">
-          <div class="chart-label" id="chart-label">Orders · recent history</div>
+          <div class="chart-label" id="chart-label" data-i18n="evidence.chart_label">Orders · recent history</div>
           <svg id="sparkline" class="spark" viewBox="0 0 300 60" preserveAspectRatio="none" aria-hidden="true"></svg>
-          <div class="chart-axis"><span id="chart-start">Earlier</span><span id="chart-end">Now</span></div>
+          <div class="chart-axis"><span id="chart-start" data-i18n="evidence.earlier">Earlier</span><span id="chart-end" data-i18n="evidence.now">Now</span></div>
           <div class="chart-caption" id="chart-caption"></div>
         </div>
       </div>
