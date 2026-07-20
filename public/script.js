@@ -36,6 +36,9 @@
       'scenarios.based_on': 'Based on {months} months of your own history.',
       'scenarios.threshold_label': 'Where safe turns risky',
       'scenarios.see_details': 'Show the numbers behind this',
+      'track.see_all': 'See all →',
+      'track.within': 'Within {pp} points on {hits} of your last {total} calls.',
+      'track.latest': 'Last time we said {predicted}, you got {actual}.',
     },
     hi: {
       'chrome.new_question': 'नया प्रश्न',
@@ -68,6 +71,9 @@
       'scenarios.based_on': 'आपके अपने {months} महीनों के इतिहास के आधार पर।',
       'scenarios.threshold_label': 'जहाँ सुरक्षित से जोखिम शुरू होता है',
       'scenarios.see_details': 'इसके पीछे के आंकड़े दिखाएं',
+      'track.see_all': 'सभी देखें →',
+      'track.within': 'आपके पिछले {total} में से {hits} बार {pp} अंकों के भीतर सही रहे।',
+      'track.latest': 'पिछली बार हमने {predicted} बताया, आपको {actual} मिला।',
     },
   };
 
@@ -359,6 +365,13 @@
   });
   viewInLogLink.addEventListener('click', openDecisionLog);
   openDecisions.addEventListener('click', openDecisionLog);
+  const trLink = document.getElementById('tr-link');
+  if (trLink) {
+    trLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      openDecisionLog();
+    });
+  }
   closeDecisions.addEventListener('click', closeDecisionLog);
   newQuestion.addEventListener('click', () => {
     resetToLanding();
@@ -1208,6 +1221,75 @@
 
     block.hidden = false;
     results.classList.add('with-scenarios');
+
+    // Fetch and render the track-record strip asynchronously — never blocks
+    // the scenarios from showing. Hidden by default; only appears if the user
+    // has reconciled decisions to show.
+    fetchAndRenderTrackStrip();
+  }
+
+  // Fetch the track record and populate the strip at the top of the scenarios
+  // block. Runs async and fails silent — a network hiccup or a brand-new user
+  // with no history simply leaves the strip hidden, never an error state on
+  // the result screen. Uses the same demo flag the decisions log uses so the
+  // seeded demo history shows during sample-data runs.
+  async function fetchAndRenderTrackStrip() {
+    const strip = document.getElementById('track-record-strip');
+    if (!strip) return;
+    // Hide first — if this render is for a user with no history, it stays hidden.
+    strip.hidden = true;
+    try {
+      const useDemo = activeDataset.kind === 'sample';
+      const url = '/api/decisions/track-record' + (useDemo ? '?demo=true' : '');
+      const res = await fetch(url, { headers: apiHeaders() });
+      if (!res.ok) return;
+      const body = await readJsonResponse(res);
+      // Need at least one reconciled decision to show anything honest.
+      if (!body || !Number.isFinite(Number(body.matchedCount)) || body.matchedCount < 1) return;
+      if (!body.latestReconciled) return;
+
+      const ringFg = document.getElementById('tr-ring-fg');
+      const ringLabel = document.getElementById('tr-ring-label');
+      const textBody = document.getElementById('tr-text-body');
+      if (!ringFg || !ringLabel || !textBody) return;
+
+      // Ring: accuracyPct maps to stroke-dashoffset. Circumference = 2πr,
+      // r=18.5 → ~116. offset = circumference * (1 - pct/100).
+      const pct = Number.isFinite(Number(body.accuracyPct)) ? Number(body.accuracyPct) : null;
+      const circumference = 116;
+      if (pct !== null) {
+        ringFg.setAttribute('stroke-dashoffset', String(Math.round(circumference * (1 - pct / 100))));
+        ringLabel.textContent = `${pct}%`;
+      } else {
+        ringFg.setAttribute('stroke-dashoffset', String(circumference));
+        ringLabel.textContent = '';
+      }
+
+      // Text: "Last time we said X, you got Y." + "within N pts on H of last T".
+      const latest = body.latestReconciled;
+      const fmtPp = (v) => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return '';
+        const sign = n > 0 ? '+' : n < 0 ? '−' : '';
+        return `${sign}${Math.abs(n).toFixed(1)}%`;
+      };
+      const latestSentence = t('track.latest')
+        .replace('{predicted}', fmtPp(latest.predictedValue))
+        .replace('{actual}', fmtPp(latest.actualValue));
+      const withinSentence = (Number(body.recentWindowCount) >= 1)
+        ? ' ' + t('track.within')
+            .replace('{pp}', body.hitThresholdPp)
+            .replace('{hits}', body.hitsInWindow)
+            .replace('{total}', body.recentWindowCount)
+        : '';
+      // Build with escaped values; only the bolded numbers use markup.
+      textBody.innerHTML = escapeHtml(latestSentence) + escapeHtml(withinSentence);
+
+      strip.hidden = false;
+    } catch (_err) {
+      // Fail silent — the strip is an enhancement, never a blocker.
+      strip.hidden = true;
+    }
   }
 
   // Minimal HTML escape for user/backend text going into innerHTML. Never

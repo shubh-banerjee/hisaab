@@ -160,6 +160,21 @@
            When absent, this block stays hidden and the existing evidence /
            confidence / chart layout below shows as today's flow. -->
       <div class="scenarios-block" id="scenarios-block" hidden>
+        <!-- Track record strip: the trust mechanism. Only shown when the user
+             has at least one reconciled predicted-vs-actual decision. Hidden
+             entirely for new users (honest — nothing to show yet). Populated
+             asynchronously so it never blocks the scenarios from rendering. -->
+        <div class="track-record" id="track-record-strip" hidden>
+          <div class="tr-ring" id="tr-ring">
+            <svg width="44" height="44" viewBox="0 0 44 44">
+              <circle class="tr-ring-bg" cx="22" cy="22" r="18.5"></circle>
+              <circle class="tr-ring-fg" id="tr-ring-fg" cx="22" cy="22" r="18.5" stroke-dasharray="116" stroke-dashoffset="116"></circle>
+            </svg>
+            <div class="tr-ring-label" id="tr-ring-label"></div>
+          </div>
+          <div class="tr-text-body" id="tr-text-body"></div>
+          <a class="tr-link" id="tr-link" href="#" data-i18n="track.see_all">See all →</a>
+        </div>
         <div class="scenarios-question">
           <div class="scenarios-q-eyebrow" data-i18n="scenarios.you_asked">You asked</div>
           <div class="scenarios-q-text" id="scenarios-q-text"></div>

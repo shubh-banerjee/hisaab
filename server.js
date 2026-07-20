@@ -1742,10 +1742,52 @@ app.get('/api/decisions/track-record', async (req, res) => {
       .sort((a, b) => b.absoluteDifference - a.absoluteDifference)
       .slice(0, 3);
 
+    // For the result-screen strip: "within X% on Y of last Z" plus the most
+    // recent reconciled decision to quote directly. "Within threshold" means
+    // the prediction landed within TRACK_RECORD_HIT_PP percentage points of
+    // actual — a hit. We sort by askedAt desc and look at the last N.
+    const TRACK_RECORD_HIT_PP = 3; // within 3 percentage points counts as a hit
+    const TRACK_RECORD_WINDOW = 5; // "of your last 5"
+    const sortedByRecency = matched
+      .slice()
+      .sort((a, b) => {
+        const ta = a.askedAt ? new Date(a.askedAt).getTime() : 0;
+        const tb = b.askedAt ? new Date(b.askedAt).getTime() : 0;
+        return tb - ta;
+      });
+    const recentWindow = sortedByRecency.slice(0, TRACK_RECORD_WINDOW);
+    const hitsInWindow = recentWindow.filter(d =>
+      Math.abs(Number(d.actualValue) - Number(d.predictedValue)) <= TRACK_RECORD_HIT_PP
+    ).length;
+    const latest = sortedByRecency[0] || null;
+    const latestReconciled = latest ? {
+      question: latest.question,
+      predictedValue: latest.predictedValue,
+      actualValue: latest.actualValue,
+      predictedMetric: latest.predictedMetric,
+      // A rough accuracy percentage for the ring: 100% minus the average
+      // absolute error across the window, floored at 0, capped at 100. This
+      // is a presentation-only figure — an intuitive "how close have we been"
+      // dial, not a statistical claim, so it's deliberately simple.
+    } : null;
+    const windowAvgError = recentWindow.length
+      ? mean(recentWindow.map(d => Math.abs(Number(d.actualValue) - Number(d.predictedValue))))
+      : null;
+    const accuracyPct = windowAvgError === null
+      ? null
+      : Math.max(0, Math.min(100, Math.round(100 - windowAvgError * 5))); // 5pp error ≈ 75%
+
     return res.json({
       matchedCount: matched.length,
       averageAbsoluteDifference,
       notableOffCases,
+      // New fields for the result-screen strip:
+      windowSize: TRACK_RECORD_WINDOW,
+      hitThresholdPp: TRACK_RECORD_HIT_PP,
+      recentWindowCount: recentWindow.length,
+      hitsInWindow,
+      accuracyPct,
+      latestReconciled,
       isDemo,
     });
   } catch (err) {
