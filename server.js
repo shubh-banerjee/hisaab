@@ -3368,9 +3368,10 @@ if (require.main === module) {
   });
 }
 
-// Export calculation and evidence helpers for the lightweight Node test suite.
-// The production entry point above still starts exactly as before with npm start.
-module.exports = {
+// Export the Express app itself for Vercel's Node runtime. Attach the pure
+// helpers as properties so the Node test suite can destructure them without
+// changing the serverless handler shape.
+Object.assign(app, {
   app,
   aggregateBootstrapEntries,
   aggregateSheetRows,
@@ -3400,4 +3401,6 @@ module.exports = {
   regressionEvidence,
   sourceLabelForDecision,
   summarizeData,
-};
+});
+
+module.exports = app;
