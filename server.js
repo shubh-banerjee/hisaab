@@ -902,11 +902,21 @@ function summarizeSheetParse(parsed) {
   };
 }
 
-function chartSeries(data) {
-  return data.map(row => ({
-    month: row.month,
-    orders: Number(row.orders),
-  })).filter(point => point.month && Number.isFinite(point.orders));
+function chartSeries(data, metric = 'orders') {
+  // Plot whatever metric the question is actually about. Previously this
+  // always plotted raw order counts regardless of outcome_metric, so a
+  // question about repeat orders or order value showed the exact same chart
+  // as a question about total orders — misleading for a tool whose whole
+  // premise is "reckoned from your own numbers." avg_order_value isn't always
+  // present per-row in every data path, so fall back to orders if the
+  // requested metric isn't actually populated on this dataset. Output key is
+  // always 'value' (plus 'orders' for backward compatibility) so the
+  // frontend doesn't need per-metric field-name logic.
+  const hasMetric = data.some(row => Number.isFinite(Number(row[metric])));
+  const field = hasMetric ? metric : 'orders';
+  return data
+    .map(row => ({ month: row.month, value: Number(row[field]), orders: Number(row.orders) }))
+    .filter(point => point.month && Number.isFinite(point.value));
 }
 
 function formatMonthLabel(month) {
@@ -2041,9 +2051,9 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
     data_source: dataSource,
     sheet_summary: sheetSummary,
     analytics_capabilities: sheetSummary?.capability_map || null,
-    chart_series: chartSeries(data),
+    chart_series: chartSeries(data, computed.outcome_metric),
     chart_meta: {
-      label: `Orders · last ${data.length} months`,
+      label: `${generated.outcome_metric_label || metricDisplayName(computed.outcome_metric, generated.detected_language)} · ${generated.detected_language === 'hi' ? `पिछले ${data.length} महीनों के` : `last ${data.length} months`}`,
       start_label: formatMonthLabel(data[0]?.month),
       end_label: formatMonthLabel(data[data.length - 1]?.month),
     },

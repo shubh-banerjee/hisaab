@@ -986,9 +986,7 @@
 
     const chartMeta = data.chart_meta || {};
     const isHindiUI = currentUILang === 'hi';
-    chartLabel.textContent = isHindiUI
-      ? `ऑर्डर · पिछले ${data.summary?.months || 'हाल के'} महीनों के`
-      : (chartMeta.label || `Orders · ${data.summary?.months || 'recent'} months`);
+    chartLabel.textContent = chartMeta.label || (isHindiUI ? `कुल ऑर्डर · पिछले ${data.summary?.months || 'हाल के'} महीनों के` : `Orders · ${data.summary?.months || 'recent'} months`);
     chartStart.textContent = isHindiUI ? (chartMeta.start_label || t('evidence.earlier')) : (chartMeta.start_label || 'Earlier');
     chartEnd.textContent = isHindiUI ? (chartMeta.end_label || t('evidence.now')) : (chartMeta.end_label || 'Now');
     chartCaption.innerHTML = chartSummary(isWeak, low, high, value);
@@ -1026,7 +1024,7 @@
 
   function drawSparkline(series, isWeak) {
     const svg = document.getElementById('sparkline');
-    const values = (series || []).map(point => Number(point.orders ?? point.value)).filter(Number.isFinite);
+    const values = (series || []).map(point => Number(point.value ?? point.orders)).filter(Number.isFinite);
     if (values.length < 2) {
       svg.innerHTML = '';
       return;
