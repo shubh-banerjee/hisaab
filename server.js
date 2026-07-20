@@ -2112,6 +2112,190 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
   const isSampleData = dataSource.mode === 'demo_fallback';
   const chartMetaLabel = `${generated.outcome_metric_label || metricDisplayName(computed.outcome_metric, generated.detected_language)} · ${generated.detected_language === 'hi' ? `पिछले ${data.length} महीनों के` : `last ${data.length} months`}`;
 
+  // ────────────────────────────────────────────────────────────────────────
+  // Compute the three-scenario decision-engine view. Only included in the
+  // response when the underlying regression is strong enough to make three
+  // scenarios genuinely comparable — otherwise the frontend falls back to
+  // today's single-answer weak-data flow, unchanged. This is the honest
+  // default: three scenarios dressed up on weak data would just be three
+  // guesses in a row, which is exactly what the product exists NOT to do.
+  //
+  // Preconditions for showing scenarios:
+  //   - confidence >= 0.45 (matches the isWeak threshold used everywhere else)
+  //   - |outcome_value| >= 1 (matches the smallEffect guard)
+  //   - assumed_change is a real non-zero number
+  //   - the lever is one we can project extra magnitudes for (numeric levers
+  //     — delivery_fee, avg_order_value; NOT promo_active or cash_on_delivery,
+  //     which are binary/unsupported and don't have a "2x" that makes sense)
+  //
+  // The three scenarios are structural, not user-typed:
+  //   [0] Baseline — no change (always 0)
+  //   [1] As asked — the assumed_change from the current question (this is
+  //       the existing computed result, unchanged; we're presenting it, not
+  //       recomputing). Marked best-fit.
+  //   [2] Bigger — 2x the assumed_change, projected linearly using the same
+  //       slope. Range widens because we're extrapolating beyond the middle
+  //       of the observed data.
+  //
+  // Threshold: where does the projected revenue impact cross from positive
+  // to negative? Only meaningful when scenarios themselves are supported AND
+  // the slope has a real sign; if the slope is ~0 there is no crossover to
+  // find and returning any threshold would be a made-up precision.
+  // ────────────────────────────────────────────────────────────────────────
+  const scenariosSupported =
+    Number.isFinite(computed.confidence) && computed.confidence >= 0.45 &&
+    Number.isFinite(computed.outcome_value) && Math.abs(computed.outcome_value) >= 1 &&
+    Number.isFinite(computed.assumed_change) && Math.abs(computed.assumed_change) > 0 &&
+    ['delivery_fee', 'avg_order_value'].includes(computed.lever) &&
+    Number.isFinite(computed.slope);
+
+  let scenariosBundle = null;
+  if (scenariosSupported) {
+    const isHindi = generated.detected_language === 'hi';
+    const asked = computed.assumed_change;
+    const bigger = asked * 2;
+    const currentValue = computed.lever === 'delivery_fee'
+      ? Number(summary.current_delivery_fee) || 0
+      : Number(summary.avg_order_value) || 0;
+    const baselineRevenue = Number(summary.baseline_monthly_revenue) || 0;
+    const currencySymbol = '₹';
+
+    // Project outcome for an arbitrary lever change using the fitted slope.
+    // slope is expressed per unit of the lever, so slope * change gives the
+    // percentage-point change in the outcome metric. We keep the sign as-is
+    // and compute the revenue impact using the same baseline the primary
+    // result uses, so the numbers reconcile with the top-line computed result.
+    const projectFor = (leverChange) => {
+      const pctChange = computed.slope * leverChange;
+      const revenueImpact = Math.round(baselineRevenue * (pctChange / 100));
+      // Range widens with distance from the asked change — we're less certain
+      // the further we extrapolate. This is expressed as a ± band on the
+      // revenue impact, scaled from the existing range_low/range_high spread
+      // seen at the asked change. Zero lever change = zero band: "no change"
+      // is exact, not a range.
+      const askedSpread = Math.abs(
+        (Number(computed.range_high) - Number(computed.range_low)) / 2
+      );
+      const distanceFactor = Math.abs(leverChange) / Math.max(Math.abs(asked), 1);
+      const bandPct = leverChange === 0 ? 0 : askedSpread * Math.max(1, distanceFactor);
+      const bandRevenue = Math.round(baselineRevenue * (bandPct / 100));
+      return {
+        lever_change: leverChange,
+        new_lever_value: Number.isFinite(currentValue) ? Math.round((currentValue + leverChange) * 100) / 100 : null,
+        pct_change: Math.round(pctChange * 10) / 10,
+        revenue_impact: revenueImpact,
+        revenue_low: revenueImpact - bandRevenue,
+        revenue_high: revenueImpact + bandRevenue,
+      };
+    };
+
+    const baseline = { lever_change: 0, new_lever_value: currentValue || null, pct_change: 0, revenue_impact: 0, revenue_low: 0, revenue_high: 0 };
+    const askedResult = projectFor(asked);
+    const biggerResult = projectFor(bigger);
+
+    // Threshold: linear projection of where revenue impact = 0. Only include
+    // when the slope has a real sign — |slope| effectively > 0 in a way the
+    // range doesn't itself already cross zero at the asked change (which
+    // would mean the direction isn't reliably established at all).
+    let threshold = null;
+    const rangeCrossesZero = Number(computed.range_low) < 0 && Number(computed.range_high) > 0;
+    if (!rangeCrossesZero && Math.abs(computed.slope) > 0.001) {
+      // Find lever_change where projected revenue crosses 0. Since revenue
+      // impact is linear in lever_change under our model, this is analytical
+      // rather than a search: it's the point where pct_change equals the
+      // opposite sign — but since our baseline already IS zero, revenue only
+      // crosses zero if the effect changes direction, which under a single
+      // linear slope it doesn't. What CAN cross zero is the LOWER bound of
+      // the confidence band — that's the honest "past here, downside dips
+      // into losing money" line. Compute the lever_change where the band's
+      // lower bound hits zero.
+      const askedBandLowerRevenue = askedResult.revenue_low;
+      if ((askedResult.revenue_impact > 0 && askedBandLowerRevenue > 0) || (askedResult.revenue_impact < 0 && askedBandLowerRevenue < 0)) {
+        // Confidence band doesn't yet cross zero at the asked change; find
+        // the lever_change where it would. Linear scan is fine here — cheap
+        // and easy to reason about vs closed-form for a confidence band.
+        const step = asked / 40;
+        for (let mult = 1; mult <= 4; mult += 0.05) {
+          const trial = projectFor(asked * mult);
+          const bandCrosses = (askedResult.revenue_impact > 0 && trial.revenue_low <= 0) ||
+                              (askedResult.revenue_impact < 0 && trial.revenue_high >= 0);
+          if (bandCrosses) {
+            threshold = {
+              lever_change: Math.round(asked * mult * 100) / 100,
+              new_lever_value: Number.isFinite(currentValue) ? Math.round((currentValue + asked * mult) * 100) / 100 : null,
+              direction: askedResult.revenue_impact > 0 ? 'gain_turns_uncertain' : 'loss_turns_uncertain',
+            };
+            break;
+          }
+        }
+      }
+    }
+
+    scenariosBundle = {
+      currency_symbol: currencySymbol,
+      current_value: Number.isFinite(currentValue) ? currentValue : null,
+      lever_label: metricDisplayName(computed.lever, generated.detected_language).toLowerCase(),
+      scenarios: [
+        {
+          id: 'baseline',
+          label: isHindi ? 'सुरक्षित रहें' : 'Play it safe',
+          action_short: isHindi
+            ? (Number.isFinite(currentValue) ? `${currencySymbol}${currentValue} पर रखें` : 'कोई बदलाव नहीं')
+            : (Number.isFinite(currentValue) ? `Keep at ${currencySymbol}${currentValue}` : 'No change'),
+          headline_revenue: 0,
+          headline_note: isHindi ? 'कोई बदलाव नहीं' : 'No change to revenue',
+          why: isHindi
+            ? 'ऑर्डर अपनी जगह पर बने रहते हैं। न कोई जोखिम, न कोई फायदा।'
+            : 'Orders stay where they are. No risk, no gain.',
+          cta: isHindi ? 'रहने दें' : 'Skip · keep as is',
+          is_best_fit: false,
+          projection: baseline,
+        },
+        {
+          id: 'as_asked',
+          label: isHindi ? 'आपने जो पूछा' : 'As you asked',
+          action_short: isHindi
+            ? (Number.isFinite(currentValue)
+                ? `${currencySymbol}${Math.round((currentValue + asked) * 100) / 100} पर करें`
+                : `${asked > 0 ? '+' : ''}${currencySymbol}${asked} बदलें`)
+            : (Number.isFinite(currentValue)
+                ? `Change to ${currencySymbol}${Math.round((currentValue + asked) * 100) / 100}`
+                : `Change by ${asked > 0 ? '+' : ''}${currencySymbol}${asked}`),
+          headline_revenue: askedResult.revenue_impact,
+          headline_note: isHindi
+            ? `${currencySymbol}${Math.abs(askedResult.revenue_low).toLocaleString('en-IN')} से ${currencySymbol}${Math.abs(askedResult.revenue_high).toLocaleString('en-IN')} के बीच`
+            : `Could vary ${currencySymbol}${Math.abs(askedResult.revenue_low).toLocaleString('en-IN')} to ${currencySymbol}${Math.abs(askedResult.revenue_high).toLocaleString('en-IN')}`,
+          why: generated.recommendation || (isHindi ? 'आपके इतिहास के अनुसार यह पैटर्न टिकाऊ रहा है।' : 'Your history shows this pattern has held up.'),
+          cta: isHindi ? 'यही आजमाएं' : 'Try this',
+          is_best_fit: true,
+          projection: askedResult,
+        },
+        {
+          id: 'bigger',
+          label: isHindi ? 'बड़ी छलांग' : 'Push further',
+          action_short: isHindi
+            ? (Number.isFinite(currentValue)
+                ? `${currencySymbol}${Math.round((currentValue + bigger) * 100) / 100} पर करें`
+                : `${bigger > 0 ? '+' : ''}${currencySymbol}${bigger} बदलें`)
+            : (Number.isFinite(currentValue)
+                ? `Change to ${currencySymbol}${Math.round((currentValue + bigger) * 100) / 100}`
+                : `Change by ${bigger > 0 ? '+' : ''}${currencySymbol}${bigger}`),
+          headline_revenue: biggerResult.revenue_impact,
+          headline_note: isHindi
+            ? `${currencySymbol}${Math.abs(biggerResult.revenue_low).toLocaleString('en-IN')} से ${currencySymbol}${Math.abs(biggerResult.revenue_high).toLocaleString('en-IN')} के बीच`
+            : `Could vary ${currencySymbol}${Math.abs(biggerResult.revenue_low).toLocaleString('en-IN')} to ${currencySymbol}${Math.abs(biggerResult.revenue_high).toLocaleString('en-IN')}`,
+          why: isHindi
+            ? 'यह आपके अब तक देखे गए बदलावों से बड़ा है — पूर्वानुमान का दायरा भी बड़ा है।'
+            : 'This goes beyond changes you\'ve tried before — the range of outcomes widens accordingly.',
+          cta: isHindi ? 'फिर भी आजमाएं' : 'Try anyway',
+          is_best_fit: false,
+          projection: biggerResult,
+        },
+      ],
+      threshold,
+    };
+  }
+
   const responseBody = {
     session_id: sessionId,
     computed,
@@ -2120,6 +2304,7 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
     data_source: dataSource,
     sheet_summary: sheetSummary,
     analytics_capabilities: sheetSummary?.capability_map || null,
+    scenarios_bundle: scenariosBundle,
     chart_series: chartSeries(data, computed.outcome_metric),
     chart_meta: {
       label: chartMetaLabel,

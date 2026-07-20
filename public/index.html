@@ -155,7 +155,33 @@
         <span id="data-source-note" class="src demo"><span class="dot"></span><span id="data-source-text" data-i18n="data_source.sample">Using sample order history — no sheet connected</span></span>
       </div>
 
-      <div class="evidence">
+      <!-- Scenarios block: the new decision-engine view. Only visible when the
+           backend response includes scenarios_bundle (confident + numeric lever).
+           When absent, this block stays hidden and the existing evidence /
+           confidence / chart layout below shows as today's flow. -->
+      <div class="scenarios-block" id="scenarios-block" hidden>
+        <div class="scenarios-question">
+          <div class="scenarios-q-eyebrow" data-i18n="scenarios.you_asked">You asked</div>
+          <div class="scenarios-q-text" id="scenarios-q-text"></div>
+          <div class="scenarios-q-sub" id="scenarios-q-sub"></div>
+        </div>
+        <div class="scenario-grid" id="scenario-grid"></div>
+        <div class="threshold-line-block" id="threshold-line-block" hidden>
+          <div class="threshold-line-label" data-i18n="scenarios.threshold_label">Where safe turns risky</div>
+          <div class="threshold-track"><div class="threshold-marker" id="threshold-marker"></div></div>
+          <div class="threshold-scale">
+            <span id="threshold-scale-start"></span>
+            <span id="threshold-scale-end"></span>
+          </div>
+          <div class="threshold-caption" id="threshold-caption"></div>
+        </div>
+        <details class="scenarios-details" id="scenarios-details">
+          <summary data-i18n="scenarios.see_details">Show the numbers behind this</summary>
+        </details>
+      </div>
+
+      <!-- Existing evidence + confidence + explain layout. Stays unchanged. -->
+      <div class="evidence" id="evidence-block">
         <div class="ev-left">
           <div id="metric-value" class="num"></div>
           <div id="metric-label" class="num-label"></div>

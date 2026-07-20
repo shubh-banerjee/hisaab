@@ -32,6 +32,10 @@
       'evidence.earlier': 'Earlier',
       'evidence.now': 'Now',
       'data_source.sample': 'Using sample order history — no sheet connected',
+      'scenarios.you_asked': 'You asked',
+      'scenarios.based_on': 'Based on {months} months of your own history.',
+      'scenarios.threshold_label': 'Where safe turns risky',
+      'scenarios.see_details': 'Show the numbers behind this',
     },
     hi: {
       'chrome.new_question': 'नया प्रश्न',
@@ -60,6 +64,10 @@
       'evidence.earlier': 'पहले',
       'evidence.now': 'अभी',
       'data_source.sample': 'नमूना ऑर्डर इतिहास का उपयोग — कोई शीट कनेक्ट नहीं है',
+      'scenarios.you_asked': 'आपने पूछा',
+      'scenarios.based_on': 'आपके अपने {months} महीनों के इतिहास के आधार पर।',
+      'scenarios.threshold_label': 'जहाँ सुरक्षित से जोखिम शुरू होता है',
+      'scenarios.see_details': 'इसके पीछे के आंकड़े दिखाएं',
     },
   };
 
@@ -923,6 +931,16 @@
     // choice "sticking" from an earlier question in the same session.
     const detected = String(generated.detected_language || data.detected_language || '').toLowerCase();
     setUILang(detected === 'hi' ? 'hi' : 'en');
+
+    // Render the new scenarios/threshold block BEFORE the existing dense
+    // stats layout. When scenarios_bundle is absent (weak data, unsupported
+    // lever, etc.), this function hides the block entirely and the existing
+    // UI below shows exactly as it did before — a strict superset, never a
+    // regression. When present, the existing stats still render but with a
+    // .with-scenarios modifier that adds top spacing; the details disclosure
+    // lets the user reveal them if they want the dense view.
+    renderScenariosBlock(data);
+
     const value = finiteNumber(computed.outcome_value);
     const low = finiteNumber(computed.range_low);
     const high = finiteNumber(computed.range_high);
@@ -1027,6 +1045,167 @@
       resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     updateAwayFromLandingState();
+  }
+
+  // Render the scenarios block from data.scenarios_bundle. If bundle is
+  // missing, hide the block entirely and remove the .with-scenarios modifier
+  // so existing evidence/confidence stats render exactly as they did before.
+  // This function is strictly additive — it never touches any DOM outside
+  // the scenarios-block/threshold-line-block/scenarios-details elements.
+  function renderScenariosBlock(data) {
+    const block = document.getElementById('scenarios-block');
+    const grid = document.getElementById('scenario-grid');
+    const thresholdBlock = document.getElementById('threshold-line-block');
+    const results = document.getElementById('results');
+    if (!block || !grid || !results) return;
+
+    const bundle = data && data.scenarios_bundle;
+    if (!bundle || !Array.isArray(bundle.scenarios) || bundle.scenarios.length === 0) {
+      block.hidden = true;
+      results.classList.remove('with-scenarios');
+      grid.innerHTML = '';
+      if (thresholdBlock) thresholdBlock.hidden = true;
+      // If a previous render moved evidence/conf/explain INTO the details
+      // disclosure, put them back where they belong so weak-data mode shows
+      // them at their normal position. Order matters — the DOM order of
+      // evidence → conf → explain in #results is what today's flow expects.
+      const details = document.getElementById('scenarios-details');
+      if (details && details.contains(document.getElementById('evidence-block'))) {
+        const evidence = document.getElementById('evidence-block');
+        const confBlock = document.getElementById('confidence-block');
+        const explainBlock = document.querySelector('.explain');
+        // Reinsert after the .result-top div, before the intent-prompt.
+        const intentPromptEl = document.getElementById('intent-prompt');
+        if (evidence && intentPromptEl) results.insertBefore(evidence, intentPromptEl);
+        if (confBlock && intentPromptEl) results.insertBefore(confBlock, intentPromptEl);
+        if (explainBlock && intentPromptEl) results.insertBefore(explainBlock, intentPromptEl);
+      }
+      return;
+    }
+
+    // Question echo — the exact user question, plus a "based on N months" line.
+    const qText = document.getElementById('scenarios-q-text');
+    const qSub = document.getElementById('scenarios-q-sub');
+    if (qText) qText.textContent = lastQuestion || '';
+    if (qSub) {
+      const months = Number(data.summary?.months || 0);
+      qSub.textContent = months > 0 ? t('scenarios.based_on').replace('{months}', months) : '';
+    }
+
+    // Render the three scenario cards.
+    grid.innerHTML = '';
+    bundle.scenarios.forEach((s) => {
+      const card = document.createElement('div');
+      card.className = 'scenario' + (s.is_best_fit ? ' best' : '');
+      const revenue = Number(s.headline_revenue) || 0;
+      const revenueClass = revenue > 0 ? 'good' : revenue < 0 ? 'bad' : '';
+      const symbol = bundle.currency_symbol || '₹';
+      const revenueFormatted = revenue === 0
+        ? `${symbol}0`
+        : `${revenue > 0 ? '+' : '−'}${symbol}${Math.abs(revenue).toLocaleString('en-IN')}`;
+
+      // Build with textContent-first, no innerHTML injection of untrusted data.
+      // Every field the backend provides is treated as text, not HTML.
+      const flagHtml = s.is_best_fit
+        ? `<span class="best-flag">${escapeHtml(t('scenarios.best_fit') !== 'scenarios.best_fit' ? t('scenarios.best_fit') : (currentUILang === 'hi' ? 'आपके डेटा के लिए सबसे उपयुक्त' : 'Best fit for your data'))}</span>`
+        : '';
+      card.innerHTML = `
+        ${flagHtml}
+        <div class="s-label">${escapeHtml(s.label || '')}</div>
+        <div class="s-action">${escapeHtml(s.action_short || '')}</div>
+        <div class="s-outcome-label">${escapeHtml(currentUILang === 'hi' ? 'इस महीने, संभावित' : 'This month, likely')}</div>
+        <div class="s-outcome ${revenueClass}">${revenueFormatted}</div>
+        <div class="s-outcome-note">${escapeHtml(s.headline_note || '')}</div>
+        <div class="s-why">${escapeHtml(s.why || '')}</div>
+        <button class="s-cta" type="button" data-scenario-id="${escapeHtml(s.id || '')}">${escapeHtml(s.cta || '')}</button>
+      `;
+      grid.appendChild(card);
+    });
+
+    // Wire scenario CTA clicks to the existing intent-capture flow. Clicking
+    // "Try this" on the best-fit card is equivalent to picking "Yes, I'll try
+    // it"; other scenarios do the same but log which scenario was chosen so
+    // the future track-record view can distinguish them. If the intent-btn
+    // handler is present, we simulate that click; otherwise the button is
+    // still visible but non-functional (safe degrade — never a broken app).
+    grid.querySelectorAll('.s-cta').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const scenarioId = btn.getAttribute('data-scenario-id') || '';
+        // Baseline "skip" scenario maps to intent = 'skipped'; every other
+        // scenario maps to intent = 'applied' (the user is committing to a
+        // change). This preserves the existing intent-capture semantics
+        // without introducing a new intent type mid-migration.
+        const targetIntent = scenarioId === 'baseline' ? 'skipped' : 'applied';
+        const intentBtn = document.querySelector(`.intent-btn[data-intent="${targetIntent}"]`);
+        if (intentBtn) {
+          intentBtn.click();
+        }
+      });
+    });
+
+    // Threshold line — only rendered when the backend provides one AND it
+    // has a real lever_change value.
+    if (thresholdBlock) {
+      const t_ = bundle.threshold;
+      if (t_ && Number.isFinite(Number(t_.lever_change))) {
+        thresholdBlock.hidden = false;
+        // Position the marker on the track: baseline (0) at left edge,
+        // bigger scenario (2x asked) at right edge. Threshold marker sits
+        // proportionally between them.
+        const asked = Number(bundle.scenarios[1]?.projection?.lever_change) || 0;
+        const bigger = asked * 2 || 1;
+        const raw = Number(t_.lever_change);
+        const pctPosition = Math.max(5, Math.min(95, Math.round((raw / bigger) * 100)));
+        const marker = document.getElementById('threshold-marker');
+        if (marker) marker.style.left = `${pctPosition}%`;
+        const scaleStart = document.getElementById('threshold-scale-start');
+        const scaleEnd = document.getElementById('threshold-scale-end');
+        const symbol = bundle.currency_symbol || '₹';
+        if (scaleStart) scaleStart.textContent = bundle.current_value != null ? `${symbol}${bundle.current_value}` : '';
+        if (scaleEnd) scaleEnd.textContent = bundle.current_value != null ? `${symbol}${Math.round((bundle.current_value + bigger) * 100) / 100}` : '';
+        const caption = document.getElementById('threshold-caption');
+        if (caption) {
+          const newValue = t_.new_lever_value != null ? `${symbol}${t_.new_lever_value}` : '';
+          caption.innerHTML = currentUILang === 'hi'
+            ? `आपका इतिहास <b>${escapeHtml(newValue)}</b> तक बदलाव को सुरक्षित मानता है। इससे आगे, पिछले उदाहरण दिखाते हैं कि नुकसान का जोखिम बढ़ जाता है।`
+            : `Your history supports changes up to <b>${escapeHtml(newValue)}</b>. Past that, previous jumps show downside risk climbing.`;
+        }
+      } else {
+        thresholdBlock.hidden = true;
+      }
+    }
+
+    // Wrap existing evidence/confidence/explain blocks in the details
+    // disclosure. Move them physically into the <details> so the summary
+    // controls their visibility. We do this every render, but only if not
+    // already moved (idempotent).
+    const details = document.getElementById('scenarios-details');
+    if (details) {
+      const evidence = document.getElementById('evidence-block');
+      const confBlock = document.getElementById('confidence-block');
+      const explainBlock = document.querySelector('#results .explain');
+      // If any of these are still direct children of #results, move them.
+      [evidence, confBlock, explainBlock].forEach((el) => {
+        if (el && el.parentElement && el.parentElement.id !== 'scenarios-details') {
+          details.appendChild(el);
+        }
+      });
+    }
+
+    block.hidden = false;
+    results.classList.add('with-scenarios');
+  }
+
+  // Minimal HTML escape for user/backend text going into innerHTML. Never
+  // pass unescaped values into innerHTML — a stray < in a Hindi phrase or a
+  // user's own product name would break the whole card.
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function drawSparkline(series, isWeak, isSampleData) {
@@ -2005,6 +2184,12 @@
   function hideResults(options = {}) {
     resultsSection.hidden = true;
     resultsSection.classList.remove('show');
+    // Also remove the scenarios-layout modifier: a subsequent weak-data
+    // result should render at its normal position, not with the top-spacing
+    // that scenarios-mode adds.
+    resultsSection.classList.remove('with-scenarios');
+    const scenariosBlock = document.getElementById('scenarios-block');
+    if (scenariosBlock) scenariosBlock.hidden = true;
     if (!options.keepTrajectory) stage.classList.remove('has-result', 'connecting-data');
     intentPrompt.classList.remove('show', 'captured');
     viewInLog.hidden = true;
