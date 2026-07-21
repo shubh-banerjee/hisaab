@@ -445,15 +445,12 @@
     hideEvidenceLimitation();
     hideResults();
     if (evidenceLimitationPrimary.dataset.action === 'question') {
-<<<<<<< HEAD
       if (evidenceLimitationPrimary.dataset.prompt) {
         questionInput.value = evidenceLimitationPrimary.dataset.prompt;
         hideResults();
         runSimulation({ skipValidation: true });
         return;
       }
-=======
->>>>>>> origin/main
       questionInput.focus();
       return;
     }
@@ -463,7 +460,6 @@
   if (evidenceLimitationSecondary) evidenceLimitationSecondary.addEventListener('click', () => {
     hideEvidenceLimitation();
     hideResults();
-<<<<<<< HEAD
       if (evidenceLimitationSecondary.dataset.action === 'question') {
         if (evidenceLimitationSecondary.dataset.prompt) {
           questionInput.value = evidenceLimitationSecondary.dataset.prompt;
@@ -473,11 +469,6 @@
         }
         questionInput.focus();
         return;
-=======
-    if (evidenceLimitationSecondary.dataset.action === 'question') {
-      questionInput.focus();
-      return;
->>>>>>> origin/main
     }
     setPath('bootstrap');
     document.getElementById('bootstrap-slot')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1395,11 +1386,7 @@
         return;
       }
 
-<<<<<<< HEAD
       if (['unsupported_question', 'clarify_intent', 'clarify_question', 'guided_answer', 'broad_guidance', 'needs_more_data'].includes(body.status || body.result_category)) {
-=======
-      if (body.status === 'unsupported_question' || body.status === 'clarify_intent') {
->>>>>>> origin/main
         renderEvidenceLimitation(body);
         return;
       }
@@ -1562,13 +1549,10 @@
   function renderTrendResults(data, elapsed, options = {}) {
     const summary = data.computed?.trend_summary || {};
     const generated = data.generated || {};
-<<<<<<< HEAD
     const isDemo = data.chart_meta?.is_sample === true || data.data_source?.source_type === 'demo';
     const demoActions = document.getElementById('demo-result-actions');
     if (demoActions) demoActions.hidden = !isDemo;
     if (isDemo) intentPrompt.classList.remove('show', 'captured');
-=======
->>>>>>> origin/main
     const change = Number(summary.change_pct);
     const metric = summary.metric === 'sales' ? 'sales value' : 'orders';
     const average = value => summary.metric === 'sales' ? formatMoney(value) : Number(value || 0).toLocaleString('en-IN');
@@ -1707,7 +1691,6 @@
     const evidence = data.evidence || {};
     const category = data.evidence_category || data.result_category || evidence.category || 'not_enough_evidence';
     const isDemo = category === 'demo_only';
-<<<<<<< HEAD
     const isUnsupported = category === 'unsupported_question' || category === 'needs_more_data';
     const isClarify = category === 'clarify_intent' || category === 'clarify_question';
     const isGuidance = ['guided_answer', 'broad_guidance', 'needs_more_data'].includes(category);
@@ -1723,20 +1706,6 @@
     evidenceLimitationPrimary.dataset.prompt = evidence.primary_prompt || '';
     evidenceLimitationSecondary.dataset.action = isDemo || isGuidance || isClarify || isUnsupported ? 'question' : 'bootstrap';
     evidenceLimitationSecondary.dataset.prompt = '';
-=======
-    const isUnsupported = category === 'unsupported_question';
-    const isClarify = category === 'clarify_intent';
-    evidenceLimitationEyebrow.textContent = isDemo
-      ? 'Demo only'
-      : isClarify ? 'Choose one check' : isUnsupported ? 'Data needed' : category === 'weak_signal' ? 'Early pattern' : 'Not enough evidence yet';
-    evidenceLimitationTitle.textContent = evidence.title || 'Not enough evidence yet';
-    evidenceLimitationCopy.textContent = evidence.message || 'Hisaab cannot estimate this honestly from the available data yet.';
-    evidenceLimitationDetail.textContent = evidence.next_action || '';
-    evidenceLimitationPrimary.textContent = isDemo ? 'Add my own data' : isClarify || isUnsupported ? 'Ask another question' : 'Add the missing data';
-    evidenceLimitationSecondary.textContent = isDemo ? 'Start daily entry' : isClarify || isUnsupported ? 'Start daily entry' : 'Ask another question';
-    evidenceLimitationPrimary.dataset.action = isClarify || isUnsupported ? 'question' : 'real';
-    evidenceLimitationSecondary.dataset.action = isDemo || isClarify || isUnsupported ? 'bootstrap' : 'question';
->>>>>>> origin/main
     if (evidenceLimitationTertiary) {
       evidenceLimitationTertiary.hidden = !isDemo;
       evidenceLimitationTertiary.textContent = 'Try another demo question';

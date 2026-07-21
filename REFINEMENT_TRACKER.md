@@ -549,7 +549,6 @@ Manual QA before demo submission:
 - [ ] Start Fresh with fewer than 14 entries shows Not enough evidence and no trend estimate.
 - [ ] Sample mode remains Demo example only, including trend questions.
 - [ ] “Sales trend” does not become promo; “discount sale” remains promo.
-<<<<<<< HEAD
 
 ## Product experience reset: SMB-first home and data flow
 
@@ -631,8 +630,6 @@ Checklist:
 - [x] Keep statistical terms and numeric evidence metrics inside the expandable Details section.
 - [x] Keep broad guidance free of regression, confidence, and prediction language.
 - [ ] Manually test broad questions with imported data, Start Fresh, and Demo mode.
-=======
->>>>>>> origin/main
 - [ ] Mobile view shows answer, evidence, action, and trend details in that order.
 - `public/script.js`
 - new `test/` or `tests/` fixtures and test files
