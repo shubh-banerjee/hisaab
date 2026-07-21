@@ -465,7 +465,7 @@ Implemented test command:
 npm test
 ```
 
-Current automated result: 16 tests passing locally. Remaining coverage is integration-level API mocking, browser flows, and CI execution.
+Current automated result: 21 tests passing locally. Remaining coverage is integration-level API mocking, browser flows, and CI execution.
 
 Manual QA before demo submission:
 
@@ -481,6 +481,75 @@ Manual QA before demo submission:
 - [ ] English, Hindi, and Hinglish questions keep the expected language.
 - [ ] Firestore save failure says calculated but not saved.
 - [ ] Result screen remains Answer → Evidence → Action before technical details on mobile.
+
+## Phase 9: Replace unsafe default question routing with explicit intent classification
+
+Goal: Hisaab must never answer a business question under the wrong scenario.
+
+Checklist:
+
+- [x] Add explicit classification for delivery fee, price/AOV, promo/discount, repeat customer, trend, and COD intents.
+- [x] Remove the default delivery-fee route for unknown questions.
+- [x] Return `unsupported_question` with friendly supported choices for unclear questions.
+- [x] Return `clarify_intent` when multiple supported intents are detected.
+- [x] Keep sales-trend questions out of promo classification.
+- [x] Route standalone repeat-customer questions to a dedicated recent-period comparison.
+- [x] Route trend questions to a dedicated recent-versus-prior-period calculation.
+- [x] Keep COD explicitly unsupported with a clear explanation.
+- [x] Add frontend choice buttons for unsupported and clarify-intent states.
+- [x] Add automated tests for the requested routing and multi-intent cases.
+
+Manual QA:
+
+- [ ] Delivery fee question routes correctly.
+- [ ] Price/AOV question routes correctly.
+- [ ] Promo/discount question routes correctly.
+- [ ] Repeat-customer question routes correctly.
+- [ ] Sales trend question routes correctly.
+- [ ] COD question returns unsupported.
+- [ ] Unknown question never defaults to delivery fee.
+- [ ] Multi-intent question asks which change to check first.
+- [ ] Hinglish delivery-fee question routes correctly.
+- [ ] “Sales trend” is not classified as promo.
+- [ ] “Sale discount” remains promo/discount.
+- [ ] Unsupported question shows friendly choices.
+
+## Phase 10: Add a dedicated trend answer path
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Route trend questions to a dedicated recent-period comparison instead of delivery-fee or price regression.
+- [x] Compare recent 3 months with the previous 3 months where monthly history is available.
+- [x] Compare recent 7 daily entries with the previous 7 for a mature Start Fresh diary.
+- [x] Return `not_enough_evidence` when trend history is too short.
+- [x] Answer order trend when total bill amount is missing and explain that sales-value trend needs bill data.
+- [x] Keep trend output free of lower/upper estimates and regression metrics.
+- [x] Render a separate simple trend result with change, best period, weak period, evidence, next action, and collapsed details.
+- [x] Keep sample trend questions demo-only through the existing sample evidence gate.
+- [x] Add automated coverage for monthly trend, missing sales value, and 14-day bootstrap trend.
+- [x] Document the trend data requirements and limitations in README.md.
+
+Files changed:
+
+- `server.js`
+- `public/index.html`
+- `public/script.js`
+- `public/style.css`
+- `tests/evidence-gates.test.js`
+- `README.md`
+
+Manual QA before demo submission:
+
+- [ ] CSV with 6 months of orders shows a dedicated trend answer.
+- [ ] CSV with sales value shows both sales and order trend when asked.
+- [ ] CSV without sales value answers order trend only and explains the missing field.
+- [ ] Start Fresh with 14 or more daily entries compares 7 days with the previous 7.
+- [ ] Start Fresh with fewer than 14 entries shows Not enough evidence and no trend estimate.
+- [ ] Sample mode remains Demo example only, including trend questions.
+- [ ] “Sales trend” does not become promo; “discount sale” remains promo.
+- [ ] Mobile view shows answer, evidence, action, and trend details in that order.
 - `public/script.js`
 - new `test/` or `tests/` fixtures and test files
 - CI configuration if introduced

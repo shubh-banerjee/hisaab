@@ -7,6 +7,7 @@ process.env.HISAAB_TEST_MODE = '1';
 
 const {
   aggregateBootstrapEntries,
+  aggregateBootstrapDailyEntries,
   aggregateSheetRows,
   alignGeneratedWithComputed,
   app,
@@ -16,6 +17,7 @@ const {
   comparisonCategory,
   comparisonMessage,
   computeRegressionResult,
+  classifyQuestionIntent,
   dataMaturity,
   detectFallbackLanguage,
   detectScenario,
@@ -226,4 +228,72 @@ test('decision storage contract distinguishes calculated data from saved data', 
   const script = fs.readFileSync(path.join(__dirname, '..', 'public', 'script.js'), 'utf8');
   assert.match(script, /Calculated, but this decision was not saved/);
   assert.match(script, /Demo decisions are not saved/);
+});
+
+test('question routing never defaults to delivery fee', () => {
+  assert.equal(classifyQuestionIntent('What if I increase delivery fee by ₹5?').intent, 'delivery_fee_change');
+  assert.equal(classifyQuestionIntent('Delivery charge badhega toh orders kam honge kya?').intent, 'delivery_fee_change');
+  assert.equal(classifyQuestionIntent('What if I increase price by 10%?').intent, 'price_or_aov_change');
+  assert.equal(classifyQuestionIntent('Average bill ₹250 se ₹280 karu toh kya hoga?').intent, 'price_or_aov_change');
+  assert.equal(classifyQuestionIntent('Should I run a 10% discount?').intent, 'promo_or_discount');
+  assert.equal(classifyQuestionIntent('Are customers coming back?').intent, 'repeat_customer');
+  assert.equal(classifyQuestionIntent('Are my sales going up?').intent, 'trend');
+  assert.equal(classifyQuestionIntent('Which month was best?').intent, 'trend');
+  assert.equal(classifyQuestionIntent('What if I enable cash on delivery?').intent, 'cod');
+  assert.equal(classifyQuestionIntent('Should I hire another worker?').status, 'unsupported_question');
+  assert.equal(classifyQuestionIntent('What if I increase delivery fee by ₹10 and also run discount?').status, 'clarify_intent');
+  assert.equal(classifyQuestionIntent('Are my sales going up?').matches.includes('promo_or_discount'), false);
+  assert.equal(classifyQuestionIntent('Should I run a sale discount?').intent, 'promo_or_discount');
+});
+
+test('trend and repeat intents use dedicated non-delivery calculations', () => {
+  const rows = [
+    { month: '2025-01', orders: 100, repeat_orders: 20, avg_order_value: 200, delivery_fee: 30 },
+    { month: '2025-02', orders: 110, repeat_orders: 22, avg_order_value: 200, delivery_fee: 30 },
+    { month: '2025-03', orders: 140, repeat_orders: 35, avg_order_value: 200, delivery_fee: 30 },
+    { month: '2025-04', orders: 150, repeat_orders: 40, avg_order_value: 200, delivery_fee: 30 },
+  ];
+  const trend = computeRegressionResult('Are my orders going up?', rows, summarizeData(rows));
+  const repeat = computeRegressionResult('Are customers coming back?', rows, summarizeData(rows));
+  assert.equal(trend.method, 'recent_3_months_vs_previous_3_months');
+  assert.equal(trend.lever, 'trend');
+  assert.equal(repeat.method, 'recent_3_months_vs_previous_3_months');
+  assert.equal(repeat.lever, 'repeat_customer');
+  assert.equal(repeat.outcome_metric, 'repeat_orders');
+});
+
+test('trend path compares monthly windows and does not expose regression ranges', () => {
+  const rows = Array.from({ length: 6 }, (_, i) => ({
+    month: `2025-${String(i + 1).padStart(2, '0')}`,
+    orders: 400 + i * 40,
+    avg_order_value: 250,
+  }));
+  const result = computeRegressionResult('Are my sales increasing?', rows, summarizeData(rows));
+  assert.equal(result.trend_summary.metric, 'sales');
+  assert.equal(result.trend_summary.recent_label, 'Recent 3 months');
+  assert.ok(result.trend_summary.recent_average > result.trend_summary.previous_average);
+  assert.equal(result.range_low, null);
+  assert.equal(result.range_high, null);
+  assert.equal(result.r2, null);
+});
+
+test('trend without bill amounts answers orders only and explains the limitation', () => {
+  const rows = Array.from({ length: 6 }, (_, i) => ({ month: `2025-${String(i + 1).padStart(2, '0')}`, orders: 300 + i * 10 }));
+  const result = computeRegressionResult('Are my sales increasing?', rows, summarizeData(rows));
+  assert.equal(result.trend_summary.metric, 'orders');
+  assert.equal(result.trend_summary.sales_requested, true);
+  assert.equal(result.trend_summary.sales_available, false);
+});
+
+test('bootstrap trend path keeps daily periods for a 7-day comparison', () => {
+  const entries = Array.from({ length: 14 }, (_, i) => ({
+    date: `2025-01-${String(i + 1).padStart(2, '0')}`,
+    orders: 20 + i,
+  }));
+  const daily = aggregateBootstrapDailyEntries(entries);
+  const result = computeRegressionResult('Are my orders going up?', daily.rows, summarizeData(daily.rows));
+  assert.equal(daily.rows.length, 14);
+  assert.equal(result.method, 'recent_7_days_vs_previous_7_days');
+  assert.equal(result.trend_summary.granularity, 'daily');
+  assert.equal(result.trend_summary.recent_label, 'Recent 7 days');
 });

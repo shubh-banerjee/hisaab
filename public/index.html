@@ -236,11 +236,30 @@
         <h2 class="evidence-limitation-title" id="evidence-limitation-title"></h2>
         <p class="evidence-limitation-copy" id="evidence-limitation-copy"></p>
         <p class="evidence-limitation-detail" id="evidence-limitation-detail"></p>
+        <div class="intent-choice-list" id="intent-choice-list" hidden aria-label="Choose a Hisaab check"></div>
         <div class="evidence-limitation-actions">
           <button class="cta-primary" id="evidence-limitation-primary" type="button">Add my own data</button>
           <button class="cta-secondary" id="evidence-limitation-secondary" type="button">Start daily entry</button>
           <button class="cta-tertiary" id="evidence-limitation-tertiary" type="button" hidden>Try another demo question</button>
         </div>
+      </section>
+
+      <section class="trend-result" id="trend-result" hidden aria-live="polite">
+        <div class="trend-eyebrow">Sales trend</div>
+        <h1 class="trend-answer" id="trend-simple-answer"></h1>
+        <p class="trend-change" id="trend-change"></p>
+        <div class="trend-period-grid">
+          <div><span id="trend-recent-label">Recent period</span><strong id="trend-recent-average"></strong></div>
+          <div><span id="trend-previous-label">Previous period</span><strong id="trend-previous-average"></strong></div>
+        </div>
+        <div class="trend-best-worst">
+          <div><span>Best period</span><strong id="trend-best-period"></strong></div>
+          <div><span>Weak period</span><strong id="trend-worst-period"></strong></div>
+        </div>
+        <div class="trend-evidence"><span>Evidence</span><strong id="trend-evidence-strength"></strong></div>
+        <p class="trend-why" id="trend-why"></p>
+        <div class="trend-next"><span>What to do next</span><p id="trend-next-action"></p></div>
+        <details class="trend-details"><summary>Show trend details</summary><p id="trend-details-copy"></p></details>
       </section>
 
       <section class="result-overview" id="result-overview" hidden aria-live="polite">

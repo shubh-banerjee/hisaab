@@ -222,6 +222,7 @@
   const evidenceLimitationTitle = document.getElementById('evidence-limitation-title');
   const evidenceLimitationCopy = document.getElementById('evidence-limitation-copy');
   const evidenceLimitationDetail = document.getElementById('evidence-limitation-detail');
+  const intentChoiceList = document.getElementById('intent-choice-list');
   const evidenceLimitationPrimary = document.getElementById('evidence-limitation-primary');
   const evidenceLimitationSecondary = document.getElementById('evidence-limitation-secondary');
   const evidenceLimitationTertiary = document.getElementById('evidence-limitation-tertiary');
@@ -231,6 +232,19 @@
   const overviewWhy = document.getElementById('overview-why');
   const overviewAction = document.getElementById('overview-action');
   const overviewData = document.getElementById('overview-data');
+  const trendResult = document.getElementById('trend-result');
+  const trendSimpleAnswer = document.getElementById('trend-simple-answer');
+  const trendChange = document.getElementById('trend-change');
+  const trendRecentLabel = document.getElementById('trend-recent-label');
+  const trendRecentAverage = document.getElementById('trend-recent-average');
+  const trendPreviousLabel = document.getElementById('trend-previous-label');
+  const trendPreviousAverage = document.getElementById('trend-previous-average');
+  const trendBestPeriod = document.getElementById('trend-best-period');
+  const trendWorstPeriod = document.getElementById('trend-worst-period');
+  const trendEvidenceStrength = document.getElementById('trend-evidence-strength');
+  const trendWhy = document.getElementById('trend-why');
+  const trendNextAction = document.getElementById('trend-next-action');
+  const trendDetailsCopy = document.getElementById('trend-details-copy');
   const calculationDetails = document.getElementById('calculation-details');
   const dataSourceNote = document.getElementById('data-source-note');
   const dataSourceText = document.getElementById('data-source-text');
@@ -391,12 +405,20 @@
   if (evidenceLimitationPrimary) evidenceLimitationPrimary.addEventListener('click', () => {
     hideEvidenceLimitation();
     hideResults();
+    if (evidenceLimitationPrimary.dataset.action === 'question') {
+      questionInput.focus();
+      return;
+    }
     setPath('real');
     sheetUrlInput.focus();
   });
   if (evidenceLimitationSecondary) evidenceLimitationSecondary.addEventListener('click', () => {
     hideEvidenceLimitation();
     hideResults();
+    if (evidenceLimitationSecondary.dataset.action === 'question') {
+      questionInput.focus();
+      return;
+    }
     setPath('bootstrap');
     document.getElementById('bootstrap-slot')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
@@ -1225,6 +1247,11 @@
         return;
       }
 
+      if (body.status === 'unsupported_question' || body.status === 'clarify_intent') {
+        renderEvidenceLimitation(body);
+        return;
+      }
+
       renderResults(body, Date.now() - startTime, { append: options.isRefine });
     } catch (err) {
       dataDetected.classList.add('show');
@@ -1243,6 +1270,10 @@
   function renderResults(data, elapsed, options = {}) {
     hideBootstrapGate();
     hideEvidenceLimitation();
+    if (data.intent === 'trend') {
+      renderTrendResults(data, elapsed, options);
+      return;
+    }
     const computed = data.computed || data;
     let generated = data.generated || data;
     // The UI chrome always mirrors the CURRENT question's detected language —
@@ -1372,6 +1403,47 @@
     updateAwayFromLandingState();
   }
 
+  function renderTrendResults(data, elapsed, options = {}) {
+    const summary = data.computed?.trend_summary || {};
+    const generated = data.generated || {};
+    const change = Number(summary.change_pct);
+    const metric = summary.metric === 'sales' ? 'sales value' : 'orders';
+    const average = value => summary.metric === 'sales' ? formatMoney(value) : Number(value || 0).toLocaleString('en-IN');
+    const direction = !Number.isFinite(change) || Math.abs(change) < 1 ? 'mostly stable' : change > 0 ? 'slightly up' : 'slightly down';
+    const evidence = evidenceStrength(data.evidence_category || data.evidence?.category, data.computed?.confidence);
+    const salesMissing = summary.sales_requested && !summary.sales_available;
+    trendSimpleAnswer.textContent = generated.recommendation || `${metric[0].toUpperCase()}${metric.slice(1)} are ${direction}.`;
+    trendChange.textContent = `${summary.recent_label || 'Recent period'} average: ${average(summary.recent_average)}. ${summary.previous_label || 'Previous period'} average: ${average(summary.previous_average)}. That is around ${Math.abs(change || 0).toFixed(1)}% ${change > 0 ? 'higher' : change < 0 ? 'lower' : 'different'}.`;
+    trendRecentLabel.textContent = summary.recent_label || 'Recent period';
+    trendRecentAverage.textContent = average(summary.recent_average);
+    trendPreviousLabel.textContent = summary.previous_label || 'Previous period';
+    trendPreviousAverage.textContent = average(summary.previous_average);
+    trendBestPeriod.textContent = summary.best_period?.label || 'Not enough history';
+    trendWorstPeriod.textContent = summary.worst_period?.label || 'Not enough history';
+    trendEvidenceStrength.textContent = evidence;
+    trendWhy.textContent = generated.why || (salesMissing ? 'This answers order trend only because total bill amount is not available.' : 'This compares the recent period with the previous period.');
+    trendNextAction.textContent = salesMissing
+      ? 'Keep recording orders. Add total bill amount later if you want Hisaab to check sales value too.'
+      : 'Keep recording the same data and check again after the next period; this is a trend, not a prediction.';
+    trendDetailsCopy.textContent = `${summary.metric === 'sales' ? 'Sales value' : 'Order count'} trend using ${summary.granularity === 'daily' ? '7 daily entries versus the previous 7' : 'the recent 3 months versus the previous 3 where available'}. ${salesMissing ? 'Total bill amount is missing, so this result uses orders only.' : ''}`;
+    trendResult.hidden = false;
+    resultOverview.hidden = true;
+    document.getElementById('scenarios-block')?.setAttribute('hidden', '');
+    document.getElementById('evidence-block')?.setAttribute('hidden', '');
+    confidenceBlock.hidden = true;
+    document.querySelector('.explain')?.setAttribute('hidden', '');
+    calculationDetails.hidden = true;
+    viewInLog.hidden = true;
+    currentResult = null;
+    lastSimulationPersistence = data.persistence || null;
+    setDataSource(data.data_source);
+    resultsSection.hidden = false;
+    resultsSection.classList.add('show');
+    stage.classList.add('has-result');
+    if (!options.keepScroll) trendResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    updateAwayFromLandingState();
+  }
+
   function evidenceStrength(category, confidence) {
     if (category === 'weak_signal') return 'Weak evidence';
     if (category === 'not_enough_evidence') return 'Not enough evidence';
@@ -1466,20 +1538,40 @@
   function renderEvidenceLimitation(data) {
     if (!evidenceLimitation) return;
     const evidence = data.evidence || {};
-    const category = data.evidence_category || evidence.category || 'not_enough_evidence';
+    const category = data.evidence_category || data.result_category || evidence.category || 'not_enough_evidence';
     const isDemo = category === 'demo_only';
     const isUnsupported = category === 'unsupported_question';
+    const isClarify = category === 'clarify_intent';
     evidenceLimitationEyebrow.textContent = isDemo
       ? 'Demo only'
-      : isUnsupported ? 'Data needed' : category === 'weak_signal' ? 'Early pattern' : 'Not enough evidence yet';
+      : isClarify ? 'Choose one check' : isUnsupported ? 'Data needed' : category === 'weak_signal' ? 'Early pattern' : 'Not enough evidence yet';
     evidenceLimitationTitle.textContent = evidence.title || 'Not enough evidence yet';
     evidenceLimitationCopy.textContent = evidence.message || 'Hisaab cannot estimate this honestly from the available data yet.';
     evidenceLimitationDetail.textContent = evidence.next_action || '';
-    evidenceLimitationPrimary.textContent = isDemo ? 'Add my own data' : 'Add the missing data';
-    evidenceLimitationSecondary.textContent = isDemo ? 'Start daily entry' : 'Ask another question';
+    evidenceLimitationPrimary.textContent = isDemo ? 'Add my own data' : isClarify || isUnsupported ? 'Ask another question' : 'Add the missing data';
+    evidenceLimitationSecondary.textContent = isDemo ? 'Start daily entry' : isClarify || isUnsupported ? 'Start daily entry' : 'Ask another question';
+    evidenceLimitationPrimary.dataset.action = isClarify || isUnsupported ? 'question' : 'real';
+    evidenceLimitationSecondary.dataset.action = isDemo || isClarify || isUnsupported ? 'bootstrap' : 'question';
     if (evidenceLimitationTertiary) {
       evidenceLimitationTertiary.hidden = !isDemo;
       evidenceLimitationTertiary.textContent = 'Try another demo question';
+    }
+    if (intentChoiceList) {
+      intentChoiceList.innerHTML = '';
+      const choices = Array.isArray(evidence.choices) ? evidence.choices : [];
+      intentChoiceList.hidden = !choices.length || isDemo;
+      choices.forEach(choice => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'intent-choice-btn';
+        button.textContent = choice.label || choice.prompt || '';
+        button.addEventListener('click', () => {
+          questionInput.value = choice.prompt || choice.label || '';
+          hideResults();
+          questionInput.focus();
+        });
+        intentChoiceList.appendChild(button);
+      });
     }
     evidenceLimitation.hidden = false;
     hideBootstrapGate();
@@ -1511,6 +1603,10 @@
     document.querySelector('.explain')?.removeAttribute('hidden');
     if (calculationDetails) calculationDetails.hidden = false;
     if (evidenceLimitationTertiary) evidenceLimitationTertiary.hidden = true;
+    if (intentChoiceList) {
+      intentChoiceList.hidden = true;
+      intentChoiceList.innerHTML = '';
+    }
   }
 
   // Render the scenarios block from data.scenarios_bundle. If bundle is
@@ -2970,6 +3066,7 @@
     // result should render at its normal position, not with the top-spacing
     // that scenarios-mode adds.
     resultsSection.classList.remove('with-scenarios');
+    if (trendResult) trendResult.hidden = true;
     const scenariosBlock = document.getElementById('scenarios-block');
     if (scenariosBlock) scenariosBlock.hidden = true;
     if (!options.keepTrajectory) stage.classList.remove('has-result', 'connecting-data');
