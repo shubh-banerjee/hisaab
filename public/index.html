@@ -90,23 +90,96 @@
     <p class="home-note" id="home-note">No spreadsheet yet? You can add daily sales manually after choosing Upload Your Data.</p>
 
     <section class="demo-intro" id="demo-intro" hidden aria-live="polite">
-      <div class="demo-eyebrow">Demo shop example</div>
-      <h2>See how Hisaab works</h2>
-      <p>This is not your business data. It only shows how Hisaab works.</p>
-      <div class="demo-shop-name">Small biryani shop</div>
-      <div class="demo-stats">
-        <span>12 months of example orders</span>
-        <span>Delivery fee changes</span>
-        <span>Some discount months</span>
-        <span>Repeat customers included</span>
+      <div class="demo-progress" aria-label="Demo progress">
+        <span id="demo-progress-label">Step 1 of 4</span>
+        <span class="demo-progress-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
       </div>
-      <div class="demo-question-heading">Choose an example question</div>
-      <div class="demo-question-list">
-        <button class="demo-question" type="button" data-q="Are orders going up or down in this demo shop?">Are orders going up or down?</button>
-        <button class="demo-question" type="button" data-q="Should this demo shop increase delivery fee?">Should this shop increase delivery fee?</button>
-        <button class="demo-question" type="button" data-q="Did discounts help this demo shop?">Did discounts help this shop?</button>
-        <button class="demo-question" type="button" data-q="Are customers coming back to this demo shop?">Are customers coming back?</button>
-      </div>
+
+      <section class="demo-step" id="demo-step-intro">
+        <div class="demo-eyebrow">Demo shop</div>
+        <h2>Demo shop: Small food stall</h2>
+        <p>This is not your business data. It only shows how Hisaab works.</p>
+        <p class="demo-supporting-text">We’ll use example orders, sales, delivery fees, discounts, and customers to show how Hisaab gives simple guidance.</p>
+        <div class="demo-step-actions">
+          <button class="cta-primary" id="demo-start" type="button">Start demo</button>
+          <button class="cta-secondary" id="demo-intro-home" type="button">Back home</button>
+        </div>
+      </section>
+
+      <section class="demo-step" id="demo-step-found" hidden>
+        <div class="demo-eyebrow">Step 2 · What Hisaab found</div>
+        <h2>Hisaab read this demo shop’s data</h2>
+        <ul class="demo-found-list">
+          <li>12 months of orders</li>
+          <li>Sales amount</li>
+          <li>Delivery fee changes</li>
+          <li>A few discount months</li>
+          <li>Repeat customers</li>
+        </ul>
+        <p class="demo-example-note">This is example data only.</p>
+        <div class="demo-step-actions">
+          <button class="cta-primary" id="demo-to-questions" type="button">Ask a demo question</button>
+          <button class="cta-secondary" id="demo-found-home" type="button">Back home</button>
+        </div>
+      </section>
+
+      <section class="demo-step" id="demo-step-questions" hidden>
+        <div class="demo-eyebrow">Step 3 · Choose a demo question</div>
+        <h2>Choose one question</h2>
+        <div class="demo-question-list">
+          <button class="demo-question" type="button" data-demo-question="trend">
+            <strong>Are orders going up or down?</strong>
+            <span>See if the shop is growing or slowing down.</span>
+          </button>
+          <button class="demo-question" type="button" data-demo-question="delivery">
+            <strong>Should this shop increase delivery fee?</strong>
+            <span>Check if a higher delivery fee may reduce orders.</span>
+          </button>
+          <button class="demo-question" type="button" data-demo-question="discount">
+            <strong>Did discounts help this shop?</strong>
+            <span>Compare discount months with normal months.</span>
+          </button>
+          <button class="demo-question" type="button" data-demo-question="repeat">
+            <strong>Are customers coming back?</strong>
+            <span>Check if people are ordering again.</span>
+          </button>
+        </div>
+        <button class="demo-text-link" id="demo-questions-home" type="button">Back home</button>
+      </section>
+
+      <section class="demo-step demo-result-step" id="demo-step-result" hidden>
+        <div class="demo-eyebrow">Step 4 · Demo result</div>
+        <h2 id="demo-result-title">Answer</h2>
+        <div class="demo-result-section">
+          <h3>Answer</h3>
+          <p id="demo-result-answer"></p>
+        </div>
+        <div class="demo-result-section">
+          <h3>Why?</h3>
+          <p id="demo-result-why"></p>
+        </div>
+        <div class="demo-result-section">
+          <h3>Try this</h3>
+          <p id="demo-result-action"></p>
+        </div>
+        <div class="demo-result-section">
+          <h3>How sure is this?</h3>
+          <p id="demo-result-strength"></p>
+        </div>
+        <div class="demo-result-section">
+          <h3>Data used</h3>
+          <p>Demo example · 12 months · Not your data</p>
+        </div>
+        <details class="demo-result-details">
+          <summary>Show details</summary>
+          <p>Example data only. This demo is illustrative and does not save a business decision.</p>
+        </details>
+        <div class="demo-step-actions">
+          <button class="cta-primary" id="demo-result-another" type="button">Try another demo question</button>
+          <button class="cta-secondary" id="demo-result-upload" type="button">Upload my data</button>
+        </div>
+        <button class="demo-text-link" id="demo-result-home" type="button">Back home</button>
+      </section>
     </section>
 
     <section class="data-options upload-view" id="data-options" hidden aria-label="Add your sales data">
@@ -184,6 +257,22 @@
       </div>
     </section>
 
+    <section class="fix-data-view" id="fix-data-view" hidden aria-live="polite" aria-label="Fix data">
+      <div class="fix-data-card">
+        <button class="fix-data-back" id="fix-data-back" type="button">← Back</button>
+        <div class="transition-eyebrow">Fix data</div>
+        <h2 id="fix-data-title">Fix data</h2>
+        <p id="fix-data-subtitle">Help Hisaab understand your file better.</p>
+        <div class="fix-data-items" id="fix-data-items"></div>
+        <div class="fix-data-success" id="fix-data-success" hidden>Got it. Hisaab can use this now.</div>
+        <div class="fix-data-empty" id="fix-data-empty" hidden>Nothing else needs fixing right now. You can continue with the questions your file supports.</div>
+        <div class="fix-data-actions">
+          <button class="cta-secondary" id="fix-data-different-question" type="button" hidden>Ask a different question</button>
+          <button class="cta-primary" id="fix-data-done" type="button">Back to data summary</button>
+        </div>
+      </div>
+    </section>
+
     <section class="data-error-view" id="data-error-view" hidden aria-live="polite" aria-label="Data reading error">
       <div class="transition-card data-error-card">
         <div class="transition-icon error-icon" aria-hidden="true">!</div>
@@ -199,6 +288,25 @@
           <button class="cta-primary" id="data-error-retry" type="button">Try again</button>
           <button class="cta-secondary" id="data-error-upload" type="button">Back to upload options</button>
         </div>
+      </div>
+    </section>
+
+    <section class="ask-view" id="ask-view" hidden aria-live="polite" aria-label="Ask Hisaab">
+      <button class="ask-back" id="ask-back-data-ready" type="button">← Back to Data Ready</button>
+      <div class="ask-eyebrow">Ask Hisaab</div>
+      <h2>Ask Hisaab</h2>
+      <p>Ask a question about your business. Hisaab will answer only when your data supports it.</p>
+      <div class="ask-example" id="ask-example">Try: Orders kam ho rahe hain kya?</div>
+
+      <div class="ask-suggestions" id="ask-suggestions" hidden>
+        <div class="ask-section-label">Try one of these</div>
+        <div class="ask-question-list" id="ask-question-list"></div>
+      </div>
+
+      <div class="ask-categories-section">
+        <div class="ask-section-label">Not sure what to ask?</div>
+        <div class="ask-category-list" id="ask-category-list"></div>
+        <div class="ask-category-questions" id="ask-category-questions" hidden></div>
       </div>
     </section>
 
@@ -278,7 +386,7 @@
     </section>
 
     <div class="composer" id="composer" hidden>
-      <textarea id="question-input" placeholder="Ask about your orders, sales, delivery fee, or offers…" rows="1" aria-label="Ask a question about your business" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
+      <textarea id="question-input" placeholder="Example: Are my orders going down?" rows="1" aria-label="Ask a question about your business" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
       <button class="icon-btn mic" id="mic-btn" title="Tap to speak your question — in any language" type="button">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       </button>
@@ -307,8 +415,8 @@
     <div class="lang-note" hidden>Speak in <b>English, हिन्दी, বাংলা,</b> or <b>தமிழ்</b> — I'll figure it out</div>
 
     <section class="nudge" id="validation-nudge" hidden>
-      <b>That's a bit too open for a calculation.</b>
-      Try naming one specific change — a price, a fee, or a promotion — and what you'd like to see the effect on.
+      <b>Ask one business question first.</b>
+      Try asking about your orders, sales, delivery fee, discounts, or customers.
     </section>
 
     <section class="nudge" id="missing-input-section" hidden>
@@ -388,10 +496,6 @@
       <section class="result-overview" id="result-overview" hidden aria-live="polite">
         <div class="overview-eyebrow">Answer</div>
         <h1 class="overview-answer" id="overview-answer"></h1>
-        <div class="overview-trust-row">
-          <span class="overview-trust-label">How sure is this?</span>
-          <span class="overview-strength" id="overview-strength"></span>
-        </div>
         <section class="overview-section">
           <h2>Why?</h2>
           <p id="overview-why"></p>
@@ -399,11 +503,21 @@
         <section class="overview-section overview-action-section">
           <h2>Try this</h2>
           <p id="overview-action"></p>
+          <div class="overview-choice-list" id="overview-choices" hidden aria-label="Choose a question"></div>
         </section>
+        <div class="overview-trust-row">
+          <span class="overview-trust-label">How sure is this?</span>
+          <span class="overview-strength" id="overview-strength"></span>
+        </div>
         <section class="overview-section overview-data-section">
           <h2>Data used</h2>
           <div class="overview-data-grid" id="overview-data"></div>
         </section>
+        <div class="result-action-row" id="result-action-row">
+          <button class="cta-primary" id="result-primary-action" type="button" hidden></button>
+          <button class="cta-secondary" id="result-secondary-action" type="button">Ask another question</button>
+        </div>
+        <button class="result-tertiary-action" id="result-tertiary-action" type="button">Back to data summary</button>
       </section>
 
       <section class="demo-result-actions" id="demo-result-actions" hidden>
@@ -455,6 +569,7 @@
 
       <details class="calculation-details" id="calculation-details">
         <summary>Details</summary>
+      <p class="result-details-copy" id="result-details-copy" hidden></p>
       <!-- Existing evidence + confidence + explain layout. Stays unchanged. -->
       <div class="evidence" id="evidence-block">
         <div class="ev-left">

@@ -175,6 +175,7 @@
   const heroSupport = document.getElementById('hero-support');
   const pathChooser = document.getElementById('path-chooser');
   const homeNote = document.getElementById('home-note');
+  const checkbackCard = document.getElementById('checkback-card');
   const questionInput = document.getElementById('question-input');
   const sheetUrlInput = document.getElementById('sheet-url-input');
   const uploadSheetUrlInput = document.getElementById('upload-sheet-url');
@@ -186,6 +187,20 @@
   const demoIntro = document.getElementById('demo-intro');
   const demoUseData = document.getElementById('demo-use-data');
   const demoAnotherQuestion = document.getElementById('demo-another-question');
+  const demoStart = document.getElementById('demo-start');
+  const demoIntroHome = document.getElementById('demo-intro-home');
+  const demoToQuestions = document.getElementById('demo-to-questions');
+  const demoFoundHome = document.getElementById('demo-found-home');
+  const demoQuestionsHome = document.getElementById('demo-questions-home');
+  const demoResultAnother = document.getElementById('demo-result-another');
+  const demoResultUpload = document.getElementById('demo-result-upload');
+  const demoResultHome = document.getElementById('demo-result-home');
+  const demoProgressLabel = document.getElementById('demo-progress-label');
+  const demoResultTitle = document.getElementById('demo-result-title');
+  const demoResultAnswer = document.getElementById('demo-result-answer');
+  const demoResultWhy = document.getElementById('demo-result-why');
+  const demoResultAction = document.getElementById('demo-result-action');
+  const demoResultStrength = document.getElementById('demo-result-strength');
   const pathReal = document.getElementById('path-real');
   const pathSheet = document.getElementById('path-sheet');
   const pathBootstrap = document.getElementById('path-bootstrap');
@@ -206,9 +221,25 @@
   const dataReadyAsk = document.getElementById('data-ready-ask');
   const dataReadyFix = document.getElementById('data-ready-fix');
   const dataReadyUpload = document.getElementById('data-ready-upload');
+  const fixDataView = document.getElementById('fix-data-view');
+  const fixDataBack = document.getElementById('fix-data-back');
+  const fixDataTitle = document.getElementById('fix-data-title');
+  const fixDataSubtitle = document.getElementById('fix-data-subtitle');
+  const fixDataItems = document.getElementById('fix-data-items');
+  const fixDataSuccess = document.getElementById('fix-data-success');
+  const fixDataEmpty = document.getElementById('fix-data-empty');
+  const fixDataDifferentQuestion = document.getElementById('fix-data-different-question');
+  const fixDataDone = document.getElementById('fix-data-done');
   const dataErrorView = document.getElementById('data-error-view');
   const dataErrorRetry = document.getElementById('data-error-retry');
   const dataErrorUpload = document.getElementById('data-error-upload');
+  const askView = document.getElementById('ask-view');
+  const askBackDataReady = document.getElementById('ask-back-data-ready');
+  const askExample = document.getElementById('ask-example');
+  const askSuggestions = document.getElementById('ask-suggestions');
+  const askQuestionList = document.getElementById('ask-question-list');
+  const askCategoryList = document.getElementById('ask-category-list');
+  const askCategoryQuestions = document.getElementById('ask-category-questions');
   const sheetSlot = document.getElementById('sheet-slot');
   const dataDetected = document.getElementById('data-detected');
   const detectedHeadline = document.getElementById('detected-headline');
@@ -266,7 +297,12 @@
   const overviewStrength = document.getElementById('overview-strength');
   const overviewWhy = document.getElementById('overview-why');
   const overviewAction = document.getElementById('overview-action');
+  const overviewChoices = document.getElementById('overview-choices');
   const overviewData = document.getElementById('overview-data');
+  const resultPrimaryAction = document.getElementById('result-primary-action');
+  const resultSecondaryAction = document.getElementById('result-secondary-action');
+  const resultTertiaryAction = document.getElementById('result-tertiary-action');
+  const resultDetailsCopy = document.getElementById('result-details-copy');
   const trendResult = document.getElementById('trend-result');
   const trendSimpleAnswer = document.getElementById('trend-simple-answer');
   const trendChange = document.getElementById('trend-change');
@@ -349,7 +385,14 @@
 
   let activePath = 'sample';
   let currentView = 'home';
+  let fixDataContext = 'general';
+  let missingFieldTarget = '';
+  let fixDataReturnView = 'dataReady';
+  let fixDataReturnQuestion = '';
+  let demoStep = 'intro';
+  let selectedDemoQuestion = '';
   let readingTimer = null;
+  let askExampleTimer = null;
   let readingStepIndex = 0;
   const readingSteps = [
     'Reading your file...',
@@ -427,21 +470,23 @@
 
   pathSample.addEventListener('click', () => openDemoIntro());
   document.querySelectorAll('.demo-question').forEach(button => {
-    button.addEventListener('click', () => {
-      questionInput.value = button.dataset.q || '';
-      resizeQuestion();
-      updateQuestionState();
-      hideValidationNudge();
-      runSimulation();
-    });
+    button.addEventListener('click', () => selectDemoQuestion(button.dataset.demoQuestion || 'trend'));
   });
   if (demoUseData) demoUseData.addEventListener('click', () => {
     openUploadOptions();
   });
   if (demoAnotherQuestion) demoAnotherQuestion.addEventListener('click', () => {
     hideResults();
-    openDemoIntro();
+    setDemoStep('chooseQuestion');
   });
+  if (demoStart) demoStart.addEventListener('click', () => setDemoStep('foundData'));
+  if (demoIntroHome) demoIntroHome.addEventListener('click', resetToLanding);
+  if (demoToQuestions) demoToQuestions.addEventListener('click', () => setDemoStep('chooseQuestion'));
+  if (demoFoundHome) demoFoundHome.addEventListener('click', resetToLanding);
+  if (demoQuestionsHome) demoQuestionsHome.addEventListener('click', resetToLanding);
+  if (demoResultAnother) demoResultAnother.addEventListener('click', () => setDemoStep('chooseQuestion'));
+  if (demoResultUpload) demoResultUpload.addEventListener('click', openUploadOptions);
+  if (demoResultHome) demoResultHome.addEventListener('click', resetToLanding);
   if (pathUseData) pathUseData.addEventListener('click', () => {
     openUploadOptions();
   });
@@ -453,6 +498,15 @@
   });
   if (dataReadyFix) dataReadyFix.addEventListener('click', openDataFixFlow);
   if (dataReadyUpload) dataReadyUpload.addEventListener('click', openUploadOptions);
+  if (fixDataBack) fixDataBack.addEventListener('click', returnFromFixData);
+  if (fixDataDone) fixDataDone.addEventListener('click', returnFromFixData);
+  if (fixDataDifferentQuestion) fixDataDifferentQuestion.addEventListener('click', () => {
+    fixDataReturnView = 'ask';
+    fixDataReturnQuestion = '';
+    showQuestionComposer();
+    questionInput.focus();
+  });
+  if (askBackDataReady) askBackDataReady.addEventListener('click', backToDataReady);
   if (dataErrorRetry) dataErrorRetry.addEventListener('click', () => {
     if (uploadedCsv || sheetUrlInput.value.trim()) {
       startReadingView(uploadedCsv ? 'file' : 'sheet');
@@ -774,22 +828,25 @@
 
   function setCurrentView(view) {
     currentView = view;
-    const viewClasses = ['view-home', 'view-upload', 'view-reading', 'view-data-ready', 'view-data-fix', 'view-demo', 'view-ask', 'view-result', 'view-error'];
+    const viewClasses = ['view-home', 'view-upload', 'view-reading', 'view-data-ready', 'view-fix-data', 'view-demo', 'view-ask', 'view-result', 'view-error'];
     document.body.classList.remove(...viewClasses);
     document.body.classList.add(`view-${view.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`);
 
     if (readingView) readingView.hidden = view !== 'reading';
     if (dataReadyView) dataReadyView.hidden = view !== 'dataReady';
+    if (fixDataView) fixDataView.hidden = view !== 'fixData';
     if (dataErrorView) dataErrorView.hidden = view !== 'error';
+    if (askView) askView.hidden = view !== 'ask';
+    if (view !== 'ask') stopAskExampleRotation();
 
     const transitionView = view === 'reading' || view === 'dataReady' || view === 'error';
-    if (transitionView || view === 'ask' || view === 'home' || view === 'demo') {
+    if (transitionView || view === 'ask' || view === 'home' || view === 'demo' || view === 'fixData') {
       dataOptions.hidden = true;
       dataOptions.classList.remove('open');
       document.body.classList.remove('upload-view-active');
     }
 
-    if (transitionView || view === 'ask') {
+    if (transitionView || view === 'ask' || view === 'fixData') {
       sheetSlot.classList.remove('open');
       dataDetected.classList.remove('show');
       demoIntro.hidden = true;
@@ -799,7 +856,7 @@
       if (langNote) langNote.hidden = view !== 'ask';
     }
 
-    if (transitionView) {
+    if (transitionView || view === 'fixData') {
       composer.hidden = true;
       pathChooser.hidden = true;
       if (homeNote) homeNote.hidden = true;
@@ -866,6 +923,138 @@
     },
   };
 
+  function buildAskQuestionSet(summary) {
+    const mapping = summary?.column_mapping || {};
+    const availableKeys = new Set((mapping.available_capabilities || []).map(item => item.key));
+    const foundConcepts = new Set(
+      (mapping.found || [])
+        .map(item => item.concept)
+        .filter(concept => dataReadyConcepts[concept]),
+    );
+    if (availableKeys.has('sales_trend')) {
+      foundConcepts.add('order_count_identifier');
+      foundConcepts.add('order_date');
+    }
+    if (availableKeys.has('pricing')) foundConcepts.add('order_value_or_price');
+    if (availableKeys.has('delivery_fee')) foundConcepts.add('shipping_or_delivery_fee');
+    if (availableKeys.has('promotions')) foundConcepts.add('promotional_flag');
+    if (availableKeys.has('repeat_customers')) foundConcepts.add('customer_identifier');
+    ['order_value_or_price', 'shipping_or_delivery_fee', 'promotional_flag', 'customer_identifier'].forEach(concept => {
+      if (fieldIsUnavailable(concept)) foundConcepts.delete(concept);
+    });
+
+    const hasOrders = foundConcepts.has('order_count_identifier');
+    const hasDates = foundConcepts.has('order_date');
+    const questions = [];
+    const categories = [];
+    const addCategory = (key, label, items) => {
+      if (!items.length) return;
+      categories.push({ key, label, questions: items });
+      questions.push(...items);
+    };
+
+    if (hasOrders && hasDates) {
+      addCategory('orders', 'Orders', [
+        { label: 'Are my orders going up or down?', query: 'Are my orders going up or down?' },
+        { label: 'Which month had the most orders?', query: 'Which month had the most orders?' },
+      ]);
+    }
+    if (foundConcepts.has('order_value_or_price') && hasOrders && hasDates) {
+      addCategory('sales', 'Sales', [
+        { label: 'Are my sales going up or down?', query: 'Are my sales going up or down?' },
+        { label: 'Which month had the highest sales?', query: 'Which month had the highest sales?' },
+      ]);
+    }
+    if (foundConcepts.has('shipping_or_delivery_fee') && hasOrders) {
+      questions.push(
+        { label: 'Should I increase delivery fee?', query: 'Should I increase delivery fee?' },
+        { label: 'What if I reduce delivery fee?', query: 'What if I reduce delivery fee?' },
+      );
+    }
+    if (foundConcepts.has('promotional_flag') && hasOrders) {
+      addCategory('discounts', 'Discounts', [
+        { label: 'Did discounts help?', query: 'Did discounts help?' },
+        { label: 'Should I run an offer?', query: 'Should I run an offer?' },
+      ]);
+    }
+    if (foundConcepts.has('customer_identifier') && hasOrders) {
+      addCategory('customers', 'Customers', [
+        { label: 'Are customers coming back?', query: 'Are customers coming back?' },
+      ]);
+    }
+    return {
+      questions: [...new Map(questions.map(item => [item.query, item])).values()],
+      categories,
+    };
+  }
+
+  function renderAskQuestionScreen() {
+    const questionSet = buildAskQuestionSet(lastSheetSummary);
+    if (askQuestionList) {
+      askQuestionList.innerHTML = questionSet.questions
+        .map(item => `<button type="button" class="ask-question" data-question="${escapeHtml(item.query)}">${escapeHtml(item.label)}</button>`)
+        .join('');
+      askQuestionList.querySelectorAll('[data-question]').forEach(button => {
+        button.addEventListener('click', () => {
+          questionInput.value = button.dataset.question || '';
+          resizeQuestion();
+          updateQuestionState();
+          hideValidationNudge();
+          questionInput.focus();
+        });
+      });
+    }
+    if (askSuggestions) askSuggestions.hidden = !questionSet.questions.length;
+    if (askCategoryList) {
+      askCategoryList.innerHTML = questionSet.categories
+        .map(category => `<button type="button" class="ask-category" data-category="${escapeHtml(category.key)}">${escapeHtml(category.label)}</button>`)
+        .join('');
+      askCategoryList.querySelectorAll('[data-category]').forEach(button => {
+        button.addEventListener('click', () => {
+          const category = questionSet.categories.find(item => item.key === button.dataset.category);
+          if (!category || !askCategoryQuestions) return;
+          askCategoryList.querySelectorAll('.ask-category').forEach(item => item.classList.toggle('active', item === button));
+          askCategoryQuestions.hidden = false;
+          askCategoryQuestions.innerHTML = category.questions
+            .map(item => `<button type="button" class="ask-category-question" data-question="${escapeHtml(item.query)}">${escapeHtml(item.label)}</button>`)
+            .join('');
+          askCategoryQuestions.querySelectorAll('[data-question]').forEach(questionButton => {
+            questionButton.addEventListener('click', () => {
+              questionInput.value = questionButton.dataset.question || '';
+              resizeQuestion();
+              updateQuestionState();
+              hideValidationNudge();
+              questionInput.focus();
+            });
+          });
+        });
+      });
+    }
+    if (askCategoryQuestions) askCategoryQuestions.hidden = true;
+  }
+
+  function startAskExampleRotation() {
+    window.clearInterval(askExampleTimer);
+    if (!askExample) return;
+    const examples = [
+      'Try: Orders kam ho rahe hain kya?',
+      'Try: Delivery fee badhaun toh kya hoga?',
+      'Try: Discount dena chahiye kya?',
+      'Try: Customers wapas aa rahe hain kya?',
+    ];
+    let index = 0;
+    askExample.textContent = examples[index];
+    askExampleTimer = window.setInterval(() => {
+      index = (index + 1) % examples.length;
+      askExample.textContent = examples[index];
+    }, 3000);
+  }
+
+  function stopAskExampleRotation() {
+    window.clearInterval(askExampleTimer);
+    askExampleTimer = null;
+  }
+
   function renderDataReadySummary(summary) {
     const mapping = summary?.column_mapping || {};
     const availableKeys = new Set((mapping.available_capabilities || []).map(item => item.key));
@@ -882,6 +1071,9 @@
     if (availableKeys.has('delivery_fee')) foundConcepts.add('shipping_or_delivery_fee');
     if (availableKeys.has('promotions')) foundConcepts.add('promotional_flag');
     if (availableKeys.has('repeat_customers')) foundConcepts.add('customer_identifier');
+    ['order_value_or_price', 'shipping_or_delivery_fee', 'promotional_flag', 'customer_identifier'].forEach(concept => {
+      if (fieldIsUnavailable(concept)) foundConcepts.delete(concept);
+    });
     const missingConcepts = new Set(
       (mapping.missing || [])
         .map(item => item.concept)
@@ -963,16 +1155,334 @@
   }
 
   function openDataFixFlow() {
-    setCurrentView('dataFix');
+    fixDataContext = 'general';
+    missingFieldTarget = '';
+    fixDataReturnView = 'dataReady';
+    fixDataReturnQuestion = '';
+    renderFixDataView();
+  }
+
+  const fixFieldCopy = {
+    order_value_or_price: {
+      label: 'Sales amount',
+      plainLabel: 'total bill amount',
+      reason: 'Needed to estimate money impact.',
+      choose: 'Choose sales amount column',
+      unavailable: 'I don’t have this',
+    },
+    promotional_flag: {
+      label: 'Discount or offer details',
+      plainLabel: 'discount or offer details',
+      reason: 'Needed to check if offers worked.',
+      choose: 'Choose discount column',
+      unavailable: 'I don’t track discounts',
+    },
+    customer_identifier: {
+      label: 'Customer name or phone',
+      plainLabel: 'customer name or phone',
+      reason: 'Needed to check repeat customers.',
+      choose: 'Choose customer column',
+      unavailable: 'I don’t have customer details',
+    },
+    shipping_or_delivery_fee: {
+      label: 'Delivery fee',
+      plainLabel: 'delivery fee',
+      reason: 'Needed to check delivery fee changes.',
+      choose: 'Choose delivery fee column',
+      unavailable: 'I don’t have this',
+    },
+    order_date: {
+      label: 'Order date',
+      plainLabel: 'order date',
+      reason: 'Needed to compare different periods.',
+      choose: 'Choose order date column',
+      unavailable: 'I don’t have this',
+    },
+    order_count_identifier: {
+      label: 'Order number',
+      plainLabel: 'order number',
+      reason: 'Needed to count your orders.',
+      choose: 'Choose order column',
+      unavailable: 'I don’t have this',
+    },
+  };
+
+  function fixConceptForField(field) {
+    return {
+      orders: 'order_count_identifier',
+      order_date: 'order_date',
+      avg_order_value: 'order_value_or_price',
+      delivery_fee: 'shipping_or_delivery_fee',
+      promo_active: 'promotional_flag',
+      customer_identifier: 'customer_identifier',
+      repeat_orders: 'customer_identifier',
+    }[field] || field;
+  }
+
+  function fixCopyForConcept(concept) {
+    return fixFieldCopy[concept] || {
+      label: 'This data',
+      plainLabel: 'this data',
+      reason: 'Needed for this question.',
+      choose: 'Choose column',
+      unavailable: 'I don’t have this',
+    };
+  }
+
+  function fieldIsUnavailable(concept) {
+    return ['unavailable', 'skip_repeat', 'manual_later'].includes(mappingChoices[concept]);
+  }
+
+  function fixDataOptions(item) {
+    const mapping = lastSheetSummary?.column_mapping || {};
+    const options = Array.isArray(item.options) ? item.options : [];
+    if (options.length) return options;
+    return (mapping.headers || []).map(column => ({ column, samples: [] }));
+  }
+
+  function sampleValuesForOption(option) {
+    return (Array.isArray(option.samples) ? option.samples : [])
+      .filter(value => String(value ?? '').trim() !== '')
+      .slice(0, 5);
+  }
+
+  function setFixDataSuccess(message = 'Got it. Hisaab can use this now.') {
+    fixDataSuccess.textContent = message;
+    fixDataSuccess.hidden = false;
+  }
+
+  function updateLocalSummaryForMapping(concept, column) {
+    const mapping = lastSheetSummary?.column_mapping;
+    if (!mapping) return;
+    mapping.found = Array.isArray(mapping.found) ? mapping.found : [];
+    mapping.missing = Array.isArray(mapping.missing) ? mapping.missing : [];
+    mapping.ambiguous = Array.isArray(mapping.ambiguous) ? mapping.ambiguous : [];
+    const copy = fixCopyForConcept(concept);
+    mapping.found = mapping.found.filter(item => item.concept !== concept);
+    mapping.found.push({ concept, label: copy.label, column, confidence: 1 });
+    mapping.missing = mapping.missing.filter(item => item.concept !== concept);
+    mapping.ambiguous = mapping.ambiguous.filter(item => item.column !== column);
+  }
+
+  function updateLocalSummaryForAverageBill() {
+    updateLocalSummaryForMapping('order_value_or_price', 'Usual average bill amount');
+  }
+
+  function updateAskAndDataReadyAfterFix() {
+    renderDataReadySummary(lastSheetSummary || {});
+  }
+
+  function returnFromFixData() {
+    if (fixDataContext === 'general') {
+      updateAskAndDataReadyAfterFix();
+      if (lastSheetSummary) showDataReady(lastSheetSummary);
+      else openUploadOptions();
+      return;
+    }
+    if (fixDataReturnView === 'ask') {
+      showQuestionComposer();
+      questionInput.value = fixDataReturnQuestion || '';
+      resizeQuestion();
+      updateQuestionState();
+      questionInput.focus();
+      return;
+    }
+    if (fixDataReturnQuestion) {
+      runSimulation({ questionOverride: fixDataReturnQuestion, skipValidation: true });
+      return;
+    }
+    showQuestionComposer();
+  }
+
+  function completeFixData(mode, concept, column = '') {
+    if (mode === 'mapped') {
+      manualMappings[concept] = column;
+      mappingChoices[concept] = 'mapped';
+      updateLocalSummaryForMapping(concept, column);
+    } else if (mode === 'average_bill') {
+      mappingChoices.order_value_or_price = 'average_bill';
+      updateLocalSummaryForAverageBill();
+    } else if (mode === 'unavailable') {
+      mappingChoices[concept] = concept === 'customer_identifier' ? 'skip_repeat' : 'unavailable';
+      delete manualMappings[concept];
+    }
+
+    setFixDataSuccess();
+    if (fixDataContext === 'general') {
+      renderFixDataView();
+      return;
+    }
+    window.setTimeout(returnFromFixData, 450);
+  }
+
+  function renderFixDataItem(item, index, { reminderOnly = false } = {}) {
+    const concept = item.concept || fixConceptForField(item.field);
+    const copy = fixCopyForConcept(concept);
+    const options = fixDataOptions(item);
+    const wrapper = document.createElement('section');
+    wrapper.className = 'fix-data-item';
+    wrapper.dataset.concept = concept;
+
+    const heading = document.createElement('h3');
+    heading.textContent = reminderOnly ? `I still need ${copy.plainLabel} to answer this honestly.` : copy.label;
+    wrapper.appendChild(heading);
+    const reason = document.createElement('p');
+    reason.textContent = reminderOnly
+      ? `You chose not to track ${copy.plainLabel}. Hisaab will not guess without it.`
+      : (item.reason || copy.reason);
+    wrapper.appendChild(reason);
+    if (reminderOnly) return wrapper;
+
+    const actions = document.createElement('div');
+    actions.className = 'fix-data-item-actions';
+    const choose = document.createElement('button');
+    choose.type = 'button';
+    choose.className = 'fix-data-choice';
+    choose.textContent = copy.choose;
+    actions.appendChild(choose);
+
+    const unavailable = document.createElement('button');
+    unavailable.type = 'button';
+    unavailable.className = 'fix-data-choice';
+    unavailable.textContent = copy.unavailable;
+    actions.appendChild(unavailable);
+
+    let averagePanel = null;
+    if (concept === 'order_value_or_price') {
+      const average = document.createElement('button');
+      average.type = 'button';
+      average.className = 'fix-data-choice';
+      average.textContent = 'Use usual average bill amount';
+      actions.appendChild(average);
+      averagePanel = document.createElement('div');
+      averagePanel.className = 'fix-data-inline-panel';
+      averagePanel.hidden = true;
+      const averageLabel = document.createElement('label');
+      averageLabel.textContent = 'What is your usual average bill amount?';
+      const averageInput = document.createElement('input');
+      averageInput.type = 'number';
+      averageInput.min = '0';
+      averageInput.step = '0.01';
+      averageInput.inputMode = 'decimal';
+      averageInput.placeholder = 'Example: 250';
+      averageInput.className = 'fix-data-input';
+      averageLabel.appendChild(averageInput);
+      const averageSave = document.createElement('button');
+      averageSave.type = 'button';
+      averageSave.className = 'cta-primary';
+      averageSave.textContent = 'Save average bill';
+      averageSave.addEventListener('click', () => {
+        const value = Number(averageInput.value);
+        if (!Number.isFinite(value) || value < 0) {
+          averageInput.focus();
+          return;
+        }
+        manualInputs.user_provided_average_order_value = value;
+        completeFixData('average_bill', concept);
+      });
+      averagePanel.append(averageLabel, averageSave);
+      wrapper.appendChild(averagePanel);
+      average.addEventListener('click', () => { averagePanel.hidden = !averagePanel.hidden; if (!averagePanel.hidden) averageInput.focus(); });
+    }
+
+    const columnPanel = document.createElement('div');
+    columnPanel.className = 'fix-data-inline-panel';
+    columnPanel.hidden = true;
+    const columnLabel = document.createElement('label');
+    columnLabel.textContent = 'Choose a column from your file';
+    const select = document.createElement('select');
+    select.className = 'fix-data-select';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Choose a column…';
+    select.appendChild(placeholder);
+    options.forEach(option => {
+      const optionEl = document.createElement('option');
+      optionEl.value = option.column || '';
+      optionEl.textContent = option.column || '';
+      select.appendChild(optionEl);
+    });
+    const preview = document.createElement('div');
+    preview.className = 'fix-data-preview';
+    preview.hidden = true;
+    select.addEventListener('change', () => {
+      const chosen = options.find(option => option.column === select.value);
+      const samples = chosen ? sampleValuesForOption(chosen) : [];
+      preview.textContent = samples.length ? `Example values: ${samples.join(' · ')}` : 'No sample values available.';
+      preview.hidden = !select.value;
+    });
+    columnLabel.appendChild(select);
+    const confirm = document.createElement('button');
+    confirm.type = 'button';
+    confirm.className = 'cta-primary';
+    confirm.textContent = 'Use this column';
+    confirm.addEventListener('click', () => {
+      if (!select.value) { select.focus(); return; }
+      completeFixData('mapped', concept, select.value);
+    });
+    columnPanel.append(columnLabel, preview, confirm);
+    wrapper.append(actions, columnPanel);
+
+    choose.addEventListener('click', () => { columnPanel.hidden = !columnPanel.hidden; if (!columnPanel.hidden) select.focus(); });
+    unavailable.addEventListener('click', () => completeFixData('unavailable', concept));
+    return wrapper;
+  }
+
+  function fixDataMissingItems() {
+    const mapping = lastSheetSummary?.column_mapping || {};
+    const missing = Array.isArray(mapping.missing) ? mapping.missing : [];
+    return missing.filter(item => !fieldIsUnavailable(item.concept));
+  }
+
+  function renderFixDataView({ reminderOnly = false, item = null } = {}) {
+    setCurrentView('fixData');
     dataOptions.hidden = true;
-    dataDetected.classList.add('show');
-    mappingPanel.hidden = false;
-    mappingPanel.classList.add('editing');
-    mappingFix.hidden = true;
-    mappingContinue.textContent = 'Done';
-    detectedToggle.hidden = true;
-    detectedDetails.classList.remove('open');
-    mappingPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    dataDetected.classList.remove('show');
+    mappingPanel.hidden = true;
+    fixDataItems.innerHTML = '';
+    fixDataSuccess.hidden = true;
+    fixDataEmpty.hidden = true;
+    fixDataDifferentQuestion.hidden = fixDataContext !== 'question';
+    fixDataDifferentQuestion.textContent = 'Ask a different question';
+    fixDataDone.textContent = fixDataContext === 'question' ? 'Back to question' : 'Back to data summary';
+
+    if (reminderOnly) {
+      fixDataTitle.textContent = `I still need ${fixCopyForConcept(missingFieldTarget).plainLabel} for this`;
+      fixDataSubtitle.textContent = 'I will not guess without the information needed for this question.';
+      fixDataItems.appendChild(renderFixDataItem(item || { concept: missingFieldTarget }, 0, { reminderOnly: true }));
+      return;
+    }
+
+    if (fixDataContext === 'question') {
+      const copy = fixCopyForConcept(missingFieldTarget);
+      fixDataTitle.textContent = `I need ${copy.plainLabel} for this`;
+      fixDataSubtitle.textContent = `I can check this, but I don’t see ${copy.plainLabel} in your file.`;
+      fixDataItems.appendChild(renderFixDataItem(item || { concept: missingFieldTarget, reason: copy.reason }, 0));
+      return;
+    }
+
+    fixDataTitle.textContent = 'Fix data';
+    fixDataSubtitle.textContent = 'Help Hisaab understand your file better.';
+    const items = fixDataMissingItems();
+    if (!items.length) {
+      fixDataEmpty.hidden = false;
+      return;
+    }
+    items.forEach((item, index) => fixDataItems.appendChild(renderFixDataItem(item, index)));
+  }
+
+  function openContextualFixData(body) {
+    const first = body?.missing_fields?.[0] || body?.evidence?.required_fields?.[0] || {};
+    const concept = fixConceptForField(first.field || missingFieldTarget || '');
+    fixDataContext = 'question';
+    missingFieldTarget = concept;
+    fixDataReturnView = currentView === 'ask' ? 'ask' : 'result';
+    fixDataReturnQuestion = lastQuestion || questionInput.value.trim();
+    if (fieldIsUnavailable(concept)) {
+      renderFixDataView({ reminderOnly: true, item: { ...first, concept } });
+      return;
+    }
+    renderFixDataView({ item: { ...first, concept } });
   }
 
   function showDataReadError(err) {
@@ -999,6 +1509,86 @@
     renderChipVisibility();
     heroSupport.textContent = 'Choose how you want to add your sales. You can change this later.';
     dataOptions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  const demoResults = {
+    trend: {
+      answer: 'This demo shop’s orders are slightly improving.',
+      why: 'In this demo shop, recent months had more orders than earlier months.',
+      action: 'Keep tracking orders and check if the increase continues next month.',
+      strength: 'Demo only — example data, not your business.',
+    },
+    delivery: {
+      answer: 'This demo shop should not increase delivery fee for everyone yet.',
+      why: 'In this demo shop, orders were lower when the delivery fee was higher.',
+      action: 'Test the higher fee for a few days first.',
+      strength: 'Demo only — example data, not your business.',
+    },
+    discount: {
+      answer: 'For this demo shop, discounts helped a little, but not every time.',
+      why: 'Some discount months had more orders, but the pattern was not strong every month.',
+      action: 'Run a small offer for 3–5 days and compare orders.',
+      strength: 'Demo only — example data, not your business.',
+    },
+    repeat: {
+      answer: 'This demo shop has some customers coming back.',
+      why: 'The example data shows repeat orders from the same customers.',
+      action: 'Give returning customers a small reason to order again.',
+      strength: 'Demo only — example data, not your business.',
+    },
+  };
+
+  function setDemoStep(step) {
+    const steps = ['intro', 'foundData', 'chooseQuestion', 'result'];
+    demoStep = steps.includes(step) ? step : 'intro';
+    setCurrentView('demo');
+    hideResults();
+    hideMissingInputs();
+    hideValidationNudge();
+    hideError();
+    stopIntro();
+    if (checkbackCard) checkbackCard.hidden = true;
+    document.body.classList.remove('home-landing', 'upload-view-active');
+    pathChooser.hidden = true;
+    dataOptions.hidden = true;
+    dataOptions.classList.remove('open');
+    composer.hidden = true;
+    if (langNote) langNote.hidden = true;
+    dataDetected.classList.remove('show');
+    demoIntro.hidden = false;
+    demoIntro.classList.add('open');
+
+    const stepIds = {
+      intro: 'demo-step-intro',
+      foundData: 'demo-step-found',
+      chooseQuestion: 'demo-step-questions',
+      result: 'demo-step-result',
+    };
+    Object.entries(stepIds).forEach(([key, id]) => {
+      const stepEl = document.getElementById(id);
+      if (stepEl) stepEl.hidden = key !== demoStep;
+    });
+    const stepNumber = steps.indexOf(demoStep) + 1;
+    if (demoProgressLabel) demoProgressLabel.textContent = `Step ${stepNumber} of 4`;
+    demoIntro.querySelectorAll('.demo-progress-dots i').forEach((dot, index) => {
+      dot.classList.toggle('active', index < stepNumber);
+    });
+    if (demoStep === 'result') renderDemoResult(selectedDemoQuestion || 'trend');
+    demoIntro.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function selectDemoQuestion(question) {
+    selectedDemoQuestion = demoResults[question] ? question : 'trend';
+    setDemoStep('result');
+  }
+
+  function renderDemoResult(question) {
+    const result = demoResults[question] || demoResults.trend;
+    if (demoResultTitle) demoResultTitle.textContent = 'Demo result';
+    if (demoResultAnswer) demoResultAnswer.textContent = result.answer;
+    if (demoResultWhy) demoResultWhy.textContent = result.why;
+    if (demoResultAction) demoResultAction.textContent = result.action;
+    if (demoResultStrength) demoResultStrength.textContent = result.strength;
   }
 
   function setPath(path) {
@@ -1055,25 +1645,28 @@
   }
 
   function openDemoIntro() {
-    setCurrentView('demo');
-    document.body.classList.remove('home-landing');
+    selectedDemoQuestion = '';
     if (homeNote) homeNote.hidden = true;
     setPath('sample');
-    if (demoIntro) {
-      demoIntro.hidden = false;
-      demoIntro.classList.add('open');
-      demoIntro.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-    if (pathChooser) pathChooser.hidden = true;
     sampleSuggestions.hidden = true;
-    demoIntro?.querySelector('.demo-question')?.focus();
+    setDemoStep('intro');
   }
 
   function showQuestionComposer() {
     setCurrentView('ask');
     document.body.classList.remove('home-landing');
+    renderAskQuestionScreen();
+    startAskExampleRotation();
     composer.hidden = false;
     if (langNote) langNote.hidden = false;
+  }
+
+  function backToDataReady() {
+    if (lastSheetSummary) {
+      showDataReady(lastSheetSummary);
+      return;
+    }
+    resetToLanding();
   }
 
   function closeDataOptions() {
@@ -1641,6 +2234,29 @@
       .replace(/order count/gi, 'order count or ID');
   }
 
+  function plainResultCopy(value) {
+    return String(value || '')
+      .replace(/R\²|R2/gi, 'fit measure')
+      .replace(/t[- ]score/gi, 'signal check')
+      .replace(/regression/gi, 'calculation')
+      .replace(/confidence score/gi, 'evidence strength')
+      .replace(/statistical confidence/gi, 'evidence strength')
+      .replace(/confidence/gi, 'evidence strength')
+      .replace(/prediction interval/gi, 'likely range')
+      .replace(/predictions?/gi, 'estimate')
+      .replace(/p[- ]value/gi, 'signal check')
+      .replace(/slope/gi, 'direction')
+      .replace(/forecast interval/gi, 'likely range')
+      .replace(/lower bound/gi, 'lower estimate')
+      .replace(/upper bound/gi, 'upper estimate')
+      .replace(/scenario model/gi, 'business comparison')
+      .replace(/data maturity/gi, 'what Hisaab can answer')
+      .replace(/evidence gate/gi, 'data check')
+      .replace(/order value/gi, 'total bill amount')
+      .replace(/promo flag/gi, 'discount or offer details')
+      .replace(/customer identifier/gi, 'customer name or phone');
+  }
+
   async function runSimulation(options = {}) {
     // Reentrancy guard: if a /api/simulate call is already in flight (from
     // ANY entry point — main composer, refine composer, missing-fields
@@ -1719,7 +2335,8 @@
         return;
       }
 
-      if (['unsupported_question', 'clarify_intent', 'clarify_question', 'guided_answer', 'broad_guidance', 'needs_more_data'].includes(body.status || body.result_category)) {
+      const nonDirectCategories = ['unsupported_question', 'clarify_intent', 'clarify_question', 'guided_answer', 'broad_guidance', 'needs_more_data', 'demo_only'];
+      if (nonDirectCategories.includes(body.status) || nonDirectCategories.includes(body.result_category) || nonDirectCategories.includes(body.evidence_category)) {
         renderEvidenceLimitation(body);
         return;
       }
@@ -1736,11 +2353,13 @@
   }
 
   function isSpecificQuestion(question) {
-    const broadQuestionVocabulary = /\b(hire|staff|worker|employee|team|helper|outlet|branch|shop|business|why|wrong|should i|what should i do|open another|second)\b/i;
-    return question.length >= 8 && (decisionVocabulary.test(question) || subjectVocabulary.test(question) || broadQuestionVocabulary.test(question));
+    const broadQuestionVocabulary = /\b(hire|staff|worker|employee|team|helper|outlet|branch|shop|business|profit|why|wrong|should i|what should i do|open another|second|kaise|badhau|badhega|kam ho|chahiye)\b/i;
+    const naturalBusinessVocabulary = /\b(kam|badh|badhe|badhaun|badhau|badhega|gir|raha|rahi|rahe|bikri|sales?|daam|rate|paisa|paise|chhoot|lagau|wapas|grahak|honge|karu|dena|kyun|problem)\b/i;
+    return question.length >= 8 && (/[ऀ-ॿ]/.test(question) || decisionVocabulary.test(question) || subjectVocabulary.test(question) || broadQuestionVocabulary.test(question) || naturalBusinessVocabulary.test(question));
   }
 
   function renderResults(data, elapsed, options = {}) {
+    setCurrentView('result');
     hideBootstrapGate();
     hideEvidenceLimitation();
     if (data.intent === 'trend') {
@@ -1749,6 +2368,8 @@
     }
     const computed = data.computed || data;
     let generated = data.generated || data;
+    const isSampleData = data.chart_meta?.is_sample === true || data.data_source?.source_type === 'demo';
+    if (isSampleData) generated = sanitizeDemoGenerated(generated);
     // The UI chrome always mirrors the CURRENT question's detected language —
     // in both directions. If this question is Hindi, switch to Hindi; if
     // it's English (or anything else we don't have UI strings for), switch
@@ -1779,11 +2400,9 @@
     lastSimulationPersistence = data.persistence || null;
     activeResultId = crypto.randomUUID ? crypto.randomUUID() : `result-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-    const isSampleData = data.chart_meta?.is_sample === true || data.data_source?.source_type === 'demo';
     const demoActions = document.getElementById('demo-result-actions');
-    if (demoActions) demoActions.hidden = !isSampleData;
+    if (demoActions) demoActions.hidden = true;
     if (isSampleData) intentPrompt.classList.remove('show', 'captured');
-    if (isSampleData) generated = sanitizeDemoGenerated(generated);
     drawSparkline(data.chart_series || data.series || [], isWeak, isSampleData);
 
     metricValue.textContent = value === null ? 'Unknown' : formatPct(value);
@@ -1860,7 +2479,6 @@
     refineRow.hidden = !lastRefinement;
     intentPrompt.classList.remove('show', 'captured');
     window.clearTimeout(intentPromptTimer);
-    if (!isSampleData) intentPromptTimer = window.setTimeout(() => intentPrompt.classList.add('show'), 900);
 
     stage.classList.add('has-result');
     resultsSection.hidden = false;
@@ -1880,19 +2498,18 @@
   }
 
   function renderTrendResults(data, elapsed, options = {}) {
+    setCurrentView('result');
     const summary = data.computed?.trend_summary || {};
     const generated = data.generated || {};
     const isDemo = data.chart_meta?.is_sample === true || data.data_source?.source_type === 'demo';
-    const demoActions = document.getElementById('demo-result-actions');
-    if (demoActions) demoActions.hidden = !isDemo;
-    if (isDemo) intentPrompt.classList.remove('show', 'captured');
     const change = Number(summary.change_pct);
     const metric = summary.metric === 'sales' ? 'sales value' : 'orders';
     const average = value => summary.metric === 'sales' ? formatMoney(value) : Number(value || 0).toLocaleString('en-IN');
     const direction = !Number.isFinite(change) || Math.abs(change) < 1 ? 'mostly stable' : change > 0 ? 'slightly up' : 'slightly down';
     const evidence = evidenceStrength(data.evidence_category || data.evidence?.category, data.computed?.confidence);
     const salesMissing = summary.sales_requested && !summary.sales_available;
-    trendSimpleAnswer.textContent = generated.recommendation || `${metric[0].toUpperCase()}${metric.slice(1)} are ${direction}.`;
+    const source = resultDataUsed(data, data.computed || {}, data.evidence_category || data.evidence?.category);
+    const answer = generated.recommendation || `${metric[0].toUpperCase()}${metric.slice(1)} are ${direction}.`;
     trendChange.textContent = `${summary.recent_label || 'Recent period'} average: ${average(summary.recent_average)}. ${summary.previous_label || 'Previous period'} average: ${average(summary.previous_average)}. That is around ${Math.abs(change || 0).toFixed(1)}% ${change > 0 ? 'higher' : change < 0 ? 'lower' : 'different'}.`;
     trendRecentLabel.textContent = summary.recent_label || 'Recent period';
     trendRecentAverage.textContent = average(summary.recent_average);
@@ -1906,21 +2523,24 @@
       ? 'Keep recording orders. Add total bill amount later if you want Hisaab to check sales value too.'
       : 'Keep recording the same data and check again after the next period; this is a trend, not a prediction.';
     trendDetailsCopy.textContent = `${summary.metric === 'sales' ? 'Sales value' : 'Order count'} trend using ${summary.granularity === 'daily' ? '7 daily entries versus the previous 7' : 'the recent 3 months versus the previous 3 where available'}. ${salesMissing ? 'Total bill amount is missing, so this result uses orders only.' : ''}`;
-    trendResult.hidden = false;
-    resultOverview.hidden = true;
-    document.getElementById('scenarios-block')?.setAttribute('hidden', '');
-    document.getElementById('evidence-block')?.setAttribute('hidden', '');
-    confidenceBlock.hidden = true;
-    document.querySelector('.explain')?.setAttribute('hidden', '');
-    calculationDetails.hidden = true;
-    viewInLog.hidden = true;
-    currentResult = null;
+    renderAnalystOverview({
+      answer,
+      why: generated.why || (salesMissing
+        ? 'This checks order trend because total bill amount is not available.'
+        : 'This compares the recent period with the previous period.'),
+      action: salesMissing
+        ? 'Keep recording orders. Add total bill amount later if you want to check sales value too.'
+        : 'Keep recording the same data and check again after the next period; this is a trend, not a prediction.',
+      strength: isDemo ? 'Demo only' : evidence,
+      category: isDemo ? 'demo_only' : (data.evidence_category || data.evidence?.category || 'clear_enough'),
+      dataUsed: [['Source', source.sourceLabel], ['History used', source.history], ['Measure', metric === 'sales value' ? 'Total bill amount' : 'Orders']],
+      primary: isDemo ? null : { label: 'Track this decision', handler: showTrackPrompt },
+      details: trendDetailsCopy.textContent,
+      showDetails: true,
+    });
     lastSimulationPersistence = data.persistence || null;
     setDataSource(data.data_source);
-    resultsSection.hidden = false;
-    resultsSection.classList.add('show');
-    stage.classList.add('has-result');
-    if (!options.keepScroll) trendResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (!options.keepScroll) resultOverview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     updateAwayFromLandingState();
   }
 
@@ -1931,20 +2551,9 @@
     return Number(confidence) >= 0.7 ? 'You can trust this more' : 'Useful direction, but test first';
   }
 
-  function renderSimpleOverview(data, computed, generated) {
-    if (!resultOverview) return;
-    const category = data.evidence_category || data.evidence?.category || 'clear_enough';
-    const isWeak = category === 'weak_signal';
-    const strength = evidenceStrength(category, computed.confidence);
-    const action = data.evidence?.next_action || (isWeak
-      ? 'Try a small change for 3–5 days and compare orders before changing it for everyone.'
-      : 'Use this as a cautious test, then record what actually happens.');
-    const answer = isWeak
-      ? 'This is an early signal only — test it before changing it for everyone.'
-      : generated.recommendation || 'Use this as a cautious test, not a guarantee.';
-    const why = generated.why || data.evidence?.message || 'The available history gives a directional signal, but it is not a guarantee.';
+  function resultDataUsed(data, computed, category) {
     const source = data.data_source || {};
-    const isDemo = source?.mode === 'demo_fallback' || data.chart_meta?.is_sample;
+    const isDemo = source?.mode === 'demo_fallback' || data.chart_meta?.is_sample || category === 'demo_only';
     const sourceLabel = source?.mode === 'bootstrap'
       ? 'Self-reported daily history'
       : isDemo
@@ -1953,61 +2562,182 @@
           : source?.sheet_url_used ? 'Connected Google Sheet'
             : 'Connected data';
     const months = Number(data.summary?.months);
-    const rows = Number(source.sheet_rows_used || source.bootstrap_entries_used || computed.sample_size);
+    const rows = Number(source.sheet_rows_used || source.bootstrap_entries_used || computed?.sample_size);
     const history = isDemo
-      ? '12 months of example orders'
+      ? 'Example data only'
       : Number.isFinite(months) && months > 0
         ? `${months} month${months === 1 ? '' : 's'}${Number.isFinite(rows) && rows > 0 ? ` · ${rows} rows/entries` : ''}`
       : Number.isFinite(rows) && rows > 0 ? `${rows} rows/entries` : 'Limited history';
-    const quality = isDemo
-      ? 'Illustrative only'
-      : category === 'clear_enough'
-        ? 'Enough for a cautious test'
-        : category === 'weak_signal' ? 'Limited — early pattern only' : 'Missing key fields';
+    return { sourceLabel, history };
+  }
 
-    overviewAnswer.textContent = answer;
-    overviewStrength.textContent = strength;
+  function showAnotherQuestion() {
+    hideResults();
+    showQuestionComposer();
+    questionInput.focus();
+  }
+
+  function showQuestionWithPrompt(prompt) {
+    questionInput.value = prompt || '';
+    resizeQuestion();
+    updateQuestionState();
+    showAnotherQuestion();
+  }
+
+  function showBackToDataSummary() {
+    if (lastSheetSummary) {
+      showDataReady(lastSheetSummary);
+      return;
+    }
+    openUploadOptions();
+  }
+
+  function showTrackPrompt() {
+    intentPrompt.classList.add('show');
+    intentPrompt.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function showResultDataFix() {
+    if (lastSheetSummary) {
+      openDataFixFlow();
+      return;
+    }
+    openUploadOptions();
+  }
+
+  function renderAnalystOverview({
+    answer,
+    why,
+    action,
+    strength,
+    category = 'clear_enough',
+    dataUsed = [],
+    choices = [],
+    primary = null,
+    secondary = null,
+    details = '',
+    showDetails = false,
+  }) {
+    if (!resultOverview) return;
+    setCurrentView('result');
+    hideBootstrapGate();
+    if (evidenceLimitation) evidenceLimitation.hidden = true;
+    if (trendResult) trendResult.hidden = true;
+    document.getElementById('scenarios-block')?.setAttribute('hidden', '');
+    document.getElementById('evidence-block')?.toggleAttribute('hidden', !showDetails);
+    confidenceBlock.hidden = !showDetails;
+    document.querySelector('.explain')?.toggleAttribute('hidden', !showDetails);
+    if (calculationDetails) {
+      calculationDetails.hidden = !showDetails;
+      calculationDetails.open = false;
+    }
+    if (resultDetailsCopy) {
+      resultDetailsCopy.textContent = details;
+      resultDetailsCopy.hidden = !details;
+    }
+    const demoActions = document.getElementById('demo-result-actions');
+    if (demoActions) demoActions.hidden = true;
+    if (dataSourceNote) dataSourceNote.hidden = true;
+    intentPrompt.classList.remove('show', 'captured');
+    viewInLog.hidden = true;
+
+    overviewAnswer.textContent = plainResultCopy(answer || 'I can help you check this step by step.');
+    overviewWhy.textContent = plainResultCopy(why || 'I need a little more information before I can say this honestly.');
+    overviewAction.textContent = plainResultCopy(action || 'Choose a next step below.');
+    overviewStrength.textContent = strength || 'Not enough data yet';
     overviewStrength.className = `overview-strength ${category}`;
-    overviewWhy.textContent = why;
-    overviewAction.textContent = action;
     overviewData.innerHTML = '';
-    [
-      ['Source', sourceLabel],
-      ['History used', history],
-      ['Data quality', quality],
-    ].forEach(([label, value]) => {
+    dataUsed.forEach(([label, value]) => {
       const item = document.createElement('div');
       item.className = 'overview-data-item';
       item.innerHTML = `<span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>`;
       overviewData.appendChild(item);
     });
+
+    overviewChoices.innerHTML = '';
+    overviewChoices.hidden = !choices.length;
+    choices.forEach(choice => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'overview-choice';
+      button.textContent = choice.label || choice.prompt || '';
+      button.addEventListener('click', () => {
+        questionInput.value = choice.prompt || choice.label || '';
+        resizeQuestion();
+        updateQuestionState();
+        showAnotherQuestion();
+      });
+      overviewChoices.appendChild(button);
+    });
+
+    resultPrimaryAction.hidden = !primary;
+    resultPrimaryAction.textContent = primary?.label || '';
+    resultPrimaryAction.onclick = primary?.handler || null;
+    resultSecondaryAction.hidden = false;
+    resultSecondaryAction.textContent = secondary?.label || 'Ask another question';
+    resultSecondaryAction.onclick = secondary?.handler || showAnotherQuestion;
+    resultTertiaryAction.onclick = showBackToDataSummary;
     resultOverview.hidden = false;
-    if (calculationDetails) calculationDetails.open = false;
+    resultsSection.hidden = false;
+    resultsSection.classList.add('show');
+    stage.classList.add('has-result');
+    currentResult = null;
+    updateAwayFromLandingState();
+  }
+
+  function renderSimpleOverview(data, computed, generated) {
+    if (!resultOverview) return;
+    const category = data.evidence_category || data.evidence?.category || 'clear_enough';
+    const isWeak = category === 'weak_signal';
+    const source = resultDataUsed(data, computed, category);
+    const quality = category === 'clear_enough'
+      ? 'Enough for a cautious test'
+      : isWeak ? 'Limited — early pattern only' : 'Missing key fields';
+    const usesAverageBill = Boolean(computed.uses_user_provided_average_bill)
+      || data.data_source?.field_sources?.avg_order_value?.source === 'user_provided_average_order_value';
+    renderAnalystOverview({
+      answer: isWeak
+        ? 'This is an early signal only — test it before changing it for everyone.'
+        : generated.recommendation || 'Use this as a cautious test, not a guarantee.',
+      why: generated.why || data.evidence?.message || 'The available history gives a directional signal, but it is not a guarantee.',
+      action: data.evidence?.next_action || (isWeak
+        ? 'Try a small change for 3–5 days and compare orders before changing it for everyone.'
+        : 'Use this as a cautious test, then record what actually happens.'),
+      strength: evidenceStrength(category, computed.confidence),
+      category,
+      dataUsed: [
+        ['Source', source.sourceLabel],
+        ['History used', source.history],
+        ['Data quality', quality],
+        ...(usesAverageBill ? [['Note', 'Sales estimate uses your average bill amount, not exact bill values.']] : []),
+      ],
+      primary: { label: 'Track this decision', handler: showTrackPrompt },
+      showDetails: true,
+      details: 'The details below show the calculation method, sample size, mapped columns, range, chart, and other supporting metrics.',
+    });
   }
 
   function renderBootstrapGate(data) {
     if (!bootstrapGate || !bootstrapGateProgress) return;
+    setCurrentView('result');
     const entryCount = Number(data.bootstrap?.entry_count ?? data.data_source?.bootstrap_entries_used) || 0;
     const minimum = Number(data.bootstrap?.minimum_entries ?? data.data_source?.bootstrap_min_entries) || 20;
     bootstrapGateProgress.textContent = `You have ${entryCount} of ${minimum} daily entries.`;
-    bootstrapGate.hidden = false;
-    resultsSection.hidden = false;
-    resultsSection.classList.add('show');
-    stage.classList.add('has-result');
-    document.getElementById('scenarios-block')?.setAttribute('hidden', '');
-    resultOverview.hidden = true;
-    if (calculationDetails) calculationDetails.hidden = true;
-    document.getElementById('evidence-block')?.setAttribute('hidden', '');
-    confidenceBlock.hidden = true;
-    document.querySelector('.explain')?.setAttribute('hidden', '');
-    intentPrompt.classList.remove('show', 'captured');
-    viewInLog.hidden = true;
-    currentResult = null;
+    renderAnalystOverview({
+      answer: 'I can’t estimate this honestly yet.',
+      why: `Hisaab has ${entryCount} of ${minimum} daily entries. A little more history is needed before this answer is useful.`,
+      action: 'Add more daily sales entries, then ask the question again.',
+      strength: 'Not enough data yet',
+      category: 'needs_more_data',
+      dataUsed: [['Source', 'Your daily sales entries'], ['History used', `${entryCount} of ${minimum} entries`]],
+      primary: { label: 'Add today’s sales', handler: () => bootstrapGateAdd.click() },
+      showDetails: false,
+    });
     lastSimulationPersistence = data.persistence || null;
     dataSourceNote.classList.remove('demo');
     dataSourceText.textContent = 'Self-reported daily history is still being built';
     updateAwayFromLandingState();
-    bootstrapGate.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    resultOverview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   function hideBootstrapGate() {
@@ -2021,65 +2751,73 @@
 
   function renderEvidenceLimitation(data) {
     if (!evidenceLimitation) return;
+    setCurrentView('result');
     const evidence = data.evidence || {};
     const category = data.evidence_category || data.result_category || evidence.category || 'not_enough_evidence';
     const isDemo = category === 'demo_only';
-    const isUnsupported = category === 'unsupported_question' || category === 'needs_more_data';
     const isClarify = category === 'clarify_intent' || category === 'clarify_question';
-    const isGuidance = ['guided_answer', 'broad_guidance', 'needs_more_data'].includes(category);
-    evidenceLimitationEyebrow.textContent = isDemo
-      ? 'Demo only'
-      : isGuidance ? 'Business guidance' : isClarify ? 'Choose one check' : isUnsupported ? 'Data needed' : category === 'weak_signal' ? 'Early pattern' : 'Not enough evidence yet';
-    evidenceLimitationTitle.textContent = evidence.title || 'Not enough evidence yet';
-    evidenceLimitationCopy.textContent = evidence.message || 'Hisaab cannot estimate this honestly from the available data yet.';
-    evidenceLimitationDetail.textContent = evidence.next_action || '';
-    evidenceLimitationPrimary.textContent = isDemo ? 'Add my own data' : isGuidance || isClarify || isUnsupported ? (evidence.primary_label || 'Ask another question') : 'Add the missing data';
-    evidenceLimitationSecondary.textContent = isDemo ? 'Start daily entry' : isGuidance || isClarify || isUnsupported ? 'Choose another check' : 'Ask another question';
-    evidenceLimitationPrimary.dataset.action = isGuidance || isClarify || isUnsupported ? 'question' : 'real';
-    evidenceLimitationPrimary.dataset.prompt = evidence.primary_prompt || '';
-    evidenceLimitationSecondary.dataset.action = isDemo || isGuidance || isClarify || isUnsupported ? 'question' : 'bootstrap';
-    evidenceLimitationSecondary.dataset.prompt = '';
-    if (evidenceLimitationTertiary) {
-      evidenceLimitationTertiary.hidden = !isDemo;
-      evidenceLimitationTertiary.textContent = 'Try another demo question';
+    const isBroad = ['guided_answer', 'broad_guidance'].includes(category);
+    const isNeedsData = ['unsupported_question', 'needs_more_data', 'evidence_limited', 'not_enough_evidence'].includes(category);
+    const source = resultDataUsed(data, data.computed || {}, category);
+    const choices = Array.isArray(evidence.choices) ? evidence.choices : [];
+    const missing = Array.isArray(evidence.missing_fields) ? evidence.missing_fields : (Array.isArray(data.missing_fields) ? data.missing_fields : []);
+    const missingText = missing.length ? `Missing: ${missing.map(item => item.label || item.prompt || item).join(', ')}` : '';
+
+    let answer = evidence.title || 'I can guide you, but I should not guess from the data I have.';
+    let why = evidence.message || 'The available information is not enough for an honest estimate yet.';
+    let action = evidence.next_action || 'Choose a useful next step below.';
+    let strength = 'Not enough data yet';
+    let primary = null;
+    let secondary = null;
+
+    if (isDemo) {
+      answer = 'This is an example answer from the demo shop.';
+      why = evidence.message || 'The demo uses example data to show how Hisaab explains a business question.';
+      action = evidence.next_action || 'Try the same question with your own data when you are ready.';
+      strength = 'Demo only';
+      primary = { label: 'Upload my data', handler: openUploadOptions };
+      secondary = { label: 'Try another demo question', handler: openDemoIntro };
+    } else if (isClarify) {
+      answer = 'I want to understand what you want to check first.';
+      why = evidence.message || 'This question could mean more than one business check.';
+      action = 'Choose one question below so I can give you a useful answer.';
+    } else if (isBroad) {
+      answer = 'I can guide you, but I should not guess from this data alone.';
+      why = evidence.message || 'This is a bigger business decision than the current numbers can support on their own.';
+      action = evidence.next_action || 'Check order trend first, then use that as one part of the decision.';
+      strength = 'Not enough data for a direct estimate.';
+      primary = { label: 'Check order trend', handler: () => showQuestionWithPrompt('Are orders going up or down?') };
+    } else if (isNeedsData) {
+      answer = 'I can’t estimate this honestly yet.';
+      why = evidence.message || 'Some information needed for this question is not available yet.';
+      action = evidence.next_action || 'Add the missing information, then try this question again.';
+      primary = {
+        label: lastSheetSummary ? 'Fix detected data' : 'Add data',
+        handler: () => lastSheetSummary
+          ? openContextualFixData({ missing_fields: evidence.required_fields || data.missing_fields || [], evidence })
+          : openUploadOptions(),
+      };
     }
-    if (intentChoiceList) {
-      intentChoiceList.innerHTML = '';
-      const choices = Array.isArray(evidence.choices) ? evidence.choices : [];
-      intentChoiceList.hidden = !choices.length || isDemo;
-      choices.forEach(choice => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'intent-choice-btn';
-        button.textContent = choice.label || choice.prompt || '';
-        button.addEventListener('click', () => {
-          questionInput.value = choice.prompt || choice.label || '';
-          hideResults();
-          questionInput.focus();
-        });
-        intentChoiceList.appendChild(button);
-      });
-    }
-    evidenceLimitation.hidden = false;
-    hideBootstrapGate();
-    resultsSection.hidden = false;
-    resultsSection.classList.add('show');
-    stage.classList.add('has-result');
-    document.getElementById('scenarios-block')?.setAttribute('hidden', '');
-    resultOverview.hidden = true;
-    if (calculationDetails) calculationDetails.hidden = true;
-    document.getElementById('evidence-block')?.setAttribute('hidden', '');
-    confidenceBlock.hidden = true;
-    document.querySelector('.explain')?.setAttribute('hidden', '');
-    intentPrompt.classList.remove('show', 'captured');
-    viewInLog.hidden = true;
-    currentResult = null;
-    dataSourceNote.classList.toggle('demo', isDemo);
-    dataSourceText.textContent = isDemo
-      ? 'Demo example'
-      : sourceNote(data.data_source);
+
+    renderAnalystOverview({
+      answer,
+      why,
+      action,
+      strength,
+      category: isDemo ? 'demo_only' : category,
+      dataUsed: [['Source', isDemo ? 'Demo shop example' : source.sourceLabel], ['History used', isDemo ? 'Example data only' : source.history], ...(missingText ? [['Still needed', missingText.replace(/^Missing: /, '')]] : [])],
+      choices: isClarify ? choices : [],
+      primary,
+      secondary,
+      showDetails: false,
+    });
+    evidenceLimitation.hidden = true;
+    evidenceLimitationEyebrow.textContent = '';
+    evidenceLimitationTitle.textContent = '';
+    evidenceLimitationCopy.textContent = '';
+    evidenceLimitationDetail.textContent = '';
     updateAwayFromLandingState();
-    evidenceLimitation.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    resultOverview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   function hideEvidenceLimitation() {
@@ -3458,6 +4196,8 @@
   function resetToLanding() {
     stopReadingProgress();
     setCurrentView('home');
+    demoStep = 'intro';
+    selectedDemoQuestion = '';
     const sessionId = getSessionId();
     const userId = getUserId();
     window.clearTimeout(parseTimer);
@@ -3595,96 +4335,7 @@
   }
 
   function showMissingInputs(body) {
-    missingSummary.textContent = body.evidence?.message || body.partial_data_summary || 'We need a little more information before calculating this.';
-    missingFields.innerHTML = '';
-    (body.missing_fields || []).forEach(item => {
-      const label = document.createElement('label');
-      label.className = 'missing-field';
-      label.textContent = item.prompt;
-      if (['orders', 'avg_order_value', 'customer_identifier', 'promo_active', 'delivery_fee'].includes(item.field)) {
-        const actions = document.createElement('span');
-        actions.className = 'missing-field-actions';
-        const choose = document.createElement('button');
-        choose.type = 'button';
-        choose.className = 'mapping-choice-btn';
-        const chooseLabels = {
-          promo_active: 'Choose discount column',
-          customer_identifier: 'Choose customer column',
-          delivery_fee: 'Choose delivery fee column',
-          avg_order_value: 'Choose sales amount column',
-          orders: 'Choose order column',
-        };
-        choose.textContent = chooseLabels[item.field] || 'Choose a column';
-        choose.addEventListener('click', () => {
-          dataDetected.classList.add('show');
-          mappingPanel.hidden = false;
-          mappingPanel.classList.add('editing');
-          mappingFix.hidden = true;
-          mappingContinue.textContent = 'Done';
-          mappingPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        });
-        actions.appendChild(choose);
-        const choiceMap = {
-          promo_active: { concept: 'promotional_flag', label: 'I don’t track discounts' },
-          customer_identifier: { concept: 'customer_identifier', label: 'I don’t have customer details' },
-        };
-        const skipChoice = choiceMap[item.field];
-        if (skipChoice) {
-          const skip = document.createElement('button');
-          skip.type = 'button';
-          skip.className = 'mapping-choice-btn';
-          skip.textContent = skipChoice.label;
-          skip.addEventListener('click', () => {
-            mappingChoices[skipChoice.concept] = 'unavailable';
-            hideMissingInputs();
-            runSimulation({ skipValidation: true });
-          });
-          actions.appendChild(skip);
-        }
-        const different = document.createElement('button');
-        different.type = 'button';
-        different.className = 'mapping-choice-btn';
-        different.textContent = 'Ask a different question';
-        different.addEventListener('click', () => {
-          hideMissingInputs();
-          questionInput.focus();
-        });
-        actions.appendChild(different);
-        if (item.field === 'avg_order_value') {
-          const average = document.createElement('button');
-          average.type = 'button';
-          average.className = 'mapping-choice-btn';
-          average.textContent = 'Use my average bill amount';
-          average.addEventListener('click', () => {
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.min = '0';
-            input.step = '0.01';
-            input.placeholder = 'e.g. 450';
-            input.dataset.field = 'user_provided_average_order_value';
-            input.className = 'missing-inline-input';
-            input.setAttribute('aria-label', 'Usual average bill amount');
-            if (!label.querySelector('[data-field="avg_order_value"]')) label.appendChild(input);
-            input.focus();
-          });
-          actions.appendChild(average);
-        }
-        label.appendChild(actions);
-        missingFields.appendChild(label);
-        return;
-      }
-      const input = document.createElement('input');
-      input.dataset.field = item.field;
-      input.type = item.input_type === 'number' ? 'number' : item.input_type === 'boolean' ? 'checkbox' : 'text';
-      if (item.input_type === 'number') input.step = '0.01';
-      label.appendChild(input);
-      missingFields.appendChild(label);
-    });
-    missingSection.hidden = false;
-    missingSection.classList.add('show');
-    missingSubmitBtn.textContent = 'Continue with this data';
-    missingSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    updateAwayFromLandingState();
+    openContextualFixData(body);
   }
 
   function showValidationNudge() {

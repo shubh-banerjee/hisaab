@@ -238,17 +238,42 @@ test('decision storage contract distinguishes calculated data from saved data', 
 test('question routing never defaults to delivery fee', () => {
   assert.equal(classifyQuestionIntent('What if I increase delivery fee by ₹5?').intent, 'delivery_fee_change');
   assert.equal(classifyQuestionIntent('Delivery charge badhega toh orders kam honge kya?').intent, 'delivery_fee_change');
-  assert.equal(classifyQuestionIntent('What if I increase price by 10%?').intent, 'price_or_aov_change');
-  assert.equal(classifyQuestionIntent('Average bill ₹250 se ₹280 karu toh kya hoga?').intent, 'price_or_aov_change');
-  assert.equal(classifyQuestionIntent('Should I run a 10% discount?').intent, 'promo_or_discount');
-  assert.equal(classifyQuestionIntent('Are customers coming back?').intent, 'repeat_customer');
-  assert.equal(classifyQuestionIntent('Are my sales going up?').intent, 'trend');
-  assert.equal(classifyQuestionIntent('Which month was best?').intent, 'trend');
+  assert.equal(classifyQuestionIntent('What if I increase price by 10%?').intent, 'price_or_bill_change');
+  assert.equal(classifyQuestionIntent('Average bill ₹250 se ₹280 karu toh kya hoga?').intent, 'price_or_bill_change');
+  assert.equal(classifyQuestionIntent('Should I run a 10% discount?').intent, 'discount_or_offer');
+  assert.equal(classifyQuestionIntent('Are customers coming back?').intent, 'repeat_customers');
+  assert.equal(classifyQuestionIntent('Are my sales going up?').intent, 'trend_sales');
+  assert.equal(classifyQuestionIntent('Which month was best?').intent, 'trend_orders');
   assert.equal(classifyQuestionIntent('What if I enable cash on delivery?').intent, 'cod');
-  assert.equal(classifyQuestionIntent('Should I hire another worker?').status, 'unsupported_question');
-  assert.equal(classifyQuestionIntent('What if I increase delivery fee by ₹10 and also run discount?').status, 'clarify_intent');
-  assert.equal(classifyQuestionIntent('Are my sales going up?').matches.includes('promo_or_discount'), false);
-  assert.equal(classifyQuestionIntent('Should I run a sale discount?').intent, 'promo_or_discount');
+  assert.equal(classifyQuestionIntent('Should I hire another worker?').status, 'broad_guidance');
+  assert.equal(classifyQuestionIntent('What if I increase delivery fee by ₹10 and also run discount?').status, 'clarify_question');
+  assert.equal(classifyQuestionIntent('Are my sales going up?').matches.includes('discount_or_offer'), false);
+  assert.equal(classifyQuestionIntent('Should I run a sale discount?').intent, 'discount_or_offer');
+
+  const languageCases = [
+    ['Orders kam ho rahe hain kya?', 'trend_orders', 'hinglish'],
+    ['Sales gir rahi hai kya?', 'trend_sales', 'hinglish'],
+    ['Delivery charge badhaun toh kya hoga?', 'delivery_fee_change', 'hinglish'],
+    ['Discount dena chahiye kya?', 'discount_or_offer', 'hinglish'],
+    ['Customers wapas aa rahe hain kya?', 'repeat_customers', 'hinglish'],
+    ['Business kaise badhau?', 'broad_guidance', 'hinglish'],
+    ['ऑर्डर कम हो रहे हैं क्या?', 'trend_orders', 'hi'],
+    ['बिक्री कम हो रही है क्या?', 'trend_sales', 'hi'],
+    ['डिलीवरी फीस बढ़ाऊं तो क्या होगा?', 'delivery_fee_change', 'hi'],
+    ['डिस्काउंट देना चाहिए क्या?', 'discount_or_offer', 'hi'],
+    ['ग्राहक वापस आ रहे हैं क्या?', 'repeat_customers', 'hi'],
+    ['व्यापार कैसे बढ़ाऊं?', 'broad_guidance', 'hi'],
+    ['दुकान खोलूं?', 'broad_guidance', 'hi'],
+  ];
+  for (const [question, intent, language] of languageCases) {
+    const result = classifyQuestionIntent(question);
+    assert.equal(result.intent, intent, question);
+    assert.equal(result.language, language, question);
+    assert.ok(Array.isArray(result.matchedTerms), question);
+  }
+  assert.equal(classifyQuestionIntent('Delivery fee badhaun aur discount bhi du?').status, 'clarify_question');
+  assert.equal(classifyQuestionIntent('Delivery fee badhaun aur discount bhi du?').needsClarification, true);
+  assert.equal(classifyQuestionIntent('Is my shop okay?').status, 'clarify_question');
 });
 
 test('broad questions return analyst guidance and a safe next step', () => {
@@ -315,8 +340,11 @@ test('bootstrap trend path keeps daily periods for a 7-day comparison', () => {
 test('stabilized experience keeps primary paths and technical detail secondary', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const script = fs.readFileSync(path.join(__dirname, '..', 'public', 'script.js'), 'utf8');
-  assert.match(html, /class="path-title">Try demo<\/span>/);
-  assert.match(html, /class="path-title">Use my data<\/span>/);
+  assert.match(html, /class="path-title">Try Demo<\/span>/);
+  assert.match(html, /class="path-title">Upload Your Data<\/span>/);
+  assert.match(html, /Your simple business analyst for small shops\./);
+  assert.match(html, /without confusing reports\./);
+  assert.match(html, /No spreadsheet yet\? You can add daily sales manually after choosing Upload Your Data\./);
   assert.match(html, /<div class="overview-eyebrow">Answer<\/div>/);
   assert.match(html, />Why\?<\/h2>/);
   assert.match(html, />Try this<\/h2>/);

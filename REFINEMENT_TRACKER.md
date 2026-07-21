@@ -676,6 +676,89 @@ Checklist:
 - [x] Provide Ask a question, Fix detected data, and Upload different data actions.
 - [ ] Manually verify Data Ready variations with order-only, sales, delivery, discount, and customer files.
 
+## Ask Question screen
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Add a dedicated Ask Hisaab screen with a simple business-question prompt.
+- [x] Show only question chips compatible with the detected data.
+- [x] Add Orders, Sales, Discounts, and Customers question categories.
+- [x] Add rotating English/Hinglish examples for natural input.
+- [x] Keep empty questions on the Ask screen with a friendly inline prompt.
+- [x] Expand Hindi/Hinglish intent patterns for trends, fees, prices, offers, customers, and COD.
+- [x] Keep broad and multi-intent questions on analyst guidance or clarification paths.
+- [x] Add a simple back action to Data Ready.
+- [ ] Manually verify English, Hindi/Hinglish, broad, multi-intent, and empty-question flows.
+
+## Demo flow
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Replace the single demo block with Intro, Found Data, Choose Question, and Result steps.
+- [x] Add visible Step 1 of 4 progress.
+- [x] Use large demo question cards with short explanations.
+- [x] Use fixed illustrative demo answers instead of real-data question submission.
+- [x] Keep demo content isolated from upload, Ask, result, check-back, and decision-saving flows.
+- [x] Provide Try another demo question, Upload my data, and Back home actions.
+- [x] Label demo data as example data and not the user’s data.
+- [ ] Manually verify all four demo questions and mobile transitions.
+
+## Result screen stabilization
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Use one analyst-style result card for direct answers, trends, guidance, missing data, clarification, and demo-only responses.
+- [x] Keep the visible order as Answer, Why?, Try this, How sure is this?, Data used, and Details.
+- [x] Keep charts, methods, sample size, mapped columns, ranges, and technical metrics inside the collapsed Details area.
+- [x] Add a practical primary action for direct answers, missing data, and broad guidance.
+- [x] Show clarification choices inside Try this instead of a separate technical result panel.
+- [x] Remove automatic decision-follow-up prompts so Track this decision is user-triggered.
+- [x] Replace visible technical wording such as regression, R², t-score, confidence score, lower/upper bound, forecast interval, scenario model, data maturity, and evidence gate with plain-language copy or Details-only wording.
+- [x] Keep demo results clearly labelled as example data and prevent them from looking like a personal estimate.
+- [ ] Manually verify direct, trend, broad-guidance, missing-data, clarification, demo, and mobile result states.
+
+## Fix Data / missing-data flow
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Keep Fix Data optional after upload; Data Ready remains usable without opening it.
+- [x] Add a dedicated Fix data view with one central card and no upload, result, demo, or Ask overlap.
+- [x] Show all missing items only for the general Fix data path.
+- [x] Show only the one missing item required by the current question in the contextual path.
+- [x] Use plain labels for total bill amount, discount or offer details, customer name or phone, delivery fee, order date, and order number.
+- [x] Let users choose detected columns from a list and preview up to five sample values.
+- [x] Support “I don’t have this”, “I don’t track discounts”, and the usual average bill fallback without asking users to type technical placeholders.
+- [x] Keep unavailable-field choices in session state and remove incompatible Ask/Data Ready question choices.
+- [x] Return users to Data Ready, Ask, or the active question flow after a fix.
+- [x] Clearly label results that use an average bill instead of exact bill values.
+- [ ] Manually verify general fixes, contextual fixes, unavailable preferences, average bill fallback, ambiguous columns, and mobile layout.
+
+## Hindi and Hinglish question understanding
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Detect English, Hindi Devanagari, and Roman-script Hinglish deterministically.
+- [x] Route order trend, sales trend, delivery fee, price/bill, discount/offer, repeat-customer, and COD questions without a random default.
+- [x] Distinguish sales trend from discount language so “sales” does not become a promo question.
+- [x] Support the requested Hindi and Hinglish business phrases for supported intents.
+- [x] Return structured intent metadata with language, confidence, matched terms, calculation intent, and clarification state.
+- [x] Return localized clarification choices for Hindi and Hinglish.
+- [x] Route multi-intent questions to clarification instead of combining calculations.
+- [x] Route broad Hindi/Hinglish business questions to safe guidance without numeric estimates.
+- [x] Allow Devanagari questions through the frontend validator so the server can classify them.
+- [x] Keep unknown questions on clarification and never default them to delivery fee.
+- [ ] Manually verify typed and speech-to-text English, Hinglish, and Hindi examples in a browser.
+
 ## Recommended implementation order
 
 1. Phase 1 — eliminate the dangerous Start Fresh fallback.

@@ -192,7 +192,7 @@ function detectFallbackLanguage(question) {
   if (/[\u0900-\u097F]/.test(text)) {
     return 'hi';
   }
-  if (/\b(agar|main|badha|badhaon|doon|toh|kya|asar|padega|hoga|nahi|dukandar|mere|apne)\b/.test(text)) {
+  if (/\b(agar|main|mujhe|aap|apna|apne|mere|kya|kyun|kaise|kam|badh|badha|badhaun|badhau|gir|raha|rahi|rahe|hoga|hogi|honge|doon|du|karu|karein|dena|dene|chahiye|toh|asar|padega|nahi|dhanda|vyapar|bikri|grahak|wapas|chhoot|daam|rate|paisa)\b/.test(text)) {
     return 'hinglish';
   }
   return 'en';
@@ -1035,6 +1035,7 @@ function buildAnalyticsCapabilities(parsed) {
 
 function buildColumnMapping(parsed) {
   const headers = parsed.headers || [];
+  const rawRows = parsed.rawRows || [];
   const classification = parsed.classification || {};
   const sources = parsed.metricSources || {};
   const conceptForSource = {
@@ -1077,6 +1078,7 @@ function buildColumnMapping(parsed) {
       const options = headers.filter(header => !matchedHeaders.has(header)).map(header => ({
         column: header,
         confidence: Number(classification[header]?.confidence) || 0,
+        samples: rawRows.slice(0, 5).map(row => row[header]).filter(value => String(value ?? '').trim() !== ''),
       }));
       missing.push({
         concept,
@@ -1358,99 +1360,98 @@ function summarizeData(data) {
   };
 }
 
-const INTENT_CHOICES = [
-  { intent: 'delivery_fee_change', label: 'Check delivery fee', prompt: 'What happens if I change delivery fee?' },
-  { intent: 'price_or_aov_change', label: 'Check price / average bill', prompt: 'What happens if I change my price or average bill?' },
-  { intent: 'promo_or_discount', label: 'Check discount / offer', prompt: 'Do discounts or offers bring more orders?' },
-  { intent: 'repeat_customer', label: 'Check repeat customers', prompt: 'Are customers coming back?' },
-  { intent: 'trend', label: 'Check sales trend', prompt: 'Are my orders going up or down?' },
-];
+function intentChoicesForLanguage(language = 'en') {
+  if (language === 'hi') {
+    return [
+      { intent: 'trend_orders', label: 'ऑर्डर बढ़ रहे या कम?', prompt: 'ऑर्डर बढ़ रहे या कम?' },
+      { intent: 'trend_sales', label: 'बिक्री बढ़ रही या कम?', prompt: 'बिक्री बढ़ रही या कम?' },
+      { intent: 'delivery_fee_change', label: 'डिलीवरी फीस बदलना है?', prompt: 'डिलीवरी फीस बदलूं तो क्या होगा?' },
+      { intent: 'discount_or_offer', label: 'डिस्काउंट का असर?', prompt: 'डिस्काउंट देने से क्या फायदा होगा?' },
+      { intent: 'repeat_customers', label: 'ग्राहक वापस आ रहे?', prompt: 'क्या ग्राहक वापस आ रहे हैं?' },
+    ];
+  }
+  if (language === 'hinglish') {
+    return [
+      { intent: 'trend_orders', label: 'Orders badh rahe ya kam?', prompt: 'Orders badh rahe ya kam ho rahe hain?' },
+      { intent: 'trend_sales', label: 'Sales badh rahi ya kam?', prompt: 'Sales badh rahi ya kam ho rahi hai?' },
+      { intent: 'delivery_fee_change', label: 'Delivery fee badalna hai?', prompt: 'Delivery fee badhaun toh kya hoga?' },
+      { intent: 'discount_or_offer', label: 'Discount ka effect?', prompt: 'Discount dene se kya fayda hoga?' },
+      { intent: 'repeat_customers', label: 'Customers wapas aa rahe?', prompt: 'Customers wapas aa rahe hain kya?' },
+    ];
+  }
+  return [
+    { intent: 'trend_orders', label: 'Orders going up or down', prompt: 'Are my orders going up or down?' },
+    { intent: 'trend_sales', label: 'Sales going up or down', prompt: 'Are my sales going up or down?' },
+    { intent: 'delivery_fee_change', label: 'Delivery fee change', prompt: 'Should I change delivery fee?' },
+    { intent: 'discount_or_offer', label: 'Discount or offer impact', prompt: 'Did discounts help?' },
+    { intent: 'repeat_customers', label: 'Customers coming back', prompt: 'Are customers coming back?' },
+  ];
+}
 
 function classifyQuestionIntent(question) {
-  const text = String(question || '').trim().toLowerCase();
-  if (!text) {
-    return { status: 'unsupported_question', intent: 'unsupported_or_unclear', matches: [], choices: INTENT_CHOICES };
-  }
-  // “Why” questions are investigations, not trend requests. Let the analyst
-  // guidance path ask which evidence to inspect instead of pretending a trend
-  // comparison explains the cause.
-  if (/^why\b|\bwhy\s+(?:are|is|did|does|do)\b/.test(text)) {
-    return { status: 'unsupported_question', intent: 'unsupported_or_unclear', matches: [], choices: INTENT_CHOICES };
-  }
+  const rawText = String(question || '').trim();
+  const text = rawText.toLowerCase();
+  const language = detectFallbackLanguage(rawText);
+  const choices = intentChoicesForLanguage(language);
+  const base = (status, intent, matches, matchedTerms, confidence = 0.95) => ({
+    status,
+    intent,
+    matches,
+    matchedTerms,
+    language,
+    confidence,
+    calculation_intent: {
+      trend_orders: 'trend',
+      trend_sales: 'trend',
+      delivery_fee_change: 'delivery_fee_change',
+      price_or_bill_change: 'price_or_aov_change',
+      discount_or_offer: 'promo_or_discount',
+      repeat_customers: 'repeat_customer',
+    }[intent] || (['cod', 'trend', 'delivery_fee_change', 'price_or_aov_change', 'promo_or_discount', 'repeat_customer'].includes(intent) ? intent : null),
+    needsClarification: status === 'clarify_question' || status === 'clarify_intent',
+    choices,
+  });
+  if (!text) return base('clarify_question', 'clarify_question', [], [], 0);
 
   const signals = {
-    cod: /\bcod\b|cash\s*(?:on|par)\s*delivery|cash\s+delivery/.test(text),
-    delivery_fee: /delivery\s*(?:fee|charge|cost)|shipping\s*(?:fee|charge|cost)|courier\s*(?:fee|charge|cost)|freight/.test(text),
-    price_or_aov: /\bprice\b|product\s+price|\baov\b|average\s+order|avg\.?\s*order|average\s*bill|avg\.?\s*bill|order\s*value/.test(text),
-    promo_or_discount: /\bpromo(?:tion)?s?\b|\bdiscounts?\b|\boffers?\b|\bcoupons?\b|\bsale\b/.test(text),
-    repeat_customer: /repeat\s*(?:customer|buyer|order)|returning\s*customer|loyal\s*customer|customer[s]?\s+(?:coming|come|comeback|coming back|return|returning)\b|customers?\s+(?:badh|badhe|bad[ha])|grahak/.test(text),
-    trend: /\btrend\b|\b(?:best|worst)\s+month\b|\b(?:which|what)\s+month\b|\b(?:sales?|orders?)\b[^?!.]{0,35}\b(?:up|down|going|growing|falling|rising|increasing|decreasing)\b|\b(?:up|down|going|growing|falling|rising|increasing|decreasing)\b[^?!.]{0,35}\b(?:sales?|orders?)\b|sales?\s+(?:kaisa|kaise)\b|orders?\s+(?:badh|badhe|kam)\s+rahe\b/.test(text),
+    cod: /\bcod\b|cash\s*(?:on|par)\s*delivery|cash\s+delivery|delivery\s+par\s+cash|cash\s+denge|सीओडी|कैश\s*ऑन\s*डिलीवरी/.test(text),
+    delivery_fee: /delivery\s*(?:fee|charge|cost|paisa|paise)|shipping\s*(?:fee|charge|cost)|courier\s*(?:fee|charge|cost)|delivery\s+(?:badhaun|badha\s+doon|badha\s+du|kam\s+karu|kam\s+karoon|mehenga|sasta)|delivery\s+ka\s+paisa|डिलीवरी\s*(?:फीस|फी|चार्ज|का\s*पैसा)|डिलीवरी\s*(?:बढ़ाऊं|कम\s*करूं|महंगी|सस्ती)/.test(text),
+    price_or_bill_change: /\bprice\b|product\s+price|item\s+price|menu\s+price|\baov\b|average\s+order|avg\.?\s*order|average\s*bill|avg\.?\s*bill|bill\s*amount|order\s*value|(?:daam|rate|keemat)\s+(?:badha|badhau|badhaun|badha\s+doon|kam|kam\s+karu)|दाम\s*बढ़ाऊं|रेट\s*बढ़ाऊं|कीमत\s*कम\s*करूं|बिल\s*अमाउंट/.test(text),
+    discount_or_offer: /\bpromo(?:tion)?s?\b|\bdiscounts?\b|\boffers?\b|\bcoupons?\b|\b(?:sale\s+campaign|sale\s+offer|sale\s+lagau)\b|\bchhoot\b|discount\s+se|offer\s+se|chhoot\s+dene|डिस्काउंट|ऑफर|छूट|कूपन/.test(text),
+    repeat_customers: /repeat\s*(?:customer|buyer|order)|returning\s*customer|loyal\s*customer|same\s*customer|customer[s]?\s+(?:coming|come|comeback|coming back|return|returning|wapas)|grahak\s+wapas|customer\s+(?:wapas|dobara)|purane\s+customer|ग्राहक\s*वापस|पुराने\s*ग्राहक|दोबारा\s*ऑर्डर/.test(text),
+    trend_orders: /order\s*trend|\b(?:are\s+my\s+)?orders?\s+(?:up|down|going\s+(?:up|down)|increasing|decreasing|growing|falling|rising|kam|badh|badhe|gir)(?!\s*(?:honge|hoga|hogi|jaayega|jayega))(?:\s+(?:ho|rahe|raha|rhi|rhe|gaye|gaya|gayi|hai|hain))?|\b(?:which|what|kis)\s+month\b[^?!.]{0,25}\b(?:most|highest|best|worst|zyaada|zyada|orders?|order)\b|\b(?:most|highest|best|worst|sabse\s+(?:zyada|zyaada))\s+orders?\b|\bkitne\s+orders?\s+(?:hue|the)|ऑर्डर\s*(?:कम|बढ़|गिर)\s*(?:हो\s*रहे|रहे|रहा)?|किस\s*महीने\s*(?:ज्यादा|अधिक)\s*ऑर्डर/.test(text),
+    trend_sales: /sales?\s+trend|\b(?:are\s+my\s+)?sales?\s+(?:up|down|going\s+(?:up|down)|increasing|decreasing|growing|falling|rising|kam|badh|badhe|gir)(?!\s*(?:honge|hoga|hogi|jaayega|jayega))(?:\s+(?:ho|rahi|raha|rhi|rhe|hai|hain))?|\b(?:which|what|kis)\s+month\b[^?!.]{0,25}\b(?:highest|most|zyaada|zyada|sales?|bikri)\b|\bsales?\s+(?:kam|badh|badhe|gir)\s+ho\s*(?:rahi|rhi|rahe|raha)?\b|\bbikri\s+(?:kam|badh|badhe|gir)\s+ho\s*(?:rahi|rhi|rahe|raha)?\b|paisa\s+kam\s+aa\s+raha|revenue\s+(?:kam|down)|बिक्री\s*(?:कम|बढ़|गिर)|सेल्स\s*(?:कम|बढ़|गिर)|किस\s*महीने\s*(?:ज्यादा|अधिक)\s*(?:बिक्री|सेल्स)/.test(text),
   };
 
-  const changeIntents = Object.entries(signals)
-    .filter(([intent, matched]) => matched && ['cod', 'delivery_fee', 'price_or_aov', 'promo_or_discount'].includes(intent))
-    .map(([intent]) => intent);
+  const broad = /what\s+should\s+i\s+do|how\s+to\s+grow|how\s+to\s+increase\s+profit|should\s+i\s+hire|should\s+i\s+open|why\s+is\s+(?:my\s+)?business\s+down|why\s+are\s+(?:my\s+)?(?:orders?|sales?)\s+(?:down|falling|low)|what\s+is\s+wrong\s+with\s+(?:my\s+)?business|\bkya\s+karu\b|business\s+kaise\s+(?:badhau|badhe|grow|badhaye)|profit\s+kaise\s+badhega|staff\s+(?:hire|rakhu|karu)|naya\s+shop\s+kholu|dusri\s+dukaan|business\s+down\s+kyun|(?:orders?|sales?)\s+(?:kam|down)\s+kyun|dhanda\s+kam\s+kyun|kya\s+problem\s+hai|व्यापार\s*कैसे\s*बढ़ाऊं|मुनाफा\s*कैसे\s*बढ़ेगा|स्टाफ\s*(?:रखूं|हायर)|(?:नई\s*दुकान|दूसरी\s*दुकान|दुकान\s*खोलूं)|धंधा\s*कम\s*क्यों|(?:ऑर्डर|बिक्री).*क्यों|क्या\s*समस्या\s*है/.test(text);
+  if (broad) return base('broad_guidance', 'broad_guidance', ['broad_guidance'], ['broad business question'], 0.96);
 
-  // “Repeat customers” and “trend” describe the question's outcome when
-  // paired with a specific lever (for example, delivery fee → repeat orders),
-  // not a second intent. When they stand alone, they are separate supported
-  // intents and are never allowed to fall through to delivery fee.
-  const standaloneIntents = [];
-  if (!changeIntents.length) {
-    if (signals.repeat_customer) standaloneIntents.push('repeat_customer');
-    else if (signals.trend) standaloneIntents.push('trend');
-  } else if (signals.trend) {
-    // An explicit trend request alongside a lever request is two questions.
-    // Ordinary outcome language such as “orders kam honge” is intentionally
-    // not a trend signal, so a normal delivery-fee question stays singular.
-    standaloneIntents.push('trend');
-  }
-
-  const matches = [...changeIntents, ...standaloneIntents];
-  if (matches.length > 1) {
-    return {
-      status: 'clarify_intent',
-      intent: 'clarify_intent',
-      matches,
-      choices: INTENT_CHOICES,
-    };
-  }
-
-  if (matches.length === 1) {
-    const intentMap = {
-      cod: 'cod',
-      delivery_fee: 'delivery_fee_change',
-      price_or_aov: 'price_or_aov_change',
-      promo_or_discount: 'promo_or_discount',
-      repeat_customer: 'repeat_customer',
-      trend: 'trend',
-    };
-    return {
-      status: 'supported',
-      intent: intentMap[matches[0]],
-      matches,
-      choices: INTENT_CHOICES,
-    };
-  }
-
-  return {
-    status: 'unsupported_question',
-    intent: 'unsupported_or_unclear',
-    matches: [],
-    choices: INTENT_CHOICES,
-  };
+  const intentSignals = [
+    ['cod', signals.cod, 'COD'],
+    ['delivery_fee_change', signals.delivery_fee, 'delivery fee'],
+    ['price_or_bill_change', signals.price_or_bill_change, 'price or bill'],
+    ['discount_or_offer', signals.discount_or_offer, 'discount or offer'],
+    ['repeat_customers', signals.repeat_customers, 'repeat customer'],
+    ['trend_orders', signals.trend_orders, 'orders trend'],
+    ['trend_sales', signals.trend_sales, 'sales trend'],
+  ];
+  const matches = intentSignals.filter(([, matched]) => matched).map(([intent]) => intent);
+  const matchedTerms = intentSignals.filter(([, matched]) => matched).map(([, , term]) => term);
+  if (matches.length > 1) return base('clarify_question', 'clarify_question', matches, matchedTerms, 0.92);
+  if (matches.length === 1) return base('supported', matches[0], matches, matchedTerms, 0.97);
+  return base('clarify_question', 'clarify_question', [], [], 0.2);
 }
 
 function detectScenario(question, data) {
   const text = String(question || '').toLowerCase();
   const last = data[data.length - 1] || {};
   const classification = classifyQuestionIntent(question);
-  const intent = classification.intent;
-  const isPrice = intent === 'price_or_aov_change';
-  const isPromo = intent === 'promo_or_discount';
+  const intent = classification.calculation_intent || classification.intent;
+  const isPrice = intent === 'price_or_aov_change' || classification.intent === 'price_or_bill_change';
+  const isPromo = intent === 'promo_or_discount' || classification.intent === 'discount_or_offer';
   const isDelivery = intent === 'delivery_fee_change';
-  const isRepeat = intent === 'repeat_customer';
-  const isTrend = intent === 'trend';
+  const isRepeat = intent === 'repeat_customer' || classification.intent === 'repeat_customers';
+  const isTrend = intent === 'trend' || ['trend_orders', 'trend_sales'].includes(classification.intent);
   const isCod = intent === 'cod';
   const lever = isCod ? 'cash_on_delivery'
     : isDelivery ? 'delivery_fee'
@@ -1459,7 +1460,7 @@ function detectScenario(question, data) {
           : isRepeat ? 'repeat_customer'
             : isTrend ? 'trend'
               : null;
-  const outcomeMetric = isRepeat ? 'repeat_orders' : /repeat|returning|loyal/.test(text) ? 'repeat_orders' : 'orders';
+  const outcomeMetric = isRepeat ? 'repeat_orders' : classification.intent === 'trend_sales' ? 'sales' : /repeat|returning|loyal|वापस|दोबारा/.test(text) ? 'repeat_orders' : 'orders';
 
   const percentMatch = text.match(/(?:by|increase|raise|up)\s*(\d+(?:\.\d+)?)\s*%/) || text.match(/(\d+(?:\.\d+)?)\s*%/);
   const moneyValues = [...question.matchAll(/[₹$]?\s*(\d+(?:\.\d+)?)/g)].map(match => Number(match[1])).filter(Number.isFinite);
@@ -1493,6 +1494,8 @@ function detectScenario(question, data) {
 
   return {
     ...classification,
+    public_intent: classification.intent,
+    intent,
     lever,
     outcomeMetric,
     delta,
@@ -1726,55 +1729,62 @@ async function sendEvidenceLimitation(res, { sessionId, uploadId, question, data
 
 function unsupportedQuestionGuidance(question) {
   const text = String(question || '').toLowerCase();
-  const choices = [
-    { label: 'Check order trend', prompt: 'Are my orders going up or down?' },
-    { label: 'Check sales trend', prompt: 'Are my sales going up or down?' },
-    { label: 'Check repeat customers', prompt: 'Are customers coming back?' },
-    { label: 'Check discount impact', prompt: 'Did discounts help?' },
-  ];
-  if (/hire|staff|worker|employee|team|helper/.test(text)) {
+  const language = detectFallbackLanguage(question);
+  const choices = intentChoicesForLanguage(language);
+  const isHindi = language === 'hi';
+  const isHinglish = language === 'hinglish';
+  if (/hire|staff|worker|employee|team|helper|staff\s+(?:hire|rakhu|karu)|kisi\s+ko\s+rakhu|स्टाफ|कर्मचारी/.test(text)) {
     return {
       category: 'broad_guidance',
-      title: 'This is a bigger business decision.',
-      message: 'I can guide you, but I should not guess from orders alone. To guide this properly, I would need daily orders, busy hours, staff cost, and missed orders or delays.',
-      next_action: 'For now, check whether orders are increasing before deciding about staff.',
+      title: isHindi ? 'यह एक बड़ा कारोबारी फैसला है।' : isHinglish ? 'Yeh business ka bada decision hai.' : 'This is a bigger business decision.',
+      message: isHindi ? 'मैं मार्गदर्शन कर सकता हूँ, लेकिन सिर्फ ऑर्डर देखकर अनुमान नहीं लगाना चाहिए। इसके लिए रोज़ के ऑर्डर, व्यस्त समय, स्टाफ का खर्च और छूटे हुए ऑर्डर जानना होगा।' : isHinglish ? 'Main guide kar sakta hoon, lekin sirf orders dekhkar guess nahi karna chahiye. Iske liye daily orders, busy hours, staff cost aur missed orders chahiye.' : 'I can guide you, but I should not guess from orders alone. To guide this properly, I would need daily orders, busy hours, staff cost, and missed orders or delays.',
+      next_action: isHindi ? 'पहले देखें कि ऑर्डर लगातार बढ़ रहे हैं या नहीं।' : isHinglish ? 'Pehle check karein ki orders lagataar badh rahe hain ya nahi.' : 'For now, check whether orders are increasing before deciding about staff.',
       primary_label: 'Check order trend', primary_prompt: 'Are my orders going up or down?', choices,
     };
   }
-  if (/second shop|another shop|open .*outlet|new outlet|second outlet|branch/.test(text)) {
+  if (/second shop|another shop|open .*outlet|new outlet|second outlet|branch|naya\s+shop|dusri\s+dukaan|नई\s*दुकान|दूसरी\s*दुकान|दुकान\s*खोलूं/.test(text)) {
     return {
       category: 'broad_guidance',
-      title: 'Opening another shop needs more information.',
-      message: 'I can help prepare this decision, but I should not predict it from current sales history alone. I would need current profit, rent estimate, staff cost, expected demand, and delivery radius.',
-      next_action: 'First check whether current orders are stable.',
+      title: isHindi ? 'दूसरी दुकान खोलने के लिए और जानकारी चाहिए।' : isHinglish ? 'Dusri shop kholne ke liye aur information chahiye.' : 'Opening another shop needs more information.',
+      message: isHindi ? 'मैं इस फैसले की तैयारी में मदद कर सकता हूँ, लेकिन सिर्फ बिक्री इतिहास से अनुमान नहीं लगाना चाहिए। मुनाफा, किराया, स्टाफ खर्च और संभावित मांग भी चाहिए।' : isHinglish ? 'Main is decision ki taiyari mein help kar sakta hoon, lekin sirf sales history se guess nahi karna chahiye. Profit, rent, staff cost aur expected demand bhi chahiye.' : 'I can help prepare this decision, but I should not predict it from current sales history alone. I would need current profit, rent estimate, staff cost, expected demand, and delivery radius.',
+      next_action: isHindi ? 'पहले देखें कि मौजूदा ऑर्डर स्थिर हैं या नहीं।' : isHinglish ? 'Pehle check karein ki current orders stable hain ya nahi.' : 'First check whether current orders are stable.',
       primary_label: 'Check if orders are stable', primary_prompt: 'Are my orders going up or down?', choices,
     };
   }
-  if (/why .*business|business .*down|orders? .*down|sales? .*down|business .*bad|what is wrong/.test(text)) {
+  if (/why .*business|business .*down|orders? .*down|sales? .*down|business .*bad|what is wrong|business\s+down\s+kyun|dhanda\s+kam\s+kyun|kya\s+problem|व्यापार.*कम|धंधा.*कम|क्या\s*समस्या/.test(text)) {
     return {
       category: 'guided_answer',
-      title: 'Let’s investigate this step by step.',
-      message: 'I can help investigate this, but I should not guess at one cause. First, check whether orders, sales, repeat customers, or discount results changed.',
-      next_action: 'Choose one check below to start with the evidence available now.',
+      title: isHindi ? 'आइए इसे एक-एक करके समझते हैं।' : isHinglish ? 'Chaliye ise step by step samajhte hain.' : 'Let’s investigate this step by step.',
+      message: isHindi ? 'मैं इसकी जांच में मदद कर सकता हूँ, लेकिन एक कारण का अनुमान नहीं लगाना चाहिए। पहले देखें कि ऑर्डर, बिक्री, वापस आने वाले ग्राहक या डिस्काउंट का असर बदला है या नहीं।' : isHinglish ? 'Main investigate karne mein help kar sakta hoon, lekin ek cause ka guess nahi karna chahiye. Pehle orders, sales, repeat customers ya discount ka effect check karein.' : 'I can help investigate this, but I should not guess at one cause. First, check whether orders, sales, repeat customers, or discount results changed.',
+      next_action: isHindi ? 'नीचे से एक जांच चुनें।' : isHinglish ? 'Neeche se ek check choose karein.' : 'Choose one check below to start with the evidence available now.',
+      primary_label: 'Check order trend', primary_prompt: 'Are my orders going up or down?', choices,
+    };
+  }
+  if (/profit|business\s+(?:kaise|badh|grow|improve)|(?:kaise|badhau|badhega|badhaye)\s+(?:business|profit)|grow|improve|kya\s+karu|व्यापार\s*कैसे|मुनाफा\s*कैसे|बिजनेस\s*कैसे|धंधा\s*कैसे/.test(text)) {
+    return {
+      category: 'broad_guidance',
+      title: isHindi ? 'इसके लिए पहले कुछ कारोबारी जांच करनी होगी।' : isHinglish ? 'Iske liye pehle kuch business checks karne honge.' : 'This needs a few business checks first.',
+      message: isHindi ? 'मैं मार्गदर्शन कर सकता हूँ, लेकिन सिर्फ एक नंबर देखकर अनुमान नहीं लगाना चाहिए। पहले ऑर्डर, बिक्री, डिस्काउंट या वापस आने वाले ग्राहकों को देखें।' : isHinglish ? 'Main guide kar sakta hoon, lekin sirf ek number dekhkar guess nahi karna chahiye. Pehle orders, sales, discounts ya repeat customers check karein.' : 'I can guide you, but I should not guess from one number alone. Start by checking orders, sales, discounts, or repeat customers to see where the change is coming from.',
+      next_action: isHindi ? 'नीचे से एक कारोबारी जांच चुनें।' : isHinglish ? 'Neeche se ek business check choose karein.' : 'Choose one business check below, then we can look at the matching data honestly.',
       primary_label: 'Check order trend', primary_prompt: 'Are my orders going up or down?', choices,
     };
   }
   return {
     category: 'clarify_question',
-    title: 'I can guide you, but I need one clear question.',
-    message: 'I should not guess from the data I have. Choose the business check that is closest to what you want to know.',
-    next_action: 'Pick one check and Hisaab will use only the matching data and calculation.',
+    title: isHindi ? 'मैं समझना चाहता हूँ — आप क्या चेक करना चाहते हैं?' : isHinglish ? 'Main samajhna chahta hoon — aap kya check karna chahte hain?' : 'I want to understand — what do you want to check?',
+    message: isHindi ? 'मैं आपके सवाल का अंदाज़ा नहीं लगाऊँगा। नीचे सबसे करीब वाला सवाल चुनें।' : isHinglish ? 'Main aapke sawaal ka guess nahi karunga. Neeche sabse close question choose karein.' : 'I should not guess from the data I have. Choose the business check that is closest to what you want to know.',
+    next_action: isHindi ? 'एक जांच चुनें।' : isHinglish ? 'Ek check choose karein.' : 'Pick one check and Hisaab will use only the matching data and calculation.',
     primary_label: 'Check order trend', primary_prompt: 'Are my orders going up or down?', choices,
   };
 }
 
 async function sendIntentLimitation(res, { sessionId, question, classification }) {
-  const isClarify = classification.status === 'clarify_intent';
+  const isClarify = ['clarify_intent', 'clarify_question'].includes(classification.status);
   const guidance = isClarify ? {
     category: 'clarify_question',
-    title: 'Which change do you want to check first?',
-    message: 'I should not combine two different business questions into one estimate. Choose one check first.',
-    next_action: 'Hisaab will use only the matching data and calculation.',
+    title: classification.language === 'hi' ? 'पहले कौन सी बात जांचनी है?' : classification.language === 'hinglish' ? 'Pehle kaunsa check karna hai?' : 'Which question do you want to check first?',
+    message: classification.language === 'hi' ? 'मैं दो अलग सवालों को मिलाकर अनुमान नहीं लगाऊँगा। पहले एक जांच चुनें।' : classification.language === 'hinglish' ? 'Main do alag questions ko mila kar guess nahi karunga. Pehle ek check choose karein.' : 'I should not combine two different business questions into one estimate. Choose one check first.',
+    next_action: classification.language === 'hi' ? 'Hisaab सिर्फ चुनी हुई जांच का डेटा इस्तेमाल करेगा।' : classification.language === 'hinglish' ? 'Hisaab sirf chosen check ka data use karega.' : 'Hisaab will use only the matching data and calculation.',
     primary_label: 'Check order trend', primary_prompt: 'Are my orders going up or down?', choices: classification.choices,
   } : unsupportedQuestionGuidance(question);
   const category = guidance.category;
@@ -2040,9 +2050,11 @@ function computeRegressionResult(question, data, summary) {
   }
 
   if (scenario.intent === 'trend' || scenario.intent === 'repeat_customer') {
-    const asksSales = scenario.intent === 'trend' && /\b(sales|revenue|turnover|bill amount|sales value)\b/i.test(question);
+    const asksSales = scenario.intent === 'trend' && (scenario.outcomeMetric === 'sales' || /\b(sales|revenue|turnover|bill amount|sales value|bikri|paisa)\b|बिक्री|सेल्स/i.test(question));
     const salesAvailable = data.some(row => Number.isFinite(Number(row.orders)) && Number.isFinite(Number(row.avg_order_value)));
-    const trendMetric = asksSales && salesAvailable ? 'sales' : scenario.outcomeMetric;
+    const trendMetric = scenario.intent === 'repeat_customer'
+      ? 'repeat_orders'
+      : asksSales && salesAvailable ? 'sales' : 'orders';
     const granularity = data.some(row => row.date) ? 'daily' : 'monthly';
     outcome = computeRecentTrend(data, trendMetric, { granularity });
     const cannotCalculate = outcome.sampleSize < 2;
@@ -3207,14 +3219,15 @@ async function handleSimulate(req, res) {
       classification: intentClassification,
     });
   }
+  const calculationIntent = intentClassification.calculation_intent || intentClassification.intent;
 
-  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner, dataMode, manualMappings, intentClassification.intent);
+  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner, dataMode, manualMappings, calculationIntent);
   dataSource.mapping_choices = mappingChoices;
 
   if (dataSource.mode === 'bootstrap_insufficient') {
     const entryCount = Number(dataSource.bootstrap_entries_used) || 0;
     const minimum = Number(dataSource.bootstrap_min_entries) || BOOTSTRAP_MIN_ENTRIES;
-    if (intentClassification.intent === 'trend') {
+    if (calculationIntent === 'trend') {
       return sendEvidenceLimitation(res, {
         sessionId,
         uploadId,
@@ -3321,7 +3334,7 @@ async function handleSimulate(req, res) {
     });
   }
 
-  if (intentClassification.intent !== 'trend' && !config.geminiApiKey && !isDemoSource) {
+  if (calculationIntent !== 'trend' && !config.geminiApiKey && !isDemoSource) {
     return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server', kind: 'server_error' });
   }
 
@@ -3358,18 +3371,18 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
 }`;
 
   let generated;
-  if (intentClassification.intent === 'trend') {
+  if (calculationIntent === 'trend') {
     generated = trendGeneratedResponse(computed, fallbackLanguage);
   }
 
-  const client = intentClassification.intent === 'trend' || isDemoSource ? null : createGeminiClient();
+  const client = calculationIntent === 'trend' || isDemoSource ? null : createGeminiClient();
   logJson('Prompt sent to Gemini', {
     model: config.geminiModel,
     prompt: userPrompt,
   });
 
   try {
-    if (intentClassification.intent === 'trend') {
+    if (calculationIntent === 'trend') {
       logJson('Server trend response', generated);
     } else {
     const response = await client.models.generateContent({
