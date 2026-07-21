@@ -251,6 +251,7 @@ test('question routing never defaults to delivery fee', () => {
   assert.equal(classifyQuestionIntent('Should I run a sale discount?').intent, 'promo_or_discount');
 });
 
+<<<<<<< HEAD
 test('broad questions return analyst guidance and a safe next step', () => {
   const staff = unsupportedQuestionGuidance('Should I hire another worker?');
   assert.equal(staff.category, 'broad_guidance');
@@ -260,6 +261,8 @@ test('broad questions return analyst guidance and a safe next step', () => {
   assert.equal(unsupportedQuestionGuidance('Should I open a second shop?').category, 'broad_guidance');
 });
 
+=======
+>>>>>>> origin/main
 test('trend and repeat intents use dedicated non-delivery calculations', () => {
   const rows = [
     { month: '2025-01', orders: 100, repeat_orders: 20, avg_order_value: 200, delivery_fee: 30 },

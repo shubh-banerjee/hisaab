@@ -262,6 +262,7 @@ function fallbackGeneratedResponse(computed, language = 'en') {
   };
 }
 
+<<<<<<< HEAD
 function demoGeneratedResponse(computed, language = 'en') {
   const value = Number(computed.outcome_value);
   const amount = Number.isFinite(value) ? Math.min(8, Math.max(0.4, Math.abs(value))) : 1.2;
@@ -312,6 +313,8 @@ function demoGeneratedResponse(computed, language = 'en') {
   };
 }
 
+=======
+>>>>>>> origin/main
 function trendGeneratedResponse(computed, language = 'en') {
   const summary = computed.trend_summary || {};
   const pct = Number(summary.change_pct);
@@ -1371,12 +1374,15 @@ function classifyQuestionIntent(question) {
   if (!text) {
     return { status: 'unsupported_question', intent: 'unsupported_or_unclear', matches: [], choices: INTENT_CHOICES };
   }
+<<<<<<< HEAD
   // “Why” questions are investigations, not trend requests. Let the analyst
   // guidance path ask which evidence to inspect instead of pretending a trend
   // comparison explains the cause.
   if (/^why\b|\bwhy\s+(?:are|is|did|does|do)\b/.test(text)) {
     return { status: 'unsupported_question', intent: 'unsupported_or_unclear', matches: [], choices: INTENT_CHOICES };
   }
+=======
+>>>>>>> origin/main
 
   const signals = {
     cod: /\bcod\b|cash\s*(?:on|par)\s*delivery|cash\s+delivery/.test(text),
@@ -1724,6 +1730,7 @@ async function sendEvidenceLimitation(res, { sessionId, uploadId, question, data
   });
 }
 
+<<<<<<< HEAD
 function unsupportedQuestionGuidance(question) {
   const text = String(question || '').toLowerCase();
   const choices = [
@@ -1781,6 +1788,18 @@ async function sendIntentLimitation(res, { sessionId, question, classification }
   const message = guidance.message;
   const title = guidance.title;
   const nextAction = guidance.next_action;
+=======
+async function sendIntentLimitation(res, { sessionId, question, classification }) {
+  const isClarify = classification.status === 'clarify_intent';
+  const category = isClarify ? 'clarify_intent' : 'unsupported_question';
+  const message = isClarify
+    ? 'Which change do you want to check first? Hisaab should not combine two different business questions into one estimate.'
+    : 'I can’t estimate this honestly from your current sales data yet. Hisaab can currently check delivery fee, price, discounts, repeat customers, or sales trends.';
+  const title = isClarify ? 'Which change do you want to check first?' : 'Hisaab cannot measure this yet';
+  const nextAction = isClarify
+    ? 'Choose one question first, then Hisaab will use only the matching data and calculation.'
+    : 'Choose one of the supported checks below, or ask a more specific question about delivery fee, price, discounts, repeat customers, or sales trend.';
+>>>>>>> origin/main
   const questionPersistence = await firestoreService.saveQuestion({
     sessionId,
     question,
@@ -1804,9 +1823,13 @@ async function sendIntentLimitation(res, { sessionId, question, classification }
       title,
       message,
       next_action: nextAction,
+<<<<<<< HEAD
       choices: guidance.choices,
       primary_label: guidance.primary_label,
       primary_prompt: guidance.primary_prompt,
+=======
+      choices: classification.choices,
+>>>>>>> origin/main
     },
     persistence: { question: questionPersistence },
   });
@@ -3321,7 +3344,11 @@ async function handleSimulate(req, res) {
     });
   }
 
+<<<<<<< HEAD
   if (intentClassification.intent !== 'trend' && !config.geminiApiKey && !isDemoSource) {
+=======
+  if (intentClassification.intent !== 'trend' && !config.geminiApiKey) {
+>>>>>>> origin/main
     return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server', kind: 'server_error' });
   }
 
@@ -3362,7 +3389,11 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
     generated = trendGeneratedResponse(computed, fallbackLanguage);
   }
 
+<<<<<<< HEAD
   const client = intentClassification.intent === 'trend' || isDemoSource ? null : createGeminiClient();
+=======
+  const client = intentClassification.intent === 'trend' ? null : createGeminiClient();
+>>>>>>> origin/main
   logJson('Prompt sent to Gemini', {
     model: config.geminiModel,
     prompt: userPrompt,
