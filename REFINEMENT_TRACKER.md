@@ -662,6 +662,20 @@ Manual QA:
 - Verify API responses contain explicit source and evidence status.
 - Verify a failed AI call never changes numeric output or evidence status.
 
+## Data Ready screen
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Show a short plain-language Data Ready card after parsing succeeds.
+- [x] List only detected data in user-friendly terms.
+- [x] Explain important missing data without blocking the next question.
+- [x] Show only compatible questions from the parsed summary.
+- [x] Keep column mapping and raw column names behind “Fix detected data”.
+- [x] Provide Ask a question, Fix detected data, and Upload different data actions.
+- [ ] Manually verify Data Ready variations with order-only, sales, delivery, discount, and customer files.
+
 ## Recommended implementation order
 
 1. Phase 1 — eliminate the dangerous Start Fresh fallback.

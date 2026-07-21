@@ -174,8 +174,10 @@
   const subtitle = document.getElementById('subtitle');
   const heroSupport = document.getElementById('hero-support');
   const pathChooser = document.getElementById('path-chooser');
+  const homeNote = document.getElementById('home-note');
   const questionInput = document.getElementById('question-input');
   const sheetUrlInput = document.getElementById('sheet-url-input');
+  const uploadSheetUrlInput = document.getElementById('upload-sheet-url');
   const clearSheetUrl = document.getElementById('clear-sheet-url');
   const csvUploadLink = document.getElementById('csv-upload-link');
   const csvFileInput = document.getElementById('csv-file-input');
@@ -187,7 +189,26 @@
   const pathReal = document.getElementById('path-real');
   const pathSheet = document.getElementById('path-sheet');
   const pathBootstrap = document.getElementById('path-bootstrap');
+  const uploadBack = document.getElementById('upload-back');
   const dataOptions = document.getElementById('data-options');
+  const readingView = document.getElementById('reading-view');
+  const readingStep = document.getElementById('reading-step');
+  const readingProgressBar = document.getElementById('reading-progress-bar');
+  const dataReadyView = document.getElementById('data-ready-view');
+  const dataReadyCopy = document.getElementById('data-ready-copy');
+  const dataReadyFoundSection = document.getElementById('data-ready-found-section');
+  const dataReadyFound = document.getElementById('data-ready-found');
+  const dataReadyMissingSection = document.getElementById('data-ready-missing-section');
+  const dataReadyMissing = document.getElementById('data-ready-missing');
+  const dataReadyAllFound = document.getElementById('data-ready-all-found');
+  const dataReadyQuestionSection = document.getElementById('data-ready-question-section');
+  const dataReadyQuestions = document.getElementById('data-ready-questions');
+  const dataReadyAsk = document.getElementById('data-ready-ask');
+  const dataReadyFix = document.getElementById('data-ready-fix');
+  const dataReadyUpload = document.getElementById('data-ready-upload');
+  const dataErrorView = document.getElementById('data-error-view');
+  const dataErrorRetry = document.getElementById('data-error-retry');
+  const dataErrorUpload = document.getElementById('data-error-upload');
   const sheetSlot = document.getElementById('sheet-slot');
   const dataDetected = document.getElementById('data-detected');
   const detectedHeadline = document.getElementById('detected-headline');
@@ -214,6 +235,7 @@
   const sampleSuggestions = document.getElementById('sample-suggestions');
   const realSuggestions = document.getElementById('real-suggestions');
   const composer = document.getElementById('composer');
+  const langNote = document.querySelector('.lang-note');
   const micBtn = document.getElementById('mic-btn');
   const simulateBtn = document.getElementById('simulate-btn');
   const btnText = simulateBtn.querySelector('.btn-text');
@@ -326,6 +348,17 @@
   const subjectVocabulary = /\b(fee|fees|price|prices|promo|promotion|discount|cod|cash on delivery|delivery|shipping|orders?|repeat|customer|customers|revenue|aov|month|months)\b/i;
 
   let activePath = 'sample';
+  let currentView = 'home';
+  let readingTimer = null;
+  let readingStepIndex = 0;
+  const readingSteps = [
+    'Reading your file...',
+    'Finding orders...',
+    'Checking sales amount...',
+    'Checking delivery fees...',
+    'Checking discounts...',
+    'Preparing simple summary...',
+  ];
   // The ONE dataset that /api/simulate calls actually use. This is distinct
   // from whatever is currently typed/uploaded in the composer inputs
   // (uploadedCsv / sheetUrlInput.value), which is merely "pending" until it
@@ -403,34 +436,57 @@
     });
   });
   if (demoUseData) demoUseData.addEventListener('click', () => {
-    hideResults();
-    setPath('real');
-    dataOptions.hidden = false;
-    dataOptions.classList.add('open');
-    dataOptions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    openUploadOptions();
   });
   if (demoAnotherQuestion) demoAnotherQuestion.addEventListener('click', () => {
     hideResults();
     openDemoIntro();
   });
   if (pathUseData) pathUseData.addEventListener('click', () => {
-    dataOptions.hidden = false;
-    dataOptions.classList.add('open');
-    pathUseData.classList.add('active');
-    renderChipVisibility();
-    heroSupport.textContent = 'Choose how you want to add your sales. You can change this later.';
-    dataOptions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    openUploadOptions();
   });
+  if (uploadBack) uploadBack.addEventListener('click', () => resetToLanding());
+  if (dataReadyAsk) dataReadyAsk.addEventListener('click', () => {
+    dataDetected.classList.remove('show');
+    showQuestionComposer();
+    questionInput.focus();
+  });
+  if (dataReadyFix) dataReadyFix.addEventListener('click', openDataFixFlow);
+  if (dataReadyUpload) dataReadyUpload.addEventListener('click', openUploadOptions);
+  if (dataErrorRetry) dataErrorRetry.addEventListener('click', () => {
+    if (uploadedCsv || sheetUrlInput.value.trim()) {
+      startReadingView(uploadedCsv ? 'file' : 'sheet');
+      parseConnectedData();
+    } else {
+      openUploadOptions();
+    }
+  });
+  if (dataErrorUpload) dataErrorUpload.addEventListener('click', openUploadOptions);
   pathReal.addEventListener('click', () => {
+    document.body.classList.add('upload-view-active');
     setPath('real');
+    sheetSlot.classList.remove('open');
     csvFileInput.click();
   });
   if (pathSheet) pathSheet.addEventListener('click', () => {
+    const value = uploadSheetUrlInput?.value.trim() || '';
+    if (!value) {
+      uploadSheetUrlInput?.focus();
+      return;
+    }
+    document.body.classList.add('upload-view-active');
+    sheetUrlInput.value = value;
+    window.clearTimeout(parseTimer);
     setPath('real');
-    sheetSlot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    sheetUrlInput.focus();
+    sheetSlot.classList.remove('open');
+    parseConnectedData();
   });
-  if (pathBootstrap) pathBootstrap.addEventListener('click', () => setPath('bootstrap'));
+  if (pathBootstrap) pathBootstrap.addEventListener('click', () => {
+    document.body.classList.remove('upload-view-active');
+    showQuestionComposer();
+    setPath('bootstrap');
+    closeDataOptions();
+  });
   if (bootstrapGateAdd) bootstrapGateAdd.addEventListener('click', () => {
     hideBootstrapGate();
     hideResults();
@@ -494,6 +550,12 @@
     csvFileInput.click();
   });
   csvFileInput.addEventListener('change', handleCsvFile);
+  if (uploadSheetUrlInput) uploadSheetUrlInput.addEventListener('input', () => {
+    if (sheetUrlInput.value && sheetUrlInput.value !== uploadSheetUrlInput.value) {
+      sheetUrlInput.value = '';
+      renderSheetUrlState();
+    }
+  });
   sheetUrlInput.addEventListener('input', () => {
     clearCsvUpload();
     manualMappings = {};
@@ -710,6 +772,235 @@
     subtitle.classList.add('show');
   }
 
+  function setCurrentView(view) {
+    currentView = view;
+    const viewClasses = ['view-home', 'view-upload', 'view-reading', 'view-data-ready', 'view-data-fix', 'view-demo', 'view-ask', 'view-result', 'view-error'];
+    document.body.classList.remove(...viewClasses);
+    document.body.classList.add(`view-${view.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`);
+
+    if (readingView) readingView.hidden = view !== 'reading';
+    if (dataReadyView) dataReadyView.hidden = view !== 'dataReady';
+    if (dataErrorView) dataErrorView.hidden = view !== 'error';
+
+    const transitionView = view === 'reading' || view === 'dataReady' || view === 'error';
+    if (transitionView || view === 'ask' || view === 'home' || view === 'demo') {
+      dataOptions.hidden = true;
+      dataOptions.classList.remove('open');
+      document.body.classList.remove('upload-view-active');
+    }
+
+    if (transitionView || view === 'ask') {
+      sheetSlot.classList.remove('open');
+      dataDetected.classList.remove('show');
+      demoIntro.hidden = true;
+      demoIntro.classList.remove('open');
+      sampleSuggestions.hidden = true;
+      realSuggestions.hidden = true;
+      if (langNote) langNote.hidden = view !== 'ask';
+    }
+
+    if (transitionView) {
+      composer.hidden = true;
+      pathChooser.hidden = true;
+      if (homeNote) homeNote.hidden = true;
+      hideResults();
+      hideMissingInputs();
+      hideValidationNudge();
+      hideError();
+    }
+  }
+
+  function stopReadingProgress() {
+    if (readingTimer) {
+      window.clearInterval(readingTimer);
+      readingTimer = null;
+    }
+  }
+
+  function renderReadingStep(index) {
+    readingStepIndex = Math.max(0, Math.min(index, readingSteps.length - 1));
+    if (readingStep) readingStep.textContent = readingSteps[readingStepIndex];
+    if (readingProgressBar) {
+      const progress = ((readingStepIndex + 1) / readingSteps.length) * 100;
+      readingProgressBar.style.width = `${progress}%`;
+    }
+  }
+
+  function startReadingView(source = 'file') {
+    stopReadingProgress();
+    setCurrentView('reading');
+    renderReadingStep(source === 'sheet' ? 0 : 0);
+    readingTimer = window.setInterval(() => {
+      if (readingStepIndex < readingSteps.length - 1) renderReadingStep(readingStepIndex + 1);
+    }, 700);
+  }
+
+  function showDataReady(summary) {
+    stopReadingProgress();
+    if (readingProgressBar) readingProgressBar.style.width = '100%';
+    renderDataReadySummary(summary);
+    setCurrentView('dataReady');
+  }
+
+  const dataReadyConcepts = {
+    order_count_identifier: { label: 'Orders', found: true },
+    order_date: { label: 'Dates', found: true },
+    order_value_or_price: { label: 'Sales amount', found: true },
+    shipping_or_delivery_fee: { label: 'Delivery fee', found: true },
+    promotional_flag: { label: 'Discount or offer details', found: true },
+    customer_identifier: { label: 'Customer name or phone', found: true },
+  };
+
+  const dataReadyMissingCopy = {
+    order_value_or_price: {
+      label: 'Sales amount',
+      reason: 'Needed to estimate money impact.',
+    },
+    promotional_flag: {
+      label: 'Discount or offer details',
+      reason: 'Needed to check if offers worked.',
+    },
+    customer_identifier: {
+      label: 'Customer name or phone',
+      reason: 'Needed to check repeat customers.',
+    },
+  };
+
+  function renderDataReadySummary(summary) {
+    const mapping = summary?.column_mapping || {};
+    const availableKeys = new Set((mapping.available_capabilities || []).map(item => item.key));
+    const foundConcepts = new Set(
+      (mapping.found || [])
+        .map(item => item.concept)
+        .filter(concept => dataReadyConcepts[concept]),
+    );
+    if (availableKeys.has('sales_trend')) {
+      foundConcepts.add('order_count_identifier');
+      foundConcepts.add('order_date');
+    }
+    if (availableKeys.has('pricing')) foundConcepts.add('order_value_or_price');
+    if (availableKeys.has('delivery_fee')) foundConcepts.add('shipping_or_delivery_fee');
+    if (availableKeys.has('promotions')) foundConcepts.add('promotional_flag');
+    if (availableKeys.has('repeat_customers')) foundConcepts.add('customer_identifier');
+    const missingConcepts = new Set(
+      (mapping.missing || [])
+        .map(item => item.concept)
+        .filter(concept => dataReadyMissingCopy[concept]),
+    );
+    const hasOrders = foundConcepts.has('order_count_identifier');
+    const hasDates = foundConcepts.has('order_date');
+    const hasSales = foundConcepts.has('order_value_or_price');
+    const hasDeliveryFee = foundConcepts.has('shipping_or_delivery_fee');
+    const hasDiscounts = foundConcepts.has('promotional_flag');
+    const hasCustomers = foundConcepts.has('customer_identifier');
+    const foundOrder = [
+      'order_count_identifier',
+      'order_date',
+      'order_value_or_price',
+      'shipping_or_delivery_fee',
+      'promotional_flag',
+      'customer_identifier',
+    ].filter(concept => foundConcepts.has(concept));
+    const questions = [];
+
+    if (hasOrders && hasDates) {
+      questions.push(
+        { label: 'Are my orders going up or down?', query: 'Are my orders going up or down?' },
+        { label: 'Which month had the most orders?', query: 'Which month had the most orders?' },
+      );
+    }
+    if (hasSales && hasOrders && hasDates) {
+      questions.push(
+        { label: 'Are my sales going up or down?', query: 'Are my sales going up or down?' },
+        { label: 'Which month had the highest sales?', query: 'Which month had the highest sales?' },
+      );
+    }
+    if (hasDeliveryFee && hasOrders) {
+      questions.push({ label: 'Should I change delivery fee?', query: 'Should I change delivery fee?' });
+    }
+    if (hasDiscounts && hasOrders) {
+      questions.push({ label: 'Did discounts help?', query: 'Did discounts help?' });
+    }
+    if (hasCustomers && hasOrders) {
+      questions.push({ label: 'Are customers coming back?', query: 'Are customers coming back?' });
+    }
+
+    const uniqueQuestions = [...new Map(questions.map(item => [item.query, item])).values()];
+    if (dataReadyFound) {
+      dataReadyFound.innerHTML = foundOrder
+        .map(concept => `<li><span class="data-ready-check" aria-hidden="true">✓</span>${escapeHtml(dataReadyConcepts[concept].label)}</li>`)
+        .join('');
+    }
+    if (dataReadyFoundSection) dataReadyFoundSection.hidden = !foundConcepts.size;
+
+    if (dataReadyMissing) {
+      dataReadyMissing.innerHTML = [...missingConcepts]
+        .map(concept => {
+          const item = dataReadyMissingCopy[concept];
+          return `<li><span class="data-ready-missing-mark" aria-hidden="true">i</span><span><b>${escapeHtml(item.label)}</b><small>${escapeHtml(item.reason)}</small></span></li>`;
+        })
+        .join('');
+    }
+    if (dataReadyMissingSection) dataReadyMissingSection.hidden = !missingConcepts.size;
+    if (dataReadyAllFound) dataReadyAllFound.hidden = Boolean(missingConcepts.size);
+
+    if (dataReadyQuestions) {
+      dataReadyQuestions.innerHTML = uniqueQuestions
+        .map(item => `<button type="button" class="data-ready-question" data-question="${escapeHtml(item.query)}">${escapeHtml(item.label)}</button>`)
+        .join('');
+      dataReadyQuestions.querySelectorAll('[data-question]').forEach(button => {
+        button.addEventListener('click', () => {
+          questionInput.value = button.dataset.question || '';
+          resizeQuestion();
+          updateQuestionState();
+          showQuestionComposer();
+          questionInput.focus();
+        });
+      });
+    }
+    if (dataReadyQuestionSection) dataReadyQuestionSection.hidden = !uniqueQuestions.length;
+    if (dataReadyCopy) dataReadyCopy.textContent = 'I read your sales data and checked what Hisaab can answer.';
+  }
+
+  function openDataFixFlow() {
+    setCurrentView('dataFix');
+    dataOptions.hidden = true;
+    dataDetected.classList.add('show');
+    mappingPanel.hidden = false;
+    mappingPanel.classList.add('editing');
+    mappingFix.hidden = true;
+    mappingContinue.textContent = 'Done';
+    detectedToggle.hidden = true;
+    detectedDetails.classList.remove('open');
+    mappingPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function showDataReadError(err) {
+    stopReadingProgress();
+    console.error('[Hisaab] Data reading failed:', err);
+    setCurrentView('error');
+  }
+
+  function openUploadOptions() {
+    hideResults();
+    setCurrentView('upload');
+    document.body.classList.remove('home-landing');
+    document.body.classList.add('upload-view-active');
+    composer.hidden = true;
+    if (langNote) langNote.hidden = true;
+    dataDetected.classList.remove('show');
+    pathChooser.hidden = true;
+    if (homeNote) homeNote.hidden = true;
+    demoIntro.hidden = true;
+    demoIntro.classList.remove('open');
+    dataOptions.hidden = false;
+    dataOptions.classList.add('open');
+    pathUseData.classList.add('active');
+    renderChipVisibility();
+    heroSupport.textContent = 'Choose how you want to add your sales. You can change this later.';
+    dataOptions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
   function setPath(path) {
     activePath = path;
     const isReal = path === 'real';
@@ -720,7 +1011,7 @@
       ? 'Your simple business analyst for small shops.'
       : 'Your data stays yours. Hisaab will tell you clearly what it can and cannot answer.';
     heroSupport.textContent = isSample
-      ? 'Ask questions about orders, sales, delivery fees, discounts, and customers.'
+      ? 'Understand orders, sales, delivery fees, discounts, and customers — without confusing reports.'
       : 'Choose how you want to add your sales. You can change this later.';
     pathSample.classList.toggle('active', isSample);
     if (pathUseData) pathUseData.classList.toggle('active', isReal || isBootstrap || !dataOptions.hidden);
@@ -764,6 +1055,9 @@
   }
 
   function openDemoIntro() {
+    setCurrentView('demo');
+    document.body.classList.remove('home-landing');
+    if (homeNote) homeNote.hidden = true;
     setPath('sample');
     if (demoIntro) {
       demoIntro.hidden = false;
@@ -772,23 +1066,42 @@
     }
     if (pathChooser) pathChooser.hidden = true;
     sampleSuggestions.hidden = true;
-    questionInput.focus();
+    demoIntro?.querySelector('.demo-question')?.focus();
+  }
+
+  function showQuestionComposer() {
+    setCurrentView('ask');
+    document.body.classList.remove('home-landing');
+    composer.hidden = false;
+    if (langNote) langNote.hidden = false;
+  }
+
+  function closeDataOptions() {
+    dataOptions.hidden = true;
+    dataOptions.classList.remove('open');
+    document.body.classList.remove('upload-view-active');
   }
 
   async function handleCsvFile() {
     const file = csvFileInput.files?.[0];
     if (!file) return;
     setPath('real');
+    startReadingView('file');
     manualMappings = {};
     mappingChoices = {};
     manualInputs = {};
     sheetUrlInput.value = '';
-    uploadedFileName = file.name;
-    uploadedCsv = await file.text();
-    connectedDataLabel = uploadedFileName;
-    renderCsvUploadState();
-    renderSheetUrlState();
-    await parseConnectedData();
+    if (uploadSheetUrlInput) uploadSheetUrlInput.value = '';
+    try {
+      uploadedFileName = file.name;
+      uploadedCsv = await file.text();
+      connectedDataLabel = uploadedFileName;
+      renderCsvUploadState();
+      renderSheetUrlState();
+      await parseConnectedData();
+    } catch (err) {
+      showDataReadError(err);
+    }
   }
 
   function clearCsvUpload() {
@@ -946,6 +1259,11 @@
     const sheetUrl = sheetUrlInput.value.trim();
     if (!uploadedCsv && sheetUrl.length <= 20) return;
 
+    const stagedUploadRead = currentView === 'upload' || currentView === 'reading';
+    if (currentView === 'upload') {
+      startReadingView(uploadedCsv ? 'file' : 'sheet');
+    }
+
     hideError();
     const isInlineRefresh = stage.classList.contains('connecting-data') && Boolean(currentResult);
     detectedHeadline.textContent = isInlineRefresh ? 'Reading this data for your analysis...' : 'Reading your order data...';
@@ -959,9 +1277,11 @@
     detectedCaveat.hidden = true;
     detectedDetails.innerHTML = '';
     hideApplyDataCta();
-    dataDetected.classList.add('show');
-    alignDataPanelToSheetSlot();
-    updateAwayFromLandingState();
+    if (!stagedUploadRead) {
+      dataDetected.classList.add('show');
+      alignDataPanelToSheetSlot();
+      updateAwayFromLandingState();
+    }
 
     try {
       const res = await fetch('/api/parse-sheet', {
@@ -986,7 +1306,12 @@
         hideApplyDataCta();
         applyPendingDataset();
       }
+      if (stagedUploadRead) showDataReady(lastSheetSummary);
     } catch (err) {
+      if (stagedUploadRead) {
+        showDataReadError(err);
+        return;
+      }
       lastSheetSummary = null;
       detectedHeadline.textContent = 'I could not read that sheet yet.';
       detectedBody.textContent = err.message;
@@ -3007,12 +3332,14 @@
   function updateAwayFromLandingState() {
     const inAnalysis = isAnalysisPage();
     newQuestion.hidden = !inAnalysis;
+    brandReset.hidden = !inAnalysis;
     brandReset.classList.toggle('is-resettable', inAnalysis);
     brandReset.setAttribute('aria-disabled', inAnalysis ? 'false' : 'true');
     brandReset.tabIndex = inAnalysis ? 0 : -1;
   }
 
   function resetToComposer() {
+    showQuestionComposer();
     restoreDataConnectorToHome();
     hideResults();
     hideMissingInputs();
@@ -3129,6 +3456,8 @@
   }
 
   function resetToLanding() {
+    stopReadingProgress();
+    setCurrentView('home');
     const sessionId = getSessionId();
     const userId = getUserId();
     window.clearTimeout(parseTimer);
@@ -3151,6 +3480,7 @@
 
     questionInput.value = '';
     sheetUrlInput.value = '';
+    if (uploadSheetUrlInput) uploadSheetUrlInput.value = '';
     refineQuestion.value = '';
     questionInput.style.height = '';
     resizeQuestion();
@@ -3164,6 +3494,13 @@
     hideError();
     restoreDataConnectorToHome();
     clearCsvUpload();
+    document.body.classList.remove('upload-view-active');
+    document.body.classList.add('home-landing');
+    composer.hidden = true;
+    if (langNote) langNote.hidden = true;
+    sampleSuggestions.hidden = true;
+    realSuggestions.hidden = true;
+    if (homeNote) homeNote.hidden = false;
     setPath('sample');
     if (demoIntro) {
       demoIntro.hidden = true;
