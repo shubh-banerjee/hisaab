@@ -40,6 +40,8 @@ Hisaab separates “can calculate a number” from “has enough evidence to sho
 
 Result categories are `clear_enough`, `weak_signal`, `not_enough_evidence`, `unsupported_question`, and `demo_only`. The frontend puts the simple answer and evidence strength first; sample size, R², slope, and ranges are secondary details.
 
+Before data is loaded, the server classifies each question into an explicit supported intent: delivery-fee change, price/average-bill change, promo/discount, repeat customers, sales trend, or COD. Unknown questions return `unsupported_question`; questions containing multiple supported changes return `clarify_intent` with simple choices. Hisaab never defaults an unclear question to delivery fee.
+
 ## What Is Calculated vs. AI-Written
 
 The API response separates:
@@ -174,6 +176,12 @@ Hisaab accepts:
 
 Column names do not need to match exactly. Hisaab shows detected columns and asks the user to choose when a business meaning is ambiguous. Cancelled, refunded, and returned rows are excluded when an order-status field is available.
 
+## First-run experience
+
+The first screen has two clear choices: **Try demo** or **Use my data**. Demo is explicitly example data and is not treated as the shop owner's history. Choosing **Use my data** then offers three simple paths: upload a sales file, connect a public Google Sheet, or add today's sales manually. File-reading, missing-data, and capability details appear only after the user chooses a data path and provides data.
+
+The interface uses everyday business language such as orders, sales, delivery fee, offers, small test, and not enough data. Technical details remain available only where they help explain a result.
+
 ## Tests
 
 Run the lightweight built-in Node test suite:
@@ -184,6 +192,8 @@ npm test
 
 The suite covers source labels, evidence gates, minimum history, missing fields, lever variation, extrapolation, weak signals, sample wording, language fallback, CSV mapping, bootstrap aggregation, comparison categories, zero/negative baselines, and save-failure copy. It does not require Gemini calls or a network listener.
 
+Trend questions use a dedicated server-owned path: imported monthly data compares recent versus previous periods, while a mature daily diary compares the latest 7 days with the previous 7. Trend answers do not run price or delivery-fee regression and do not show prediction ranges. If total bill amount is missing, Hisaab answers order trend only and says what is needed for a sales-value trend.
+
 ## Current limitations
 
 - Evidence is directional and statistical; it cannot prove that a lever caused an outcome.
@@ -191,6 +201,8 @@ The suite covers source labels, evidence gates, minimum history, missing fields,
 - Repeat-customer analysis needs a usable customer identifier and can be weak when most customers appear once.
 - Promo analysis needs both promo and non-promo periods; discount depth and other simultaneous changes may confound it.
 - Start Fresh needs at least 20 daily entries and still supports fewer capabilities than order-level data.
+- Question intent is deterministic keyword/phrase classification, not a general-purpose natural-language understanding model. Unclear or multi-intent questions are stopped rather than guessed.
+- Trend analysis needs at least two usable monthly periods, or 14 daily entries for the daily diary path. A short file cannot support an honest trend comparison.
 - No automated browser end-to-end suite or CI workflow is configured yet; the primary flows still need manual QA before a public demo.
 
 ## Run the Project

@@ -262,6 +262,91 @@ function fallbackGeneratedResponse(computed, language = 'en') {
   };
 }
 
+function demoGeneratedResponse(computed, language = 'en') {
+  const value = Number(computed.outcome_value);
+  const amount = Number.isFinite(value) ? Math.min(8, Math.max(0.4, Math.abs(value))) : 1.2;
+  const direction = Number.isFinite(value) && value < 0 ? 'slightly fewer' : 'slightly more';
+  const lever = computed.lever;
+  if (computed.outcome_metric === 'trend') {
+    return {
+      recommendation: 'In this demo shop, orders show a small illustrative movement over the example periods.',
+      why: 'Example data compares recent demo periods with earlier demo periods; this is illustrative only, not a real business result.',
+      outcome_metric_label: 'Example order trend',
+      detected_language: 'en',
+      source: 'demo_template',
+    };
+  }
+  if (lever === 'promo_active') {
+    return {
+      recommendation: 'In this demo shop, test discounts for a few days before using them widely.',
+      why: `In this demo shop, discount months were linked with ${direction} orders by about ${amount.toFixed(1)}%; this is illustrative only.`,
+      outcome_metric_label: 'Example order change',
+      detected_language: 'en',
+      source: 'demo_template',
+    };
+  }
+  if (lever === 'repeat_customer') {
+    return {
+      recommendation: 'In this demo shop, keep recording customer visits to see whether repeat buying continues.',
+      why: 'Example customer details show how Hisaab can look for returning customers; this is illustrative only, not your business data.',
+      outcome_metric_label: 'Example repeat-order change',
+      detected_language: 'en',
+      source: 'demo_template',
+    };
+  }
+  if (lever === 'delivery_fee') {
+    return {
+      recommendation: 'In this demo shop, try a small delivery-fee change before applying it to everyone.',
+      why: `In this demo shop, orders were linked with ${direction} orders when the delivery fee changed by about ${amount.toFixed(1)}%; this is illustrative only.`,
+      outcome_metric_label: 'Example order change',
+      detected_language: 'en',
+      source: 'demo_template',
+    };
+  }
+  return {
+    recommendation: 'In this demo shop, test a small price change before rolling it out widely.',
+    why: `In this demo shop, the example data links the change with ${direction} orders by about ${amount.toFixed(1)}%; this is illustrative only.`,
+    outcome_metric_label: 'Example order change',
+    detected_language: 'en',
+    source: 'demo_template',
+  };
+}
+
+function trendGeneratedResponse(computed, language = 'en') {
+  const summary = computed.trend_summary || {};
+  const pct = Number(summary.change_pct);
+  const metric = summary.metric === 'sales' ? 'sales value' : 'orders';
+  const direction = !Number.isFinite(pct) || Math.abs(pct) < 1 ? 'mostly stable' : pct > 0 ? 'slightly up' : 'slightly down';
+  const salesNote = summary.sales_requested && !summary.sales_available
+    ? ' This checks order trend only; total bill amount is needed for a sales-value trend.'
+    : '';
+  if (language === 'hi') {
+    return {
+      recommendation: `${metric === 'orders' ? 'ऑर्डर' : 'बिक्री'} का रुझान ${direction === 'slightly up' ? 'थोड़ा ऊपर' : direction === 'slightly down' ? 'थोड़ा नीचे' : 'लगभग स्थिर'} है।`,
+      why: `हाल के समय में औसत ${metric === 'orders' ? 'ऑर्डर' : 'बिक्री'} ${summary.recent_average ?? '—'} और पहले ${summary.previous_average ?? '—'} रही।${salesNote}`,
+      outcome_metric_label: metric === 'orders' ? 'ऑर्डर ट्रेंड' : 'बिक्री ट्रेंड',
+      detected_language: 'hi',
+      source: 'server_trend_template',
+    };
+  }
+  if (language === 'hinglish') {
+    return {
+      recommendation: `${metric === 'orders' ? 'Orders' : 'Sales'} ka trend ${direction === 'slightly up' ? 'thoda upar' : direction === 'slightly down' ? 'thoda neeche' : 'lagbhag stable'} hai.`,
+      why: `Recent average ${summary.recent_average ?? '—'} aur previous average ${summary.previous_average ?? '—'} tha.${salesNote}`,
+      outcome_metric_label: metric === 'orders' ? 'Order trend' : 'Sales trend',
+      detected_language: 'hinglish',
+      source: 'server_trend_template',
+    };
+  }
+  return {
+    recommendation: `${metric === 'orders' ? 'Orders' : 'Sales'} are ${direction}.`,
+    why: `The recent average is ${summary.recent_average ?? '—'} versus ${summary.previous_average ?? '—'} in the previous period.${salesNote}`,
+    outcome_metric_label: metric === 'orders' ? 'Order trend' : 'Sales trend',
+    detected_language: 'en',
+    source: 'server_trend_template',
+  };
+}
+
 function alignGeneratedWithComputed(generated, computed, expectedLanguage = 'en') {
   const text = `${generated.recommendation} ${generated.why}`.toLowerCase();
   const saysDecrease = /decreas|drop|fewer|lower|declin|lose|reduc/.test(text);
@@ -1117,7 +1202,7 @@ function formatMonthLabel(month) {
   return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' }).replace(' ', " '");
 }
 
-async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '', bootstrapOwner = null, dataMode = 'sample', manualMappings = {}) {
+async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '', bootstrapOwner = null, dataMode = 'sample', manualMappings = {}, requestedIntent = null) {
   const fallback = getHistoricalData();
   let sheetError = null;
 
@@ -1138,7 +1223,26 @@ async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '', boot
     }
 
     const agg = aggregateBootstrapEntries(entries);
+    const daily = aggregateBootstrapDailyEntries(entries);
     const entryCount = entries.length;
+    const minimumEntries = requestedIntent === 'trend' ? BOOTSTRAP_TREND_MIN_ENTRIES : BOOTSTRAP_MIN_ENTRIES;
+    if (requestedIntent === 'trend' && entryCount >= minimumEntries && daily.rows.length >= minimumEntries) {
+      return {
+        data: daily.rows,
+        sheetSummary: null,
+        dataSource: {
+          mode: 'bootstrap',
+          source_label: 'Self-reported daily history',
+          bootstrap_granularity: 'daily',
+          sheet_url_used: false,
+          bootstrap_entries_used: entryCount,
+          aggregated_rows_used: daily.rows.length,
+          field_sources: daily.metricSources,
+          columns: daily.columns,
+          warning: null,
+        },
+      };
+    }
     if (entryCount >= BOOTSTRAP_MIN_ENTRIES && agg.rows.length >= 2) {
       return {
         data: agg.rows,
@@ -1164,7 +1268,7 @@ async function getSimulationData(sheetUrl, manualInputs = {}, csvText = '', boot
         source_label: 'Self-reported daily history',
         sheet_url_used: false,
         bootstrap_entries_used: entryCount,
-        bootstrap_min_entries: BOOTSTRAP_MIN_ENTRIES,
+        bootstrap_min_entries: minimumEntries,
         aggregated_rows_used: agg.rows.length,
         field_sources: agg.metricSources,
         columns: agg.columns,
@@ -1254,14 +1358,108 @@ function summarizeData(data) {
   };
 }
 
+const INTENT_CHOICES = [
+  { intent: 'delivery_fee_change', label: 'Check delivery fee', prompt: 'What happens if I change delivery fee?' },
+  { intent: 'price_or_aov_change', label: 'Check price / average bill', prompt: 'What happens if I change my price or average bill?' },
+  { intent: 'promo_or_discount', label: 'Check discount / offer', prompt: 'Do discounts or offers bring more orders?' },
+  { intent: 'repeat_customer', label: 'Check repeat customers', prompt: 'Are customers coming back?' },
+  { intent: 'trend', label: 'Check sales trend', prompt: 'Are my orders going up or down?' },
+];
+
+function classifyQuestionIntent(question) {
+  const text = String(question || '').trim().toLowerCase();
+  if (!text) {
+    return { status: 'unsupported_question', intent: 'unsupported_or_unclear', matches: [], choices: INTENT_CHOICES };
+  }
+  // “Why” questions are investigations, not trend requests. Let the analyst
+  // guidance path ask which evidence to inspect instead of pretending a trend
+  // comparison explains the cause.
+  if (/^why\b|\bwhy\s+(?:are|is|did|does|do)\b/.test(text)) {
+    return { status: 'unsupported_question', intent: 'unsupported_or_unclear', matches: [], choices: INTENT_CHOICES };
+  }
+
+  const signals = {
+    cod: /\bcod\b|cash\s*(?:on|par)\s*delivery|cash\s+delivery/.test(text),
+    delivery_fee: /delivery\s*(?:fee|charge|cost)|shipping\s*(?:fee|charge|cost)|courier\s*(?:fee|charge|cost)|freight/.test(text),
+    price_or_aov: /\bprice\b|product\s+price|\baov\b|average\s+order|avg\.?\s*order|average\s*bill|avg\.?\s*bill|order\s*value/.test(text),
+    promo_or_discount: /\bpromo(?:tion)?s?\b|\bdiscounts?\b|\boffers?\b|\bcoupons?\b|\bsale\b/.test(text),
+    repeat_customer: /repeat\s*(?:customer|buyer|order)|returning\s*customer|loyal\s*customer|customer[s]?\s+(?:coming|come|comeback|coming back|return|returning)\b|customers?\s+(?:badh|badhe|bad[ha])|grahak/.test(text),
+    trend: /\btrend\b|\b(?:best|worst)\s+month\b|\b(?:which|what)\s+month\b|\b(?:sales?|orders?)\b[^?!.]{0,35}\b(?:up|down|going|growing|falling|rising|increasing|decreasing)\b|\b(?:up|down|going|growing|falling|rising|increasing|decreasing)\b[^?!.]{0,35}\b(?:sales?|orders?)\b|sales?\s+(?:kaisa|kaise)\b|orders?\s+(?:badh|badhe|kam)\s+rahe\b/.test(text),
+  };
+
+  const changeIntents = Object.entries(signals)
+    .filter(([intent, matched]) => matched && ['cod', 'delivery_fee', 'price_or_aov', 'promo_or_discount'].includes(intent))
+    .map(([intent]) => intent);
+
+  // “Repeat customers” and “trend” describe the question's outcome when
+  // paired with a specific lever (for example, delivery fee → repeat orders),
+  // not a second intent. When they stand alone, they are separate supported
+  // intents and are never allowed to fall through to delivery fee.
+  const standaloneIntents = [];
+  if (!changeIntents.length) {
+    if (signals.repeat_customer) standaloneIntents.push('repeat_customer');
+    else if (signals.trend) standaloneIntents.push('trend');
+  } else if (signals.trend) {
+    // An explicit trend request alongside a lever request is two questions.
+    // Ordinary outcome language such as “orders kam honge” is intentionally
+    // not a trend signal, so a normal delivery-fee question stays singular.
+    standaloneIntents.push('trend');
+  }
+
+  const matches = [...changeIntents, ...standaloneIntents];
+  if (matches.length > 1) {
+    return {
+      status: 'clarify_intent',
+      intent: 'clarify_intent',
+      matches,
+      choices: INTENT_CHOICES,
+    };
+  }
+
+  if (matches.length === 1) {
+    const intentMap = {
+      cod: 'cod',
+      delivery_fee: 'delivery_fee_change',
+      price_or_aov: 'price_or_aov_change',
+      promo_or_discount: 'promo_or_discount',
+      repeat_customer: 'repeat_customer',
+      trend: 'trend',
+    };
+    return {
+      status: 'supported',
+      intent: intentMap[matches[0]],
+      matches,
+      choices: INTENT_CHOICES,
+    };
+  }
+
+  return {
+    status: 'unsupported_question',
+    intent: 'unsupported_or_unclear',
+    matches: [],
+    choices: INTENT_CHOICES,
+  };
+}
+
 function detectScenario(question, data) {
-  const text = question.toLowerCase();
+  const text = String(question || '').toLowerCase();
   const last = data[data.length - 1] || {};
-  const isCod = /\bcod\b|cash\s+on\s+delivery/.test(text);
-  const isPromo = /promo|promotion|discount|sale/.test(text);
-  const isPrice = /price|product|aov|average order|avg order/.test(text);
-  const lever = isCod ? 'cash_on_delivery' : isPromo ? 'promo_active' : isPrice ? 'avg_order_value' : 'delivery_fee';
-  const outcomeMetric = /repeat|returning|loyal/.test(text) ? 'repeat_orders' : 'orders';
+  const classification = classifyQuestionIntent(question);
+  const intent = classification.intent;
+  const isPrice = intent === 'price_or_aov_change';
+  const isPromo = intent === 'promo_or_discount';
+  const isDelivery = intent === 'delivery_fee_change';
+  const isRepeat = intent === 'repeat_customer';
+  const isTrend = intent === 'trend';
+  const isCod = intent === 'cod';
+  const lever = isCod ? 'cash_on_delivery'
+    : isDelivery ? 'delivery_fee'
+      : isPrice ? 'avg_order_value'
+        : isPromo ? 'promo_active'
+          : isRepeat ? 'repeat_customer'
+            : isTrend ? 'trend'
+              : null;
+  const outcomeMetric = isRepeat ? 'repeat_orders' : /repeat|returning|loyal/.test(text) ? 'repeat_orders' : 'orders';
 
   const percentMatch = text.match(/(?:by|increase|raise|up)\s*(\d+(?:\.\d+)?)\s*%/) || text.match(/(\d+(?:\.\d+)?)\s*%/);
   const moneyValues = [...question.matchAll(/[₹$]?\s*(\d+(?:\.\d+)?)/g)].map(match => Number(match[1])).filter(Number.isFinite);
@@ -1278,7 +1476,7 @@ function detectScenario(question, data) {
         : 10;
       promoScale = clamp(discountDepthPct / baselineDepth, 0.1, 2);
     }
-  } else if (lever === 'cash_on_delivery') {
+  } else if (lever === 'cash_on_delivery' || lever === 'repeat_customer' || lever === 'trend') {
     delta = 0;
   } else {
     const current = Number(lever === 'avg_order_value' ? last.avg_order_value : last.delivery_fee) || 0;
@@ -1293,7 +1491,14 @@ function detectScenario(question, data) {
     }
   }
 
-  return { lever, outcomeMetric, delta, discountDepthPct, promoScale };
+  return {
+    ...classification,
+    lever,
+    outcomeMetric,
+    delta,
+    discountDepthPct,
+    promoScale,
+  };
 }
 
 function missingCriticalFields(question, dataSource) {
@@ -1307,23 +1512,24 @@ function missingCriticalFields(question, dataSource) {
 
   if (!isAvailable('orders')) {
     const prompt = dataSource.manual_column_unmatched?.order_date
-      ? 'I could not use that selection for the order date. Choose the column that contains the dates of your orders.'
-      : 'I could not find readable order dates in this file. Choose the column that contains the dates of your orders.';
+      ? 'I could not use that selection for the dates. Choose the column that contains your order dates.'
+      : 'I could not find readable order dates in this file.';
     missing.push({ field: 'orders', prompt, input_type: 'text' });
   }
-  if (!isAvailable(scenario.lever)) {
+  const leverNeedsHistory = ['delivery_fee', 'avg_order_value', 'promo_active'].includes(scenario.lever);
+  if (leverNeedsHistory && !isAvailable(scenario.lever)) {
     const prompt = scenario.lever === 'delivery_fee'
-      ? "What's your current delivery/shipping fee? We couldn't find a reliable fee column in your sheet."
+      ? "I can check delivery fee changes, but I don't see delivery fee history in your file."
       : scenario.lever === 'avg_order_value'
-        ? "What's your typical order value? We couldn't find a reliable price or revenue column in your sheet."
-        : 'Were there any past discount or promotion periods? We could not find this in your sheet.';
+        ? "I can estimate sales impact if you tell me your usual average bill amount."
+        : "I can check this, but I don't see discount or offer details in your file.";
     missing.push({ field: scenario.lever, prompt, input_type: scenario.lever === 'promo_active' ? 'boolean' : 'number' });
   }
-  if (scenario.outcomeMetric === 'repeat_orders' && !isAvailable('repeat_orders')) {
+  if ((scenario.intent === 'repeat_customer' || scenario.outcomeMetric === 'repeat_orders') && !isAvailable('repeat_orders')) {
     const repeatSource = sources.repeat_orders;
     const prompt = repeatSource?.status === 'derived_low_confidence'
       ? `Repeat customer tracking looks too sparse in this sheet (${Math.round((repeatSource.unique_buyer_fraction || 0) * 100)}% of buyers appear only once). Hisaab needs a reliable customer identifier before it can answer this.`
-      : 'We could not identify a customer identifier. Hisaab needs customer name, phone, email, or ID data before it can answer this honestly.';
+      : 'I can check repeat customers, but I do not see customer name or phone details in your file.';
     missing.push({ field: 'customer_identifier', prompt, input_type: 'text' });
   }
 
@@ -1377,7 +1583,7 @@ function assessEvidence(question, data, summary, dataSource, computed) {
   const requiredFields = missingCriticalFields(question, dataSource);
   if (requiredFields.length) {
     return {
-      category: 'unsupported_question',
+      category: 'needs_more_data',
       maturity,
       required_fields: requiredFields,
       title: 'Hisaab cannot measure this yet',
@@ -1386,24 +1592,28 @@ function assessEvidence(question, data, summary, dataSource, computed) {
     };
   }
 
-  const minimumMonths = scenario.lever === 'promo_active' ? 6 : 4;
+  if (scenario.intent === 'cod') {
+    return {
+      category: 'unsupported_question',
+      maturity,
+      title: 'COD is not supported yet',
+      message: 'Hisaab does not have cash-on-delivery history to compare, so it cannot estimate this change honestly yet.',
+      next_action: 'Choose delivery fee, price, discounts, repeat customers, or sales trend instead.',
+    };
+  }
+
+  const trendDaily = scenario.intent === 'trend' && dataSource.bootstrap_granularity === 'daily';
+  const minimumMonths = scenario.intent === 'trend' ? (trendDaily ? 14 : 2) : scenario.lever === 'promo_active' ? 6 : 4;
   if (data.length < minimumMonths) {
+    const historyRequirement = trendDaily
+      ? 'at least 14 daily entries or a file with at least 2 months of orders'
+      : `at least ${minimumMonths} months`;
     return {
       category: 'not_enough_evidence',
       maturity,
       title: 'Not enough evidence yet',
-      message: `Hisaab found ${data.length} month${data.length === 1 ? '' : 's'} of usable history. It needs at least ${minimumMonths} months before estimating this honestly.`,
+      message: `Hisaab found ${data.length} usable period${data.length === 1 ? '' : 's'} of history. It needs ${historyRequirement} before checking this honestly.`,
       next_action: 'Keep collecting the same fields and try again when there is more history.',
-    };
-  }
-
-  if (scenario.lever === 'cash_on_delivery') {
-    return {
-      category: 'unsupported_question',
-      maturity,
-      title: 'Hisaab cannot measure this yet',
-      message: 'There is no cash-on-delivery history to compare, so Hisaab cannot estimate this change honestly.',
-      next_action: 'Collect whether each order used cash on delivery before asking again.',
     };
   }
 
@@ -1418,7 +1628,18 @@ function assessEvidence(question, data, summary, dataSource, computed) {
         next_action: 'Mark a few promo periods and non-promo periods in your data, then try again.',
       };
     }
-  } else {
+  } else if (scenario.intent === 'repeat_customer') {
+    const values = data.map(row => Number(row.repeat_orders)).filter(Number.isFinite);
+    if (new Set(values.map(value => String(round(value, 4)))).size < 2) {
+      return {
+        category: 'not_enough_evidence',
+        maturity,
+        title: 'Not enough evidence yet',
+        message: 'Repeat-customer history does not change enough to show whether customers are coming back more or less often.',
+        next_action: 'Keep recording customer identifiers and orders across more months, then try again.',
+      };
+    }
+  } else if (scenario.intent !== 'trend') {
     const values = observedLeverValues(data, scenario.lever);
     const uniqueValues = new Set(values.map(value => String(round(value, 4))));
     if (uniqueValues.size < 2) {
@@ -1499,6 +1720,94 @@ async function sendEvidenceLimitation(res, { sessionId, uploadId, question, data
     evidence,
     data_source: dataSource,
     summary,
+    persistence: { question: questionPersistence },
+  });
+}
+
+function unsupportedQuestionGuidance(question) {
+  const text = String(question || '').toLowerCase();
+  const choices = [
+    { label: 'Check order trend', prompt: 'Are my orders going up or down?' },
+    { label: 'Check sales trend', prompt: 'Are my sales going up or down?' },
+    { label: 'Check repeat customers', prompt: 'Are customers coming back?' },
+    { label: 'Check discount impact', prompt: 'Did discounts help?' },
+  ];
+  if (/hire|staff|worker|employee|team|helper/.test(text)) {
+    return {
+      category: 'broad_guidance',
+      title: 'This is a bigger business decision.',
+      message: 'I can guide you, but I should not guess from orders alone. To guide this properly, I would need daily orders, busy hours, staff cost, and missed orders or delays.',
+      next_action: 'For now, check whether orders are increasing before deciding about staff.',
+      primary_label: 'Check order trend', primary_prompt: 'Are my orders going up or down?', choices,
+    };
+  }
+  if (/second shop|another shop|open .*outlet|new outlet|second outlet|branch/.test(text)) {
+    return {
+      category: 'broad_guidance',
+      title: 'Opening another shop needs more information.',
+      message: 'I can help prepare this decision, but I should not predict it from current sales history alone. I would need current profit, rent estimate, staff cost, expected demand, and delivery radius.',
+      next_action: 'First check whether current orders are stable.',
+      primary_label: 'Check if orders are stable', primary_prompt: 'Are my orders going up or down?', choices,
+    };
+  }
+  if (/why .*business|business .*down|orders? .*down|sales? .*down|business .*bad|what is wrong/.test(text)) {
+    return {
+      category: 'guided_answer',
+      title: 'Let’s investigate this step by step.',
+      message: 'I can help investigate this, but I should not guess at one cause. First, check whether orders, sales, repeat customers, or discount results changed.',
+      next_action: 'Choose one check below to start with the evidence available now.',
+      primary_label: 'Check order trend', primary_prompt: 'Are my orders going up or down?', choices,
+    };
+  }
+  return {
+    category: 'clarify_question',
+    title: 'I can guide you, but I need one clear question.',
+    message: 'I should not guess from the data I have. Choose the business check that is closest to what you want to know.',
+    next_action: 'Pick one check and Hisaab will use only the matching data and calculation.',
+    primary_label: 'Check order trend', primary_prompt: 'Are my orders going up or down?', choices,
+  };
+}
+
+async function sendIntentLimitation(res, { sessionId, question, classification }) {
+  const isClarify = classification.status === 'clarify_intent';
+  const guidance = isClarify ? {
+    category: 'clarify_question',
+    title: 'Which change do you want to check first?',
+    message: 'I should not combine two different business questions into one estimate. Choose one check first.',
+    next_action: 'Hisaab will use only the matching data and calculation.',
+    primary_label: 'Check order trend', primary_prompt: 'Are my orders going up or down?', choices: classification.choices,
+  } : unsupportedQuestionGuidance(question);
+  const category = guidance.category;
+  const message = guidance.message;
+  const title = guidance.title;
+  const nextAction = guidance.next_action;
+  const questionPersistence = await firestoreService.saveQuestion({
+    sessionId,
+    question,
+    answer: message,
+  });
+  await firestoreService.saveEvent({
+    type: 'ask',
+    sessionId,
+    questionId: questionPersistence.id,
+    metadata: { status: category, intent: classification.intent, matches: classification.matches },
+  });
+  return res.json({
+    session_id: sessionId,
+    status: category,
+    result_category: category,
+    evidence_category: category,
+    intent: classification.intent,
+    intent_classification: classification,
+    evidence: {
+      category,
+      title,
+      message,
+      next_action: nextAction,
+      choices: guidance.choices,
+      primary_label: guidance.primary_label,
+      primary_prompt: guidance.primary_prompt,
+    },
     persistence: { question: questionPersistence },
   });
 }
@@ -1650,10 +1959,126 @@ function computePromoLift(data, outcomeMetric, scenario = {}) {
   };
 }
 
+function computeRecentTrend(data, outcomeMetric, options = {}) {
+  const granularity = options.granularity === 'daily' ? 'daily' : 'monthly';
+  const windowSize = granularity === 'daily' ? 7 : 3;
+  const valueFor = row => {
+    if (outcomeMetric === 'sales') {
+      const orders = Number(row.orders);
+      const aov = Number(row.avg_order_value);
+      return Number.isFinite(orders) && Number.isFinite(aov) ? orders * aov : undefined;
+    }
+    return Number(row[outcomeMetric]);
+  };
+  const usable = data
+    .map(row => ({ row, value: valueFor(row) }))
+    .filter(item => Number.isFinite(item.value));
+  const effectiveWindow = Math.min(windowSize, Math.max(1, Math.floor(usable.length / 2)));
+  const priorItems = usable.slice(-(effectiveWindow * 2), -effectiveWindow);
+  const recentItems = usable.slice(-effectiveWindow);
+  const prior = priorItems.map(item => item.value);
+  const recent = recentItems.map(item => item.value);
+  const priorMean = mean(prior);
+  const recentMean = mean(recent);
+  const pct = priorMean ? ((recentMean - priorMean) / Math.abs(priorMean)) * 100 : 0;
+  const confidence = clamp(0.35 + (Math.min(usable.length, 42) - 2) * 0.025, 0.35, 0.72);
+  const periodLabel = row => granularity === 'daily'
+    ? String(row.date || row.month || '')
+    : formatMonthLabel(row.month) || String(row.month || '');
+  const periodValues = usable.map(item => ({ label: periodLabel(item.row), value: item.value }));
+  const best = periodValues.reduce((acc, item) => !acc || item.value > acc.value ? item : acc, null);
+  const worst = periodValues.reduce((acc, item) => !acc || item.value < acc.value ? item : acc, null);
+  return {
+    pct: round(pct),
+    low: null,
+    high: null,
+    confidence: round(confidence, 2),
+    method: granularity === 'daily' ? 'recent_7_days_vs_previous_7_days' : 'recent_3_months_vs_previous_3_months',
+    sampleSize: usable.length,
+    r2: null,
+    slope: null,
+    tScore: null,
+    uniqueX: null,
+    granularity,
+    windowSize: effectiveWindow,
+    recentMean: round(recentMean),
+    priorMean: round(priorMean),
+    recentLabel: granularity === 'daily' ? 'Recent 7 days' : 'Recent 3 months',
+    previousLabel: granularity === 'daily' ? 'Previous 7 days' : 'Previous 3 months',
+    bestPeriod: best,
+    worstPeriod: worst,
+  };
+}
+
 function computeRegressionResult(question, data, summary) {
   const scenario = detectScenario(question, data);
   const lang = detectFallbackLanguage(question);
   let outcome;
+
+  if (scenario.status !== 'supported') {
+    return {
+      lever: null,
+      outcome_metric: null,
+      outcome_value: null,
+      range_low: null,
+      range_high: null,
+      confidence: 0,
+      monthly_revenue_impact: null,
+      worst_case_revenue_impact: null,
+      trend_pct: null,
+      method: 'unsupported_question',
+      sample_size: data.length,
+      r2: null,
+      slope: null,
+      t_score: null,
+      unique_lever_values: null,
+      assumed_change: 0,
+      low_signal_warning: lang === 'hi'
+        ? 'यह सवाल Hisaab के उपलब्ध checks में साफ़ तौर पर नहीं आता।'
+        : 'This question does not map clearly to one of Hisaab’s supported checks.',
+    };
+  }
+
+  if (scenario.intent === 'trend' || scenario.intent === 'repeat_customer') {
+    const asksSales = scenario.intent === 'trend' && /\b(sales|revenue|turnover|bill amount|sales value)\b/i.test(question);
+    const salesAvailable = data.some(row => Number.isFinite(Number(row.orders)) && Number.isFinite(Number(row.avg_order_value)));
+    const trendMetric = asksSales && salesAvailable ? 'sales' : scenario.outcomeMetric;
+    const granularity = data.some(row => row.date) ? 'daily' : 'monthly';
+    outcome = computeRecentTrend(data, trendMetric, { granularity });
+    const cannotCalculate = outcome.sampleSize < 2;
+    return {
+      lever: scenario.lever,
+      outcome_metric: trendMetric,
+      outcome_value: cannotCalculate ? null : outcome.pct,
+      range_low: null,
+      range_high: null,
+      confidence: outcome.confidence,
+      monthly_revenue_impact: null,
+      worst_case_revenue_impact: null,
+      trend_pct: cannotCalculate ? null : outcome.pct,
+      method: outcome.method,
+      sample_size: outcome.sampleSize,
+      r2: outcome.r2,
+      slope: null,
+      t_score: outcome.tScore,
+      unique_lever_values: outcome.uniqueX,
+      assumed_change: 0,
+      low_signal_warning: null,
+      trend_summary: {
+        granularity: outcome.granularity,
+        metric: trendMetric,
+        recent_label: outcome.recentLabel,
+        previous_label: outcome.previousLabel,
+        recent_average: outcome.recentMean,
+        previous_average: outcome.priorMean,
+        change_pct: cannotCalculate ? null : outcome.pct,
+        best_period: outcome.bestPeriod,
+        worst_period: outcome.worstPeriod,
+        sales_requested: asksSales,
+        sales_available: salesAvailable,
+      },
+    };
+  }
 
   if (scenario.lever === 'cash_on_delivery') {
     return {
@@ -2471,6 +2896,7 @@ app.post('/api/decisions/:id/checkback', async (req, res) => {
 // same monthly-row shape the regression consumes — no OCR, no upload.
 
 const BOOTSTRAP_MIN_ENTRIES = Number(process.env.HISAAB_BOOTSTRAP_MIN_ENTRIES || 20);
+const BOOTSTRAP_TREND_MIN_ENTRIES = Number(process.env.HISAAB_BOOTSTRAP_TREND_MIN_ENTRIES || 14);
 
 function bootstrapCollection() {
   return firestoreService.collection(firestoreService.COLLECTIONS.bootstrap);
@@ -2521,6 +2947,42 @@ function aggregateBootstrapEntries(entries) {
     trend: { status: rows.length >= 2 ? 'derived' : 'unavailable', source: rows.length >= 2 ? 'bootstrap' : null, column: '(daily check-in)', confidence: 0.55 },
   };
   return { rows, metricSources, columns: {} };
+}
+
+// Trend questions can use the daily diary directly. Keeping one row per day
+// preserves the intended 7-days-vs-previous-7-days comparison instead of
+// manufacturing monthly history from a short bootstrap period.
+function aggregateBootstrapDailyEntries(entries) {
+  const buckets = new Map();
+  for (const entry of entries) {
+    const date = parseOrderDate(entry.date);
+    if (!date) continue;
+    const key = date.toISOString().slice(0, 10);
+    const orders = toNumber(entry.orders);
+    if (orders === undefined) continue;
+    buckets.set(key, {
+      date: key,
+      month: key.slice(0, 7),
+      orders,
+      avg_order_value: toNumber(entry.avg_order_value),
+      delivery_fee: toNumber(entry.delivery_fee),
+    });
+  }
+  const rows = [...buckets.values()].sort((a, b) => a.date.localeCompare(b.date));
+  const hasAov = rows.some(row => Number.isFinite(row.avg_order_value));
+  const hasFee = rows.some(row => Number.isFinite(row.delivery_fee));
+  return {
+    rows,
+    metricSources: {
+      orders: { status: rows.length ? 'derived' : 'unavailable', source: 'bootstrap', column: '(daily check-in)', confidence: 0.6 },
+      repeat_orders: { status: 'unavailable', source: null, column: null, confidence: 0 },
+      avg_order_value: { status: hasAov ? 'derived' : 'unavailable', source: hasAov ? 'bootstrap' : null, column: hasAov ? '(daily check-in)' : null, confidence: hasAov ? 0.55 : 0 },
+      delivery_fee: { status: hasFee ? 'derived' : 'unavailable', source: hasFee ? 'bootstrap' : null, column: hasFee ? '(daily check-in)' : null, confidence: hasFee ? 0.55 : 0 },
+      promo_active: { status: 'unavailable', source: null, column: null, confidence: 0 },
+      trend: { status: rows.length >= 2 ? 'derived' : 'unavailable', source: rows.length >= 2 ? 'bootstrap' : null, column: '(daily check-in)', confidence: 0.55 },
+    },
+    columns: {},
+  };
 }
 
 // Log one daily bootstrap entry. Idempotent per (owner, date): logging the
@@ -2737,12 +3199,36 @@ async function handleSimulate(req, res) {
     return res.status(400).json({ error: 'question is required', kind: 'bad_request' });
   }
 
-  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner, dataMode, manualMappings);
+  const intentClassification = classifyQuestionIntent(question.trim());
+  if (intentClassification.status !== 'supported') {
+    return sendIntentLimitation(res, {
+      sessionId,
+      question: question.trim(),
+      classification: intentClassification,
+    });
+  }
+
+  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner, dataMode, manualMappings, intentClassification.intent);
   dataSource.mapping_choices = mappingChoices;
 
   if (dataSource.mode === 'bootstrap_insufficient') {
     const entryCount = Number(dataSource.bootstrap_entries_used) || 0;
     const minimum = Number(dataSource.bootstrap_min_entries) || BOOTSTRAP_MIN_ENTRIES;
+    if (intentClassification.intent === 'trend') {
+      return sendEvidenceLimitation(res, {
+        sessionId,
+        uploadId,
+        question: question.trim(),
+        dataSource,
+        summary: null,
+        evidence: {
+          category: 'not_enough_evidence',
+          title: 'Not enough evidence yet',
+          message: 'I need more history to check the trend honestly. Add at least 14 daily entries or upload a file with at least 2 months of orders.',
+          next_action: 'Add today’s sales, then come back to compare recent orders with the previous period.',
+        },
+      });
+    }
     const questionPersistence = await firestoreService.saveQuestion({
       sessionId,
       uploadId: uploadId || null,
@@ -2771,16 +3257,7 @@ async function handleSimulate(req, res) {
 
   const summary = summarizeData(data);
 
-  if (dataSource.mode === 'demo_fallback') {
-    return sendEvidenceLimitation(res, {
-      sessionId,
-      uploadId,
-      question: question.trim(),
-      dataSource,
-      summary: null,
-      evidence: assessEvidence(question.trim(), data, summary, dataSource, null),
-    });
-  }
+  const isDemoSource = dataSource.source_type === 'demo' || dataSource.mode === 'demo_fallback';
 
   if ((sheetUrl && String(sheetUrl).trim()) || (csvText && String(csvText).trim())) {
     const missingFields = missingCriticalFields(question.trim(), dataSource);
@@ -2809,9 +3286,10 @@ async function handleSimulate(req, res) {
           { field: 'orders', prompt: 'We could not build monthly order history from this sheet. Which column identifies an order?', input_type: 'text' },
         ],
         partial_data_summary: answer,
-        evidence_category: 'unsupported_question',
+        result_category: 'needs_more_data',
+        evidence_category: 'needs_more_data',
         evidence: {
-          category: 'unsupported_question',
+          category: 'needs_more_data',
           title: 'Hisaab cannot measure this yet',
           message: answer,
           required_fields: missingFields,
@@ -2832,7 +3310,7 @@ async function handleSimulate(req, res) {
   computed.evidence_category = evidence.category;
   computed.data_maturity = evidence.maturity;
 
-  if (evidence.category !== 'clear_enough') {
+  if (evidence.category !== 'clear_enough' && !isDemoSource) {
     return sendEvidenceLimitation(res, {
       sessionId,
       uploadId,
@@ -2843,13 +3321,11 @@ async function handleSimulate(req, res) {
     });
   }
 
-  if (!config.geminiApiKey) {
+  if (intentClassification.intent !== 'trend' && !config.geminiApiKey && !isDemoSource) {
     return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server', kind: 'server_error' });
   }
 
   const fallbackLanguage = detectFallbackLanguage(question);
-  const isDemoSource = dataSource.source_type === 'demo' || dataSource.mode === 'demo_fallback';
-
   const userPrompt = `The business owner asks: "${question.trim()}"
 
 Historical data summary (${summary.months} months):
@@ -2881,14 +3357,21 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
   "detected_language": "<ISO 639-1 language code like en, hi, ta, bn, te, mr, kn, or language name if unsure>"
 }`;
 
-  const client = createGeminiClient();
+  let generated;
+  if (intentClassification.intent === 'trend') {
+    generated = trendGeneratedResponse(computed, fallbackLanguage);
+  }
+
+  const client = intentClassification.intent === 'trend' || isDemoSource ? null : createGeminiClient();
   logJson('Prompt sent to Gemini', {
     model: config.geminiModel,
     prompt: userPrompt,
   });
 
-  let generated;
   try {
+    if (intentClassification.intent === 'trend') {
+      logJson('Server trend response', generated);
+    } else {
     const response = await client.models.generateContent({
       model: config.geminiModel,
       contents: userPrompt,
@@ -2930,6 +3413,7 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
       }
     }
     logJson('Parsed Gemini object', generated);
+    }
   } catch (err) {
     const message = (err.message || '').split('\n')[0];
     const status = err instanceof ApiError ? err.status : undefined;
@@ -2954,6 +3438,10 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
       generated.source = 'server_fallback_after_unexpected_error';
     }
     logJson('Parsed Gemini object', generated);
+  }
+
+  if (isDemoSource) {
+    generated = demoGeneratedResponse(computed, 'en');
   }
 
   const isSampleData = dataSource.mode === 'demo_fallback';
@@ -3195,6 +3683,8 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
     evidence_category: evidence.category,
     evidence,
     data_maturity: evidence.maturity,
+    intent: intentClassification.intent,
+    intent_classification: intentClassification,
     chart_series: chartSeries(data, computed.outcome_metric),
     chart_meta: {
       label: chartMetaLabel,
@@ -3374,12 +3864,14 @@ if (require.main === module) {
 Object.assign(app, {
   app,
   aggregateBootstrapEntries,
+  aggregateBootstrapDailyEntries,
   aggregateSheetRows,
   alignGeneratedWithComputed,
   assessEvidence,
   buildAnalyticsCapabilities,
   buildColumnMapping,
   classifySheetColumnsFallback,
+  classifyQuestionIntent,
   comparisonCategory,
   comparisonMessage,
   computePromoLift,
@@ -3387,6 +3879,7 @@ Object.assign(app, {
   dataMaturity,
   detectFallbackLanguage,
   detectScenario,
+  demoGeneratedResponse,
   fallbackGeneratedResponse,
   getHistoricalData,
   isDemoDecision,
@@ -3401,6 +3894,7 @@ Object.assign(app, {
   regressionEvidence,
   sourceLabelForDecision,
   summarizeData,
+  unsupportedQuestionGuidance,
 });
 
 module.exports = app;

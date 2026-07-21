@@ -465,7 +465,7 @@ Implemented test command:
 npm test
 ```
 
-Current automated result: 16 tests passing locally. Remaining coverage is integration-level API mocking, browser flows, and CI execution.
+Current automated result: 21 tests passing locally. Remaining coverage is integration-level API mocking, browser flows, and CI execution.
 
 Manual QA before demo submission:
 
@@ -481,6 +481,156 @@ Manual QA before demo submission:
 - [ ] English, Hindi, and Hinglish questions keep the expected language.
 - [ ] Firestore save failure says calculated but not saved.
 - [ ] Result screen remains Answer → Evidence → Action before technical details on mobile.
+
+## Phase 9: Replace unsafe default question routing with explicit intent classification
+
+Goal: Hisaab must never answer a business question under the wrong scenario.
+
+Checklist:
+
+- [x] Add explicit classification for delivery fee, price/AOV, promo/discount, repeat customer, trend, and COD intents.
+- [x] Remove the default delivery-fee route for unknown questions.
+- [x] Return `unsupported_question` with friendly supported choices for unclear questions.
+- [x] Return `clarify_intent` when multiple supported intents are detected.
+- [x] Keep sales-trend questions out of promo classification.
+- [x] Route standalone repeat-customer questions to a dedicated recent-period comparison.
+- [x] Route trend questions to a dedicated recent-versus-prior-period calculation.
+- [x] Keep COD explicitly unsupported with a clear explanation.
+- [x] Add frontend choice buttons for unsupported and clarify-intent states.
+- [x] Add automated tests for the requested routing and multi-intent cases.
+
+Manual QA:
+
+- [ ] Delivery fee question routes correctly.
+- [ ] Price/AOV question routes correctly.
+- [ ] Promo/discount question routes correctly.
+- [ ] Repeat-customer question routes correctly.
+- [ ] Sales trend question routes correctly.
+- [ ] COD question returns unsupported.
+- [ ] Unknown question never defaults to delivery fee.
+- [ ] Multi-intent question asks which change to check first.
+- [ ] Hinglish delivery-fee question routes correctly.
+- [ ] “Sales trend” is not classified as promo.
+- [ ] “Sale discount” remains promo/discount.
+- [ ] Unsupported question shows friendly choices.
+
+## Phase 10: Add a dedicated trend answer path
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Route trend questions to a dedicated recent-period comparison instead of delivery-fee or price regression.
+- [x] Compare recent 3 months with the previous 3 months where monthly history is available.
+- [x] Compare recent 7 daily entries with the previous 7 for a mature Start Fresh diary.
+- [x] Return `not_enough_evidence` when trend history is too short.
+- [x] Answer order trend when total bill amount is missing and explain that sales-value trend needs bill data.
+- [x] Keep trend output free of lower/upper estimates and regression metrics.
+- [x] Render a separate simple trend result with change, best period, weak period, evidence, next action, and collapsed details.
+- [x] Keep sample trend questions demo-only through the existing sample evidence gate.
+- [x] Add automated coverage for monthly trend, missing sales value, and 14-day bootstrap trend.
+- [x] Document the trend data requirements and limitations in README.md.
+
+Files changed:
+
+- `server.js`
+- `public/index.html`
+- `public/script.js`
+- `public/style.css`
+- `tests/evidence-gates.test.js`
+- `README.md`
+
+Manual QA before demo submission:
+
+- [ ] CSV with 6 months of orders shows a dedicated trend answer.
+- [ ] CSV with sales value shows both sales and order trend when asked.
+- [ ] CSV without sales value answers order trend only and explains the missing field.
+- [ ] Start Fresh with 14 or more daily entries compares 7 days with the previous 7.
+- [ ] Start Fresh with fewer than 14 entries shows Not enough evidence and no trend estimate.
+- [ ] Sample mode remains Demo example only, including trend questions.
+- [ ] “Sales trend” does not become promo; “discount sale” remains promo.
+
+## Product experience reset: SMB-first home and data flow
+
+Status: implemented in the current working tree.
+
+The first-run experience now presents Hisaab as a simple business analyst rather than a technical analytics dashboard.
+
+Checklist:
+
+- [x] Replace the technical hero framing with “Hisaab” and simple business-help copy.
+- [x] Keep the first screen focused on two main paths: **Try demo** and **Use my data**.
+- [x] Keep demo mode visible and explain that its data is illustrative only.
+- [x] Move upload, Google Sheet, and manual daily entry choices behind **Use my data**.
+- [x] Keep file mapping and capability details hidden until data is supplied.
+- [x] Replace technical example questions with plain-language business questions.
+- [x] Keep existing evidence, calculation, and source-label safeguards unchanged.
+- [ ] Complete the manual mobile and clean-session QA checklist below.
+
+Manual QA before demo submission:
+
+- [ ] A clean first load shows only **Try demo** and **Use my data** as the main paths.
+- [ ] **Try demo** opens the example-data path and keeps the Demo example label visible.
+- [ ] **Use my data** reveals Upload sales file, Connect Google Sheet, and Add today’s sales manually.
+- [ ] Manual daily entry is not shown as a top-level first-screen path.
+- [ ] File mapping and capability details appear only after a file or Sheet is read.
+- [ ] A missing field is explained in business language and does not force technical typing.
+- [ ] Mobile layout keeps the two main paths and nested data choices readable.
+- [ ] Returning to the brand/home state resets the flow without mixing demo and real data.
+
+## Simpler data-reading experience
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] After CSV or Google Sheet upload, show one friendly “I read your file” summary.
+- [x] Show only data that was actually found, using labels such as Orders, Dates, Sales amount, and Customer details.
+- [x] Move missing data into a non-blocking “Not found yet” section with plain-language reasons.
+- [x] Show only compatible questions from the data currently available.
+- [x] Explain what can be added later without asking the owner to resolve every gap immediately.
+- [x] Add a Continue action that lets the owner ask an available question.
+- [x] Keep detailed column choices behind Fix detected data.
+- [x] Show missing-field guidance only when a question needs that field.
+- [x] Keep the average bill fallback clearly user-provided.
+- [ ] Manually test CSVs with only orders, with delivery fee, and with ambiguous sales columns.
+- [ ] Manually test the question-specific discount, sales amount, and repeat-customer prompts on mobile.
+
+## Guided demo mode
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Add a guided Demo shop example entry flow from the home screen.
+- [x] Explain that the demo uses example data and is not the user's business data.
+- [x] Show a small biryani shop context with 12 months of example orders, fee changes, discount months, and repeat customers.
+- [x] Add four demo question buttons covering trend, delivery fee, discounts, and repeat customers.
+- [x] Return a full illustrative result instead of treating demo mode as an error or evidence block.
+- [x] Keep demo result actions separate from real decision tracking.
+- [x] Keep demo charts labelled “Illustrative demo — not your data”.
+- [x] Provide Use my data and Try another demo question actions after a demo result.
+- [ ] Manually verify all four guided demo questions in a clean browser session.
+- [ ] Verify demo result copy remains free of accidental real-business wording after future copy changes.
+
+## Analyst-style guidance for broad questions
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Keep unknown questions away from delivery-fee or any other default calculation.
+- [x] Add broad guidance for hiring/staff questions with the data needed to investigate.
+- [x] Add broad guidance for opening another shop/outlet questions without numeric estimates.
+- [x] Route “why” questions into an investigation path instead of treating them as a trend calculation.
+- [x] Show related supported checks such as order trend, sales trend, repeat customers, and discount impact.
+- [x] Give every unsupported/broad result a direct next-step CTA.
+- [x] Use `direct_answer`, `guided_answer`, `needs_more_data`, `broad_guidance`, `clarify_question`, and `demo_only` as the supported result categories.
+- [x] Revamp the visible result hierarchy to Answer → Why? → Try this → How sure is this? → Data used → Details.
+- [x] Keep statistical terms and numeric evidence metrics inside the expandable Details section.
+- [x] Keep broad guidance free of regression, confidence, and prediction language.
+- [ ] Manually test broad questions with imported data, Start Fresh, and Demo mode.
+- [ ] Mobile view shows answer, evidence, action, and trend details in that order.
 - `public/script.js`
 - new `test/` or `tests/` fixtures and test files
 - CI configuration if introduced

@@ -33,8 +33,9 @@
 
   <main class="stage" id="stage">
     <div class="greet-block">
-      <h1 class="greet" id="greet">What would you like to change?</h1>
-      <p class="subtitle" id="subtitle">An honest answer to your business's next what-if — reckoned from your own numbers.</p>
+      <h1 class="greet" id="greet">Hisaab</h1>
+      <p class="subtitle" id="subtitle">Your simple business analyst for orders, sales, delivery fees, and offers.</p>
+      <p class="hero-support" id="hero-support">Ask a question about your business, or try demo data to see how it works.</p>
     </div>
 
     <!-- Check-back card: appears on session start when the user has an applied
@@ -68,26 +69,73 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg>
         </span>
         <span class="path-body">
-          <span class="path-title">Try with sample data</span>
+          <span class="path-title">Try demo</span>
+          <span class="path-sub">See how Hisaab works with example data</span>
         </span>
       </button>
-      <button class="path" id="path-real" type="button">
+      <button class="path path-use-data" id="path-use-data" type="button">
         <span class="path-icon" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         </span>
         <span class="path-body">
-          <span class="path-title">Connect my order data</span>
+          <span class="path-title">Use my data</span>
+          <span class="path-sub">Upload a file, connect a Sheet, or add today’s sales</span>
         </span>
       </button>
-      <button class="path" id="path-bootstrap" type="button">
+    </div>
+
+    <section class="demo-intro" id="demo-intro" hidden aria-live="polite">
+      <div class="demo-eyebrow">Demo shop example</div>
+      <h2>See how Hisaab works</h2>
+      <p>This is not your business data. It only shows how Hisaab works.</p>
+      <div class="demo-shop-name">Small biryani shop</div>
+      <div class="demo-stats">
+        <span>12 months of example orders</span>
+        <span>Delivery fee changes</span>
+        <span>Some discount months</span>
+        <span>Repeat customers included</span>
+      </div>
+      <div class="demo-question-heading">Choose an example question</div>
+      <div class="demo-question-list">
+        <button class="demo-question" type="button" data-q="Are orders going up or down in this demo shop?">Are orders going up or down?</button>
+        <button class="demo-question" type="button" data-q="Should this demo shop increase delivery fee?">Should this shop increase delivery fee?</button>
+        <button class="demo-question" type="button" data-q="Did discounts help this demo shop?">Did discounts help this shop?</button>
+        <button class="demo-question" type="button" data-q="Are customers coming back to this demo shop?">Are customers coming back?</button>
+      </div>
+    </section>
+
+    <section class="data-options" id="data-options" hidden aria-label="Choose how to add your data">
+      <div class="data-options-heading">How would you like to add your data?</div>
+      <div class="data-options-grid">
+        <button class="path" id="path-real" type="button">
+          <span class="path-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </span>
+          <span class="path-body">
+            <span class="path-title">Upload sales file</span>
+            <span class="path-sub">CSV file</span>
+          </span>
+        </button>
+        <button class="path" id="path-sheet" type="button">
+          <span class="path-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg>
+          </span>
+          <span class="path-body">
+            <span class="path-title">Connect Google Sheet</span>
+            <span class="path-sub">Paste a public Sheet link</span>
+          </span>
+        </button>
+        <button class="path" id="path-bootstrap" type="button">
         <span class="path-icon" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6"/><path d="M12 8V4"/><circle cx="12" cy="11" r="3"/><path d="M5 21h14"/></svg>
         </span>
         <span class="path-body">
-          <span class="path-title" data-i18n="path.bootstrap">No data yet — start fresh</span>
+          <span class="path-title" data-i18n="path.bootstrap">Add today’s sales manually</span>
+          <span class="path-sub">No spreadsheet needed</span>
         </span>
-      </button>
-    </div>
+        </button>
+      </div>
+    </section>
 
     <section class="sheet-slot" id="sheet-slot" aria-label="Connect order data">
       <div class="lbl">Paste a public Google Sheets link. Hisaab reads whatever columns exist.</div>
@@ -141,10 +189,20 @@
           <div class="mapping-list" id="mapping-found"></div>
         </div>
         <div class="mapping-group" id="mapping-missing-group" hidden>
-          <div class="mapping-group-title">Missing</div>
+          <div class="mapping-group-title">Not found yet</div>
           <div class="mapping-list" id="mapping-missing"></div>
         </div>
         <div class="mapping-capabilities" id="mapping-capabilities" hidden></div>
+        <div class="mapping-next" id="mapping-next" hidden>
+          <div class="mapping-next-title">You can still ask:</div>
+          <div class="mapping-question-list" id="mapping-available-questions"></div>
+          <div class="mapping-next-title later">For better answers later, you can add:</div>
+          <div class="mapping-later-list" id="mapping-later-list"></div>
+        </div>
+        <div class="mapping-actions">
+          <button class="cta-primary mapping-continue" id="mapping-continue" type="button">Continue</button>
+          <button class="cta-secondary mapping-fix" id="mapping-fix" type="button">Fix detected data</button>
+        </div>
       </section>
       <div class="capability-list" id="capability-list" hidden></div>
       <div class="dd-caveat" id="detected-caveat" hidden></div>
@@ -155,7 +213,7 @@
     </section>
 
     <div class="composer" id="composer">
-      <textarea id="question-input" placeholder="e.g. If I raise my delivery fee by ₹20, what happens to repeat orders?" rows="1" aria-label="Ask a what-if question" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
+      <textarea id="question-input" placeholder="Ask about your orders, sales, delivery fee, or offers…" rows="1" aria-label="Ask a question about your business" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
       <button class="icon-btn mic" id="mic-btn" title="Tap to speak your question — in any language" type="button">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       </button>
@@ -169,16 +227,16 @@
     <div class="loading-status" id="loading-status" hidden aria-live="polite">Running the numbers...</div>
 
     <div class="suggestions" id="sample-suggestions">
-      <button class="chip" data-q="If I raise my delivery fee by ₹20, what happens to repeat orders?" type="button">Raise delivery fee</button>
-      <button class="chip" data-q="If I run a promotional discount next month, what lift can I expect?" type="button">Run a promo</button>
-      <button class="chip" data-q="If I increase product prices by 5%, how does it affect total orders?" type="button">Change my price</button>
-      <button class="chip" data-q="If I stop offering cash on delivery, what happens to total orders?" type="button">Stop cash on delivery</button>
+      <button class="chip" data-q="Are my orders going down?" type="button">Are my orders going down?</button>
+      <button class="chip" data-q="Should I increase delivery fee?" type="button">Should I increase delivery fee?</button>
+      <button class="chip" data-q="Did discounts help?" type="button">Did discounts help?</button>
+      <button class="chip" data-q="Which month was best?" type="button">Which month was best?</button>
     </div>
     <div class="suggestions" id="real-suggestions" hidden>
-      <button class="chip" data-q="What's driving the change in my repeat customer rate recently?" type="button">What's dragging my repeat rate?</button>
-      <button class="chip" data-q="Where in my order history could I safely raise prices without losing volume?" type="button">Where can I safely raise prices?</button>
-      <button class="chip" data-q="What if my worst month had been an average month — what did it cost me?" type="button">What did my worst month cost me?</button>
-      <button class="chip" data-q="Which lever in my data has the strongest effect on total orders?" type="button">What actually moves my orders?</button>
+      <button class="chip" data-q="Are customers coming back?" type="button">Are customers coming back?</button>
+      <button class="chip" data-q="Are my sales going up?" type="button">Are my sales going up?</button>
+      <button class="chip" data-q="Which month was best?" type="button">Which month was best?</button>
+      <button class="chip" data-q="Should I increase delivery fee?" type="button">Check delivery fee</button>
     </div>
 
     <div class="lang-note">Speak in <b>English, हिन्दी, বাংলা,</b> or <b>தமிழ்</b> — I'll figure it out</div>
@@ -236,6 +294,7 @@
         <h2 class="evidence-limitation-title" id="evidence-limitation-title"></h2>
         <p class="evidence-limitation-copy" id="evidence-limitation-copy"></p>
         <p class="evidence-limitation-detail" id="evidence-limitation-detail"></p>
+        <div class="intent-choice-list" id="intent-choice-list" hidden aria-label="Choose a Hisaab check"></div>
         <div class="evidence-limitation-actions">
           <button class="cta-primary" id="evidence-limitation-primary" type="button">Add my own data</button>
           <button class="cta-secondary" id="evidence-limitation-secondary" type="button">Start daily entry</button>
@@ -243,11 +302,29 @@
         </div>
       </section>
 
+      <section class="trend-result" id="trend-result" hidden aria-live="polite">
+        <div class="trend-eyebrow">Sales trend</div>
+        <h1 class="trend-answer" id="trend-simple-answer"></h1>
+        <p class="trend-change" id="trend-change"></p>
+        <div class="trend-period-grid">
+          <div><span id="trend-recent-label">Recent period</span><strong id="trend-recent-average"></strong></div>
+          <div><span id="trend-previous-label">Previous period</span><strong id="trend-previous-average"></strong></div>
+        </div>
+        <div class="trend-best-worst">
+          <div><span>Best period</span><strong id="trend-best-period"></strong></div>
+          <div><span>Weak period</span><strong id="trend-worst-period"></strong></div>
+        </div>
+        <div class="trend-evidence"><span>How sure is this?</span><strong id="trend-evidence-strength"></strong></div>
+        <div class="trend-why"><span>Why?</span><p id="trend-why"></p></div>
+        <div class="trend-next"><span>Try this</span><p id="trend-next-action"></p></div>
+        <details class="trend-details"><summary>Details</summary><p id="trend-details-copy"></p></details>
+      </section>
+
       <section class="result-overview" id="result-overview" hidden aria-live="polite">
-        <div class="overview-eyebrow">Simple answer</div>
+        <div class="overview-eyebrow">Answer</div>
         <h1 class="overview-answer" id="overview-answer"></h1>
         <div class="overview-trust-row">
-          <span class="overview-trust-label">Can you trust this?</span>
+          <span class="overview-trust-label">How sure is this?</span>
           <span class="overview-strength" id="overview-strength"></span>
         </div>
         <section class="overview-section">
@@ -255,13 +332,21 @@
           <p id="overview-why"></p>
         </section>
         <section class="overview-section overview-action-section">
-          <h2>What should you do next?</h2>
+          <h2>Try this</h2>
           <p id="overview-action"></p>
         </section>
         <section class="overview-section overview-data-section">
           <h2>Data used</h2>
           <div class="overview-data-grid" id="overview-data"></div>
         </section>
+      </section>
+
+      <section class="demo-result-actions" id="demo-result-actions" hidden>
+        <div class="demo-result-note">Illustrative example only — this is not your data.</div>
+        <div class="demo-result-buttons">
+          <button class="cta-primary" id="demo-use-data" type="button">Use my data</button>
+          <button class="cta-secondary" id="demo-another-question" type="button">Try another demo question</button>
+        </div>
       </section>
 
       <!-- Scenarios block: the new decision-engine view. Only visible when the
@@ -305,7 +390,7 @@
       </div>
 
       <details class="calculation-details" id="calculation-details">
-        <summary>Show calculation details</summary>
+        <summary>Details</summary>
       <!-- Existing evidence + confidence + explain layout. Stays unchanged. -->
       <div class="evidence" id="evidence-block">
         <div class="ev-left">

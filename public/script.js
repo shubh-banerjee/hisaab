@@ -52,7 +52,7 @@
       'checkback.skip': 'Skip this check-in',
       'checkback.thanks': 'Thanks — saved. This now counts toward your track record.',
       'checkback.thanks_noted': 'Got it — noted that you skipped this one.',
-      'path.bootstrap': 'No data yet — start fresh',
+      'path.bootstrap': 'Add today’s sales manually',
       'bootstrap.eyebrow': 'Building your history',
       'bootstrap.question': 'Roughly how many orders did you get yesterday?',
       'bootstrap.sub': 'No spreadsheet needed — just a rough number, typed or spoken. After a few weeks of this, Hisaab can answer real what-ifs for you.',
@@ -116,7 +116,7 @@
       'checkback.skip': 'इस जानकारी को छोड़ें',
       'checkback.thanks': 'धन्यवाद — सहेज लिया। यह अब आपके ट्रैक रिकॉर्ड में गिना जाएगा।',
       'checkback.thanks_noted': 'समझ गए — नोट कर लिया कि आपने इसे छोड़ दिया।',
-      'path.bootstrap': 'अभी कोई डेटा नहीं — नई शुरुआत करें',
+      'path.bootstrap': 'आज की बिक्री हाथ से जोड़ें',
       'bootstrap.eyebrow': 'आपका इतिहास बन रहा है',
       'bootstrap.question': 'कल आपको लगभग कितने ऑर्डर मिले?',
       'bootstrap.sub': 'किसी शीट की ज़रूरत नहीं — बस एक मोटा नंबर, लिखकर या बोलकर। कुछ हफ़्तों बाद Hisaab आपके लिए असली सवालों के जवाब दे पाएगा।',
@@ -172,14 +172,21 @@
   const brandReset = document.getElementById('brand-reset');
   const greet = document.getElementById('greet');
   const subtitle = document.getElementById('subtitle');
+  const heroSupport = document.getElementById('hero-support');
   const questionInput = document.getElementById('question-input');
   const sheetUrlInput = document.getElementById('sheet-url-input');
   const clearSheetUrl = document.getElementById('clear-sheet-url');
   const csvUploadLink = document.getElementById('csv-upload-link');
   const csvFileInput = document.getElementById('csv-file-input');
   const pathSample = document.getElementById('path-sample');
+  const pathUseData = document.getElementById('path-use-data');
+  const demoIntro = document.getElementById('demo-intro');
+  const demoUseData = document.getElementById('demo-use-data');
+  const demoAnotherQuestion = document.getElementById('demo-another-question');
   const pathReal = document.getElementById('path-real');
+  const pathSheet = document.getElementById('path-sheet');
   const pathBootstrap = document.getElementById('path-bootstrap');
+  const dataOptions = document.getElementById('data-options');
   const sheetSlot = document.getElementById('sheet-slot');
   const dataDetected = document.getElementById('data-detected');
   const detectedHeadline = document.getElementById('detected-headline');
@@ -190,6 +197,11 @@
   const mappingMissingGroup = document.getElementById('mapping-missing-group');
   const mappingMissing = document.getElementById('mapping-missing');
   const mappingCapabilities = document.getElementById('mapping-capabilities');
+  const mappingNext = document.getElementById('mapping-next');
+  const mappingAvailableQuestions = document.getElementById('mapping-available-questions');
+  const mappingLaterList = document.getElementById('mapping-later-list');
+  const mappingContinue = document.getElementById('mapping-continue');
+  const mappingFix = document.getElementById('mapping-fix');
   const capabilityList = document.getElementById('capability-list');
   const detectedCaveat = document.getElementById('detected-caveat');
   const applyDataBtn = document.getElementById('apply-data-btn');
@@ -222,6 +234,7 @@
   const evidenceLimitationTitle = document.getElementById('evidence-limitation-title');
   const evidenceLimitationCopy = document.getElementById('evidence-limitation-copy');
   const evidenceLimitationDetail = document.getElementById('evidence-limitation-detail');
+  const intentChoiceList = document.getElementById('intent-choice-list');
   const evidenceLimitationPrimary = document.getElementById('evidence-limitation-primary');
   const evidenceLimitationSecondary = document.getElementById('evidence-limitation-secondary');
   const evidenceLimitationTertiary = document.getElementById('evidence-limitation-tertiary');
@@ -231,6 +244,19 @@
   const overviewWhy = document.getElementById('overview-why');
   const overviewAction = document.getElementById('overview-action');
   const overviewData = document.getElementById('overview-data');
+  const trendResult = document.getElementById('trend-result');
+  const trendSimpleAnswer = document.getElementById('trend-simple-answer');
+  const trendChange = document.getElementById('trend-change');
+  const trendRecentLabel = document.getElementById('trend-recent-label');
+  const trendRecentAverage = document.getElementById('trend-recent-average');
+  const trendPreviousLabel = document.getElementById('trend-previous-label');
+  const trendPreviousAverage = document.getElementById('trend-previous-average');
+  const trendBestPeriod = document.getElementById('trend-best-period');
+  const trendWorstPeriod = document.getElementById('trend-worst-period');
+  const trendEvidenceStrength = document.getElementById('trend-evidence-strength');
+  const trendWhy = document.getElementById('trend-why');
+  const trendNextAction = document.getElementById('trend-next-action');
+  const trendDetailsCopy = document.getElementById('trend-details-copy');
   const calculationDetails = document.getElementById('calculation-details');
   const dataSourceNote = document.getElementById('data-source-note');
   const dataSourceText = document.getElementById('data-source-text');
@@ -293,13 +319,7 @@
   const loadingStatus = document.getElementById('loading-status');
   const refineLoadingStatus = document.getElementById('refine-loading-status');
 
-  const pageGreetingPhrases = [
-    'What would you like to change?',
-    'आप क्या बदलना चाहते हैं?',
-    'আপনি কী পরিবর্তন করতে চান?',
-    'நீங்கள் என்ன மாற்ற விரும்புகிறீர்கள்?',
-    'What would you like to change?',
-  ];
+  const pageGreetingPhrases = ['Hisaab'];
   const loaderPhrases = ['Hello', 'नमस्ते', 'নমস্কার', 'வணக்கம்'];
   const decisionVocabulary = /\b(raise|raised|raising|lower|lowered|change|changed|add|added|remove|removed|stop|start|increase|increased|decrease|decreased|run|running|try|offer|offering|reduce|reduced|cut|discount)\b/i;
   const subjectVocabulary = /\b(fee|fees|price|prices|promo|promotion|discount|cod|cash on delivery|delivery|shipping|orders?|repeat|customer|customers|revenue|aov|month|months)\b/i;
@@ -371,8 +391,41 @@
     });
   });
 
-  pathSample.addEventListener('click', () => setPath('sample'));
+  pathSample.addEventListener('click', () => openDemoIntro());
+  document.querySelectorAll('.demo-question').forEach(button => {
+    button.addEventListener('click', () => {
+      questionInput.value = button.dataset.q || '';
+      resizeQuestion();
+      updateQuestionState();
+      hideValidationNudge();
+      runSimulation();
+    });
+  });
+  if (demoUseData) demoUseData.addEventListener('click', () => {
+    hideResults();
+    setPath('real');
+    dataOptions.hidden = false;
+    dataOptions.classList.add('open');
+    dataOptions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+  if (demoAnotherQuestion) demoAnotherQuestion.addEventListener('click', () => {
+    hideResults();
+    openDemoIntro();
+  });
+  if (pathUseData) pathUseData.addEventListener('click', () => {
+    dataOptions.hidden = false;
+    dataOptions.classList.add('open');
+    pathUseData.classList.add('active');
+    renderChipVisibility();
+    heroSupport.textContent = 'Choose how you want to add your sales. You can change this later.';
+    dataOptions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
   pathReal.addEventListener('click', () => setPath('real'));
+  if (pathSheet) pathSheet.addEventListener('click', () => {
+    setPath('real');
+    sheetSlot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    sheetUrlInput.focus();
+  });
   if (pathBootstrap) pathBootstrap.addEventListener('click', () => setPath('bootstrap'));
   if (bootstrapGateAdd) bootstrapGateAdd.addEventListener('click', () => {
     hideBootstrapGate();
@@ -391,12 +444,32 @@
   if (evidenceLimitationPrimary) evidenceLimitationPrimary.addEventListener('click', () => {
     hideEvidenceLimitation();
     hideResults();
+    if (evidenceLimitationPrimary.dataset.action === 'question') {
+      if (evidenceLimitationPrimary.dataset.prompt) {
+        questionInput.value = evidenceLimitationPrimary.dataset.prompt;
+        hideResults();
+        runSimulation({ skipValidation: true });
+        return;
+      }
+      questionInput.focus();
+      return;
+    }
     setPath('real');
     sheetUrlInput.focus();
   });
   if (evidenceLimitationSecondary) evidenceLimitationSecondary.addEventListener('click', () => {
     hideEvidenceLimitation();
     hideResults();
+      if (evidenceLimitationSecondary.dataset.action === 'question') {
+        if (evidenceLimitationSecondary.dataset.prompt) {
+          questionInput.value = evidenceLimitationSecondary.dataset.prompt;
+          hideResults();
+          runSimulation({ skipValidation: true });
+          return;
+        }
+        questionInput.focus();
+        return;
+    }
     setPath('bootstrap');
     document.getElementById('bootstrap-slot')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
@@ -452,6 +525,17 @@
   detectedToggle.addEventListener('click', () => {
     const open = detectedDetails.classList.toggle('open');
     detectedToggle.textContent = open ? 'Hide details ↑' : 'See what I read from your sheet ↓';
+  });
+  if (mappingContinue) mappingContinue.addEventListener('click', () => {
+    dataDetected.classList.remove('show');
+    alignDataPanelToSheetSlot();
+    questionInput.focus();
+    updateAwayFromLandingState();
+  });
+  if (mappingFix) mappingFix.addEventListener('click', () => {
+    mappingPanel.classList.add('editing');
+    mappingFix.hidden = true;
+    mappingContinue.textContent = 'Done';
   });
 
   questionInput.addEventListener('focus', stopIntro, { once: true });
@@ -627,13 +711,22 @@
     const isReal = path === 'real';
     const isBootstrap = path === 'bootstrap';
     const isSample = !isReal && !isBootstrap;
+    if (demoIntro) demoIntro.hidden = !isSample || !demoIntro.classList.contains('open');
     subtitle.textContent = isSample
-      ? 'Demo example — this is example data for a demo shop. It only shows how Hisaab works after real entries are added.'
-      : 'An honest answer to your business\'s next what-if — reckoned from your own numbers.';
+      ? 'Your simple business analyst for orders, sales, delivery fees, and offers.'
+      : 'Your data stays yours. Hisaab will tell you clearly what it can and cannot answer.';
+    heroSupport.textContent = isSample
+      ? 'This demo uses example data only. It shows how Hisaab works after you add your own data.'
+      : 'Choose how you want to add your sales. You can change this later.';
     pathSample.classList.toggle('active', isSample);
+    if (pathUseData) pathUseData.classList.toggle('active', isReal || isBootstrap || !dataOptions.hidden);
     pathReal.classList.toggle('active', isReal);
     const pathBootstrapBtn = document.getElementById('path-bootstrap');
     if (pathBootstrapBtn) pathBootstrapBtn.classList.toggle('active', isBootstrap);
+    if (dataOptions) {
+      dataOptions.hidden = isSample;
+      dataOptions.classList.toggle('open', !isSample);
+    }
     sheetSlot.classList.toggle('open', isReal);
     const bootstrapSlot = document.getElementById('bootstrap-slot');
     if (bootstrapSlot) bootstrapSlot.classList.toggle('open', isBootstrap);
@@ -663,6 +756,16 @@
       scheduleSheetParse();
     }
     updateAwayFromLandingState();
+  }
+
+  function openDemoIntro() {
+    setPath('sample');
+    if (demoIntro) {
+      demoIntro.hidden = false;
+      demoIntro.classList.add('open');
+      demoIntro.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    questionInput.focus();
   }
 
   async function handleCsvFile() {
@@ -776,7 +879,8 @@
   // since that path is explicitly the demo experience.
   function renderChipVisibility() {
     const isReal = activePath === 'real';
-    sampleSuggestions.hidden = isReal;
+    const isDataChooserOpen = dataOptions && !dataOptions.hidden;
+    sampleSuggestions.hidden = isReal || isDataChooserOpen;
     realSuggestions.hidden = !(isReal && activeDataset.kind !== 'sample');
   }
 
@@ -841,6 +945,9 @@
     capabilityList.hidden = true;
     capabilityList.innerHTML = '';
     mappingPanel.hidden = true;
+    mappingPanel.classList.remove('editing');
+    mappingFix.hidden = false;
+    mappingContinue.textContent = 'Continue';
     detectedCaveat.hidden = true;
     detectedDetails.innerHTML = '';
     hideApplyDataCta();
@@ -859,7 +966,7 @@
       if (body.session_id) localStorage.setItem('hisaabSessionId', body.session_id);
       lastUploadId = body.persistence?.uploadId || lastUploadId;
       lastSheetSummary = body.sheet_summary || body;
-      renderSheetSummary(lastSheetSummary);
+    renderSheetSummary(lastSheetSummary);
       alignDataPanelToSheetSlot();
       if (isAnalysisScreenGated()) {
         // Analysis screen: newly parsed data is shown but stays PENDING —
@@ -893,7 +1000,8 @@
       ? `I found ${summary.raw_rows || 0} rows across ${months} month${months === 1 ? '' : 's'}.`
       : 'I found the file, but not enough usable order history yet.';
     renderColumnMapping(summary.column_mapping || {});
-    renderCapabilities(summary.capability_map);
+    capabilityList.hidden = true;
+    capabilityList.innerHTML = '';
 
     if (summary.caveat_line) {
       detectedCaveat.innerHTML = `<b>Heads up:</b> ${escapeHtml(summary.caveat_line)}`;
@@ -915,30 +1023,83 @@
 
   function renderColumnMapping(mapping) {
     if (!mappingPanel) return;
+    const editing = mappingPanel.classList.contains('editing');
     const found = mapping.found || [];
     const missing = mapping.missing || [];
     mappingPanel.hidden = false;
+    mappingPanel.classList.toggle('editing', editing);
     mappingFoundGroup.hidden = !found.length;
     mappingMissingGroup.hidden = !missing.length;
     mappingFound.innerHTML = found.map(item => `
       <div class="mapping-row found">
         <span class="mapping-status-dot"></span>
-        <span class="mapping-label">${escapeHtml(item.label)}</span>
+        <span class="mapping-label">${escapeHtml(friendlyFoundLabel(item))}</span>
         <span class="mapping-column">${escapeHtml(item.column)}</span>
       </div>
     `).join('');
     mappingMissing.innerHTML = missing.map(item => renderMissingMapping(item)).join('');
-
-    const available = mapping.available_capabilities || [];
-    const unavailable = mapping.unavailable_capabilities || [];
-    mappingCapabilities.hidden = !available.length && !unavailable.length;
-    mappingCapabilities.innerHTML = `
-      <div class="mapping-capability-title">What Hisaab can answer from this file</div>
-      ${available.map(item => `<div class="mapping-capability available">✓ ${escapeHtml(item.label)}</div>`).join('')}
-      ${unavailable.length ? '<div class="mapping-capability-title cannot">What Hisaab cannot answer yet</div>' : ''}
-      ${unavailable.map(item => `<div class="mapping-capability unavailable"><b>${escapeHtml(item.label)}</b><span>${escapeHtml(item.reason)}</span></div>`).join('')}
-    `;
+    renderMappingSummary(mapping, missing);
     wireMappingControls();
+  }
+
+  function friendlyFoundLabel(item) {
+    const labels = {
+      order_date: 'Dates',
+      order_count_identifier: 'Orders',
+      order_value_or_price: 'Sales amount',
+      shipping_or_delivery_fee: 'Delivery fee',
+      customer_identifier: 'Customer details',
+      promotional_flag: 'Discount details',
+      order_status: 'Order status',
+    };
+    return labels[item.concept] || item.label;
+  }
+
+  function friendlyMissingLabel(item) {
+    const labels = {
+      order_value_or_price: 'Total sales amount',
+      promotional_flag: 'Discount details',
+      customer_identifier: 'Customer details',
+      shipping_or_delivery_fee: 'Delivery fee history',
+      order_date: 'Dates',
+      order_count_identifier: 'Orders',
+    };
+    return labels[item.concept] || item.label;
+  }
+
+  function friendlyMissingReason(item) {
+    const reasons = {
+      order_value_or_price: 'Needed to estimate sales impact.',
+      promotional_flag: 'Needed to check if offers worked.',
+      customer_identifier: 'Needed to check repeat customers.',
+      shipping_or_delivery_fee: 'Needed to check delivery fee changes.',
+      order_date: 'Needed to compare different periods.',
+      order_count_identifier: 'Needed to count your orders.',
+    };
+    return reasons[item.concept] || item.reason || 'Can be added later for a better answer.';
+  }
+
+  function renderMappingSummary(mapping, missing) {
+    const available = mapping.available_capabilities || [];
+    const later = missing
+      .map(item => friendlyMissingLabel(item))
+      .filter(label => !['Dates', 'Orders'].includes(label));
+    mappingNext.hidden = false;
+    mappingAvailableQuestions.innerHTML = available.length
+      ? available.map(item => `<button type="button" class="mapping-question" data-q="${escapeHtml(item.label)}">${escapeHtml(item.label)}</button>`).join('')
+      : '<span class="mapping-empty">Add more data later to unlock more questions.</span>';
+    mappingLaterList.innerHTML = later.length
+      ? [...new Set(later)].map(label => `<span class="mapping-later-item">${escapeHtml(label)}</span>`).join('')
+      : '<span class="mapping-empty">Nothing else is needed for the questions available now.</span>';
+    mappingAvailableQuestions.querySelectorAll('[data-q]').forEach(button => {
+      button.addEventListener('click', () => {
+        questionInput.value = button.dataset.q;
+        mappingContinue.click();
+        resizeQuestion();
+        updateQuestionState();
+        questionInput.focus();
+      });
+    });
   }
 
   function renderMissingMapping(item) {
@@ -976,9 +1137,9 @@
       </div>`;
     }
     return `<div class="mapping-row missing">
-      <div class="mapping-missing-title"><span class="mapping-status-dot"></span><span>${escapeHtml(item.label)}</span></div>
-      <div class="mapping-missing-reason">${escapeHtml(item.reason)}</div>
-      ${controls}
+      <div class="mapping-missing-title"><span class="mapping-status-dot"></span><span>${escapeHtml(friendlyMissingLabel(item))}</span></div>
+      <div class="mapping-missing-reason">${escapeHtml(friendlyMissingReason(item))}</div>
+      <div class="mapping-control">${controls}</div>
     </div>`;
   }
 
@@ -1225,6 +1386,11 @@
         return;
       }
 
+      if (['unsupported_question', 'clarify_intent', 'clarify_question', 'guided_answer', 'broad_guidance', 'needs_more_data'].includes(body.status || body.result_category)) {
+        renderEvidenceLimitation(body);
+        return;
+      }
+
       renderResults(body, Date.now() - startTime, { append: options.isRefine });
     } catch (err) {
       dataDetected.classList.add('show');
@@ -1237,12 +1403,17 @@
   }
 
   function isSpecificQuestion(question) {
-    return question.length >= 12 && (decisionVocabulary.test(question) || subjectVocabulary.test(question));
+    const broadQuestionVocabulary = /\b(hire|staff|worker|employee|team|helper|outlet|branch|shop|business|why|wrong|should i|what should i do|open another|second)\b/i;
+    return question.length >= 8 && (decisionVocabulary.test(question) || subjectVocabulary.test(question) || broadQuestionVocabulary.test(question));
   }
 
   function renderResults(data, elapsed, options = {}) {
     hideBootstrapGate();
     hideEvidenceLimitation();
+    if (data.intent === 'trend') {
+      renderTrendResults(data, elapsed, options);
+      return;
+    }
     const computed = data.computed || data;
     let generated = data.generated || data;
     // The UI chrome always mirrors the CURRENT question's detected language —
@@ -1276,6 +1447,9 @@
     activeResultId = crypto.randomUUID ? crypto.randomUUID() : `result-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     const isSampleData = data.chart_meta?.is_sample === true || data.data_source?.source_type === 'demo';
+    const demoActions = document.getElementById('demo-result-actions');
+    if (demoActions) demoActions.hidden = !isSampleData;
+    if (isSampleData) intentPrompt.classList.remove('show', 'captured');
     if (isSampleData) generated = sanitizeDemoGenerated(generated);
     drawSparkline(data.chart_series || data.series || [], isWeak, isSampleData);
 
@@ -1353,7 +1527,7 @@
     refineRow.hidden = !lastRefinement;
     intentPrompt.classList.remove('show', 'captured');
     window.clearTimeout(intentPromptTimer);
-    intentPromptTimer = window.setTimeout(() => intentPrompt.classList.add('show'), 900);
+    if (!isSampleData) intentPromptTimer = window.setTimeout(() => intentPrompt.classList.add('show'), 900);
 
     stage.classList.add('has-result');
     resultsSection.hidden = false;
@@ -1372,12 +1546,56 @@
     updateAwayFromLandingState();
   }
 
+  function renderTrendResults(data, elapsed, options = {}) {
+    const summary = data.computed?.trend_summary || {};
+    const generated = data.generated || {};
+    const isDemo = data.chart_meta?.is_sample === true || data.data_source?.source_type === 'demo';
+    const demoActions = document.getElementById('demo-result-actions');
+    if (demoActions) demoActions.hidden = !isDemo;
+    if (isDemo) intentPrompt.classList.remove('show', 'captured');
+    const change = Number(summary.change_pct);
+    const metric = summary.metric === 'sales' ? 'sales value' : 'orders';
+    const average = value => summary.metric === 'sales' ? formatMoney(value) : Number(value || 0).toLocaleString('en-IN');
+    const direction = !Number.isFinite(change) || Math.abs(change) < 1 ? 'mostly stable' : change > 0 ? 'slightly up' : 'slightly down';
+    const evidence = evidenceStrength(data.evidence_category || data.evidence?.category, data.computed?.confidence);
+    const salesMissing = summary.sales_requested && !summary.sales_available;
+    trendSimpleAnswer.textContent = generated.recommendation || `${metric[0].toUpperCase()}${metric.slice(1)} are ${direction}.`;
+    trendChange.textContent = `${summary.recent_label || 'Recent period'} average: ${average(summary.recent_average)}. ${summary.previous_label || 'Previous period'} average: ${average(summary.previous_average)}. That is around ${Math.abs(change || 0).toFixed(1)}% ${change > 0 ? 'higher' : change < 0 ? 'lower' : 'different'}.`;
+    trendRecentLabel.textContent = summary.recent_label || 'Recent period';
+    trendRecentAverage.textContent = average(summary.recent_average);
+    trendPreviousLabel.textContent = summary.previous_label || 'Previous period';
+    trendPreviousAverage.textContent = average(summary.previous_average);
+    trendBestPeriod.textContent = summary.best_period?.label || 'Not enough history';
+    trendWorstPeriod.textContent = summary.worst_period?.label || 'Not enough history';
+    trendEvidenceStrength.textContent = evidence;
+    trendWhy.textContent = generated.why || (salesMissing ? 'This answers order trend only because total bill amount is not available.' : 'This compares the recent period with the previous period.');
+    trendNextAction.textContent = salesMissing
+      ? 'Keep recording orders. Add total bill amount later if you want Hisaab to check sales value too.'
+      : 'Keep recording the same data and check again after the next period; this is a trend, not a prediction.';
+    trendDetailsCopy.textContent = `${summary.metric === 'sales' ? 'Sales value' : 'Order count'} trend using ${summary.granularity === 'daily' ? '7 daily entries versus the previous 7' : 'the recent 3 months versus the previous 3 where available'}. ${salesMissing ? 'Total bill amount is missing, so this result uses orders only.' : ''}`;
+    trendResult.hidden = false;
+    resultOverview.hidden = true;
+    document.getElementById('scenarios-block')?.setAttribute('hidden', '');
+    document.getElementById('evidence-block')?.setAttribute('hidden', '');
+    confidenceBlock.hidden = true;
+    document.querySelector('.explain')?.setAttribute('hidden', '');
+    calculationDetails.hidden = true;
+    viewInLog.hidden = true;
+    currentResult = null;
+    lastSimulationPersistence = data.persistence || null;
+    setDataSource(data.data_source);
+    resultsSection.hidden = false;
+    resultsSection.classList.add('show');
+    stage.classList.add('has-result');
+    if (!options.keepScroll) trendResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    updateAwayFromLandingState();
+  }
+
   function evidenceStrength(category, confidence) {
-    if (category === 'weak_signal') return 'Weak evidence';
-    if (category === 'not_enough_evidence') return 'Not enough evidence';
-    if (category === 'unsupported_question') return 'Missing key data';
+    if (category === 'weak_signal') return 'Early signal only';
+    if (category === 'not_enough_evidence' || category === 'needs_more_data' || category === 'unsupported_question') return 'Not enough data yet';
     if (category === 'demo_only') return 'Demo only';
-    return Number(confidence) >= 0.7 ? 'Strong evidence' : 'Medium evidence';
+    return Number(confidence) >= 0.7 ? 'You can trust this more' : 'Useful direction, but test first';
   }
 
   function renderSimpleOverview(data, computed, generated) {
@@ -1389,25 +1607,30 @@
       ? 'Try a small change for 3–5 days and compare orders before changing it for everyone.'
       : 'Use this as a cautious test, then record what actually happens.');
     const answer = isWeak
-      ? 'This is an early pattern — I would test it before changing it for everyone.'
+      ? 'This is an early signal only — test it before changing it for everyone.'
       : generated.recommendation || 'Use this as a cautious test, not a guarantee.';
     const why = generated.why || data.evidence?.message || 'The available history gives a directional signal, but it is not a guarantee.';
     const source = data.data_source || {};
+    const isDemo = source?.mode === 'demo_fallback' || data.chart_meta?.is_sample;
     const sourceLabel = source?.mode === 'bootstrap'
       ? 'Self-reported daily history'
-      : source?.mode === 'demo_fallback' || data.chart_meta?.is_sample
-        ? 'Demo example'
+      : isDemo
+        ? 'Demo shop example'
         : source?.csv_used ? 'Imported CSV'
           : source?.sheet_url_used ? 'Connected Google Sheet'
             : 'Connected data';
     const months = Number(data.summary?.months);
     const rows = Number(source.sheet_rows_used || source.bootstrap_entries_used || computed.sample_size);
-    const history = Number.isFinite(months) && months > 0
-      ? `${months} month${months === 1 ? '' : 's'}${Number.isFinite(rows) && rows > 0 ? ` · ${rows} rows/entries` : ''}`
+    const history = isDemo
+      ? '12 months of example orders'
+      : Number.isFinite(months) && months > 0
+        ? `${months} month${months === 1 ? '' : 's'}${Number.isFinite(rows) && rows > 0 ? ` · ${rows} rows/entries` : ''}`
       : Number.isFinite(rows) && rows > 0 ? `${rows} rows/entries` : 'Limited history';
-    const quality = category === 'clear_enough'
-      ? 'Enough for a cautious test'
-      : category === 'weak_signal' ? 'Limited — early pattern only' : 'Missing key fields';
+    const quality = isDemo
+      ? 'Illustrative only'
+      : category === 'clear_enough'
+        ? 'Enough for a cautious test'
+        : category === 'weak_signal' ? 'Limited — early pattern only' : 'Missing key fields';
 
     overviewAnswer.textContent = answer;
     overviewStrength.textContent = strength;
@@ -1466,20 +1689,43 @@
   function renderEvidenceLimitation(data) {
     if (!evidenceLimitation) return;
     const evidence = data.evidence || {};
-    const category = data.evidence_category || evidence.category || 'not_enough_evidence';
+    const category = data.evidence_category || data.result_category || evidence.category || 'not_enough_evidence';
     const isDemo = category === 'demo_only';
-    const isUnsupported = category === 'unsupported_question';
+    const isUnsupported = category === 'unsupported_question' || category === 'needs_more_data';
+    const isClarify = category === 'clarify_intent' || category === 'clarify_question';
+    const isGuidance = ['guided_answer', 'broad_guidance', 'needs_more_data'].includes(category);
     evidenceLimitationEyebrow.textContent = isDemo
       ? 'Demo only'
-      : isUnsupported ? 'Data needed' : category === 'weak_signal' ? 'Early pattern' : 'Not enough evidence yet';
+      : isGuidance ? 'Business guidance' : isClarify ? 'Choose one check' : isUnsupported ? 'Data needed' : category === 'weak_signal' ? 'Early pattern' : 'Not enough evidence yet';
     evidenceLimitationTitle.textContent = evidence.title || 'Not enough evidence yet';
     evidenceLimitationCopy.textContent = evidence.message || 'Hisaab cannot estimate this honestly from the available data yet.';
     evidenceLimitationDetail.textContent = evidence.next_action || '';
-    evidenceLimitationPrimary.textContent = isDemo ? 'Add my own data' : 'Add the missing data';
-    evidenceLimitationSecondary.textContent = isDemo ? 'Start daily entry' : 'Ask another question';
+    evidenceLimitationPrimary.textContent = isDemo ? 'Add my own data' : isGuidance || isClarify || isUnsupported ? (evidence.primary_label || 'Ask another question') : 'Add the missing data';
+    evidenceLimitationSecondary.textContent = isDemo ? 'Start daily entry' : isGuidance || isClarify || isUnsupported ? 'Choose another check' : 'Ask another question';
+    evidenceLimitationPrimary.dataset.action = isGuidance || isClarify || isUnsupported ? 'question' : 'real';
+    evidenceLimitationPrimary.dataset.prompt = evidence.primary_prompt || '';
+    evidenceLimitationSecondary.dataset.action = isDemo || isGuidance || isClarify || isUnsupported ? 'question' : 'bootstrap';
+    evidenceLimitationSecondary.dataset.prompt = '';
     if (evidenceLimitationTertiary) {
       evidenceLimitationTertiary.hidden = !isDemo;
       evidenceLimitationTertiary.textContent = 'Try another demo question';
+    }
+    if (intentChoiceList) {
+      intentChoiceList.innerHTML = '';
+      const choices = Array.isArray(evidence.choices) ? evidence.choices : [];
+      intentChoiceList.hidden = !choices.length || isDemo;
+      choices.forEach(choice => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'intent-choice-btn';
+        button.textContent = choice.label || choice.prompt || '';
+        button.addEventListener('click', () => {
+          questionInput.value = choice.prompt || choice.label || '';
+          hideResults();
+          questionInput.focus();
+        });
+        intentChoiceList.appendChild(button);
+      });
     }
     evidenceLimitation.hidden = false;
     hideBootstrapGate();
@@ -1511,6 +1757,10 @@
     document.querySelector('.explain')?.removeAttribute('hidden');
     if (calculationDetails) calculationDetails.hidden = false;
     if (evidenceLimitationTertiary) evidenceLimitationTertiary.hidden = true;
+    if (intentChoiceList) {
+      intentChoiceList.hidden = true;
+      intentChoiceList.innerHTML = '';
+    }
   }
 
   // Render the scenarios block from data.scenarios_bundle. If bundle is
@@ -2907,12 +3157,20 @@
     restoreDataConnectorToHome();
     clearCsvUpload();
     setPath('sample');
+    if (demoIntro) {
+      demoIntro.hidden = true;
+      demoIntro.classList.remove('open');
+    }
+    document.getElementById('demo-result-actions')?.setAttribute('hidden', '');
     dataDetected.classList.remove('show');
     detectedHeadline.textContent = '';
     detectedBody.textContent = '';
     capabilityList.hidden = true;
     capabilityList.innerHTML = '';
     mappingPanel.hidden = true;
+    mappingPanel.classList.remove('editing');
+    mappingFix.hidden = false;
+    mappingContinue.textContent = 'Continue';
     detectedCaveat.hidden = true;
     detectedDetails.classList.remove('open');
     detectedDetails.innerHTML = '';
@@ -2970,6 +3228,7 @@
     // result should render at its normal position, not with the top-spacing
     // that scenarios-mode adds.
     resultsSection.classList.remove('with-scenarios');
+    if (trendResult) trendResult.hidden = true;
     const scenariosBlock = document.getElementById('scenarios-block');
     if (scenariosBlock) scenariosBlock.hidden = true;
     if (!options.keepTrajectory) stage.classList.remove('has-result', 'connecting-data');
@@ -2996,9 +3255,44 @@
       label.className = 'missing-field';
       label.textContent = item.prompt;
       if (['orders', 'avg_order_value', 'customer_identifier', 'promo_active'].includes(item.field)) {
+        const actions = document.createElement('span');
+        actions.className = 'missing-field-actions';
+        const choose = document.createElement('button');
+        choose.type = 'button';
+        choose.className = 'mapping-choice-btn';
+        choose.textContent = 'Choose a column';
+        choose.addEventListener('click', () => {
+          dataDetected.classList.add('show');
+          mappingPanel.hidden = false;
+          mappingPanel.classList.add('editing');
+          mappingFix.hidden = true;
+          mappingContinue.textContent = 'Done';
+          mappingPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+        actions.appendChild(choose);
+        if (item.field === 'avg_order_value') {
+          const average = document.createElement('button');
+          average.type = 'button';
+          average.className = 'mapping-choice-btn';
+          average.textContent = 'Use my average bill amount';
+          average.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.step = '0.01';
+            input.placeholder = 'e.g. 450';
+            input.dataset.field = 'user_provided_average_order_value';
+            input.className = 'missing-inline-input';
+            input.setAttribute('aria-label', 'Usual average bill amount');
+            if (!label.querySelector('[data-field="avg_order_value"]')) label.appendChild(input);
+            input.focus();
+          });
+          actions.appendChild(average);
+        }
+        label.appendChild(actions);
         const note = document.createElement('span');
         note.className = 'missing-field-note';
-        note.textContent = 'Choose an option in the file summary above.';
+        note.textContent = 'You can also ask a different question.';
         label.appendChild(note);
         missingFields.appendChild(label);
         return;
@@ -3012,6 +3306,7 @@
     });
     missingSection.hidden = false;
     missingSection.classList.add('show');
+    missingSubmitBtn.textContent = 'Continue';
     missingSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     updateAwayFromLandingState();
   }
