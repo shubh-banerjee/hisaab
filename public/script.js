@@ -378,6 +378,37 @@
   const loadingStatus = document.getElementById('loading-status');
   const refineLoadingStatus = document.getElementById('refine-loading-status');
 
+  // These are the only top-level panels that are allowed to participate in
+  // the page flow. renderView() hides every one before revealing the active
+  // screen, so an older panel cannot keep occupying space below the current
+  // screen even when a legacy helper still toggles its own state.
+  const MAIN_SECTIONS = [
+    pathChooser,
+    homeNote,
+    checkbackCard,
+    demoIntro,
+    dataOptions,
+    readingView,
+    dataReadyView,
+    fixDataView,
+    dataErrorView,
+    askView,
+    sheetSlot,
+    document.getElementById('bootstrap-slot'),
+    dataDetected,
+    composer,
+    sampleSuggestions,
+    realSuggestions,
+    langNote,
+    validationNudge,
+    missingSection,
+    errorBanner,
+    trajectory,
+    refineInline,
+    resultsSection,
+    decisionLog,
+  ].filter(Boolean);
+
   const pageGreetingPhrases = ['Hisaab'];
   const loaderPhrases = ['Hello', 'नमस्ते', 'নমস্কার', 'வணக்கம்'];
   const decisionVocabulary = /\b(raise|raised|raising|lower|lowered|change|changed|add|added|remove|removed|stop|start|increase|increased|decrease|decreased|run|running|try|offer|offering|reduce|reduced|cut|discount)\b/i;
@@ -385,6 +416,22 @@
 
   let activePath = 'sample';
   let currentView = 'home';
+  const VIEW_NAMES = [
+    'home',
+    'upload',
+    'reading',
+    'dataReady',
+    'ask',
+    'result',
+    'demoIntro',
+    'demoFoundData',
+    'demoQuestions',
+    'demoResult',
+    'fixData',
+    'manualEntry',
+    'error',
+    'decisionLog',
+  ];
   let fixDataContext = 'general';
   let missingFieldTarget = '';
   let fixDataReturnView = 'dataReady';
@@ -394,6 +441,7 @@
   let readingTimer = null;
   let askExampleTimer = null;
   let readingStepIndex = 0;
+  let parseRequestToken = 0;
   const readingSteps = [
     'Reading your file...',
     'Finding orders...',
@@ -445,6 +493,7 @@
   let decisionsCountValue = 0;
   let activeDecisionFilter = 'all';
   let lastSavedDecisionId = null;
+  let viewBeforeDecisionLog = 'home';
 
   setupIntro();
   setupSpeech();
@@ -456,6 +505,7 @@
   window.addEventListener('scroll', updateNavScrollState, { passive: true });
   updateAwayFromLandingState();
   renderChipVisibility();
+  setCurrentView('home');
 
   document.querySelectorAll('.chip').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -536,15 +586,12 @@
     parseConnectedData();
   });
   if (pathBootstrap) pathBootstrap.addEventListener('click', () => {
-    document.body.classList.remove('upload-view-active');
-    showQuestionComposer();
-    setPath('bootstrap');
-    closeDataOptions();
+    openManualEntry();
   });
   if (bootstrapGateAdd) bootstrapGateAdd.addEventListener('click', () => {
     hideBootstrapGate();
     hideResults();
-    setPath('bootstrap');
+    openManualEntry();
     document.getElementById('bootstrap-slot')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     document.getElementById('bs-orders-input')?.focus();
   });
@@ -584,7 +631,7 @@
         questionInput.focus();
         return;
     }
-    setPath('bootstrap');
+    openManualEntry();
     document.getElementById('bootstrap-slot')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
   if (evidenceLimitationTertiary) evidenceLimitationTertiary.addEventListener('click', () => {
@@ -826,11 +873,82 @@
     subtitle.classList.add('show');
   }
 
+  function renderView() {
+    const checkbackShouldShow = checkbackCard && !checkbackCard.hidden;
+    const dataDetectedShouldShow = dataDetected.classList.contains('show');
+    const sampleSuggestionsShouldShow = !sampleSuggestions.hidden;
+    const realSuggestionsShouldShow = !realSuggestions.hidden;
+    const validationShouldShow = !validationNudge.hidden;
+    const errorShouldShow = !errorBanner.hidden;
+    const loadingShouldShow = !loadingStatus.hidden;
+    const refineShouldShow = !refineInline.hidden;
+    const trajectoryShouldShow = !trajectory.hidden;
+
+    MAIN_SECTIONS.forEach(section => {
+      section.hidden = true;
+      section.classList.add('is-hidden');
+    });
+
+    const reveal = (...sections) => sections.filter(Boolean).forEach(section => {
+      section.hidden = false;
+      section.classList.remove('is-hidden');
+    });
+
+    if (currentView === 'home') {
+      reveal(pathChooser, homeNote);
+      if (checkbackShouldShow) reveal(checkbackCard);
+    } else if (currentView === 'upload') {
+      reveal(dataOptions);
+    } else if (currentView === 'reading') {
+      reveal(readingView);
+    } else if (currentView === 'dataReady') {
+      reveal(dataReadyView);
+    } else if (currentView === 'ask') {
+      reveal(askView, composer, langNote);
+      if (sampleSuggestionsShouldShow) reveal(sampleSuggestions);
+      if (realSuggestionsShouldShow) reveal(realSuggestions);
+      if (validationShouldShow) reveal(validationNudge);
+      if (loadingShouldShow) reveal(loadingStatus);
+    } else if (currentView === 'result') {
+      reveal(resultsSection);
+      if (stage.classList.contains('connecting-data')) {
+        reveal(sheetSlot);
+        if (dataDetectedShouldShow) reveal(dataDetected);
+      }
+      if (refineShouldShow) reveal(refineInline);
+      if (trajectoryShouldShow) reveal(trajectory);
+      if (errorShouldShow) reveal(errorBanner);
+    } else if (currentView === 'fixData') {
+      reveal(fixDataView);
+    } else if (currentView === 'manualEntry') {
+      reveal(document.getElementById('bootstrap-slot'));
+    } else if (currentView === 'error') {
+      reveal(dataErrorView);
+    } else if (currentView === 'decisionLog') {
+      reveal(decisionLog);
+    } else if (currentView.startsWith('demo')) {
+      reveal(demoIntro);
+    } else {
+      currentView = 'home';
+      reveal(pathChooser, homeNote);
+    }
+
+    // These are internal states, not separate screens. They should never
+    // leak onto another active screen just because a legacy helper toggled
+    // them before the view changed.
+    if (currentView !== 'ask') stopAskExampleRotation();
+    if (currentView !== 'home' && checkbackCard) checkbackCard.hidden = true;
+    if (currentView !== 'result') stage.classList.remove('connecting-data');
+    document.body.classList.toggle('home-landing', currentView === 'home');
+    document.body.classList.toggle('upload-view-active', currentView === 'upload');
+    console.debug('[Hisaab] View changed:', currentView);
+  }
+
   function setCurrentView(view) {
-    currentView = view;
-    const viewClasses = ['view-home', 'view-upload', 'view-reading', 'view-data-ready', 'view-fix-data', 'view-demo', 'view-ask', 'view-result', 'view-error'];
+    currentView = VIEW_NAMES.includes(view) ? view : 'home';
+    const viewClasses = VIEW_NAMES.map(name => `view-${name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`);
     document.body.classList.remove(...viewClasses);
-    document.body.classList.add(`view-${view.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`);
+    document.body.classList.add(`view-${currentView.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`);
 
     if (readingView) readingView.hidden = view !== 'reading';
     if (dataReadyView) dataReadyView.hidden = view !== 'dataReady';
@@ -865,6 +983,8 @@
       hideValidationNudge();
       hideError();
     }
+
+    renderView();
   }
 
   function stopReadingProgress() {
@@ -1492,6 +1612,14 @@
   }
 
   function openUploadOptions() {
+    parseRequestToken += 1;
+    window.clearTimeout(parseTimer);
+    clearCsvUpload();
+    sheetUrlInput.value = '';
+    if (uploadSheetUrlInput) uploadSheetUrlInput.value = '';
+    lastSheetSummary = null;
+    lastUploadId = null;
+    connectedDataLabel = '';
     hideResults();
     setCurrentView('upload');
     document.body.classList.remove('home-landing');
@@ -1509,6 +1637,14 @@
     renderChipVisibility();
     heroSupport.textContent = 'Choose how you want to add your sales. You can change this later.';
     dataOptions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function openManualEntry() {
+    setPath('bootstrap');
+    closeDataOptions();
+    setCurrentView('manualEntry');
+    document.body.classList.remove('upload-view-active');
+    fetchBootstrapStatus();
   }
 
   const demoResults = {
@@ -1541,7 +1677,13 @@
   function setDemoStep(step) {
     const steps = ['intro', 'foundData', 'chooseQuestion', 'result'];
     demoStep = steps.includes(step) ? step : 'intro';
-    setCurrentView('demo');
+    const demoViews = {
+      intro: 'demoIntro',
+      foundData: 'demoFoundData',
+      chooseQuestion: 'demoQuestions',
+      result: 'demoResult',
+    };
+    setCurrentView(demoViews[demoStep]);
     hideResults();
     hideMissingInputs();
     hideValidationNudge();
@@ -1625,6 +1767,7 @@
       dataDetected.classList.remove('show');
       fetchBootstrapStatus();
       updateAwayFromLandingState();
+      renderView();
       return;
     }
     if (!isReal) {
@@ -1641,6 +1784,7 @@
     } else {
       scheduleSheetParse();
     }
+    renderView();
     updateAwayFromLandingState();
   }
 
@@ -1698,6 +1842,7 @@
   }
 
   function clearCsvUpload() {
+    parseRequestToken += 1;
     uploadedCsv = null;
     uploadedFileName = '';
     csvFileInput.value = '';
@@ -1852,6 +1997,8 @@
     const sheetUrl = sheetUrlInput.value.trim();
     if (!uploadedCsv && sheetUrl.length <= 20) return;
 
+    const requestToken = ++parseRequestToken;
+
     const stagedUploadRead = currentView === 'upload' || currentView === 'reading';
     if (currentView === 'upload') {
       startReadingView(uploadedCsv ? 'file' : 'sheet');
@@ -1884,6 +2031,7 @@
       });
       const body = await readJsonResponse(res);
       if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);
+      if (requestToken !== parseRequestToken) return;
       if (body.session_id) localStorage.setItem('hisaabSessionId', body.session_id);
       lastUploadId = body.persistence?.uploadId || lastUploadId;
       lastSheetSummary = body.sheet_summary || body;
@@ -1901,6 +2049,7 @@
       }
       if (stagedUploadRead) showDataReady(lastSheetSummary);
     } catch (err) {
+      if (requestToken !== parseRequestToken) return;
       if (stagedUploadRead) {
         showDataReadError(err);
         return;
@@ -3418,7 +3567,8 @@
       if (followup) followup.hidden = true;
       if (done) done.hidden = true;
       if (options) options.hidden = false;
-      card.hidden = false;
+      card.hidden = currentView !== 'home';
+      renderView();
     } catch (_err) {
       card.hidden = true;
     }
@@ -3578,8 +3728,9 @@
 
   async function openDecisionLog() {
     hideError();
+    viewBeforeDecisionLog = currentView === 'decisionLog' ? 'home' : currentView;
+    setCurrentView('decisionLog');
     stage.classList.add('has-log');
-    decisionLog.hidden = false;
     updateAwayFromLandingState();
     decisionList.innerHTML = '<div class="log-empty-note">Loading your decisions...</div>';
     try {
@@ -3602,7 +3753,7 @@
 
   function closeDecisionLog() {
     stage.classList.remove('has-log');
-    decisionLog.hidden = true;
+    if (currentView === 'decisionLog') setCurrentView(viewBeforeDecisionLog);
     updateAwayFromLandingState();
   }
 
@@ -4194,6 +4345,7 @@
   }
 
   function resetToLanding() {
+    parseRequestToken += 1;
     stopReadingProgress();
     setCurrentView('home');
     demoStep = 'intro';

@@ -759,6 +759,20 @@ Checklist:
 - [x] Keep unknown questions on clarification and never default them to delivery fee.
 - [ ] Manually verify typed and speech-to-text English, Hinglish, and Hindi examples in a browser.
 
+## Single active screen state
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Keep one central `currentView` state for all primary screens and the decision log.
+- [x] Add one `renderView()` pass that hides every top-level panel before revealing the active screen.
+- [x] Route home, upload, reading, Data Ready, Ask, result, Fix Data, manual entry, error, and demo steps through the active view state.
+- [x] Prevent legacy sheet, data-reading, composer, result, suggestion, and analysis panels from occupying space under another screen.
+- [x] Keep demo steps explicit as `demoIntro`, `demoFoundData`, `demoQuestions`, and `demoResult`.
+- [x] Add a reusable `.is-hidden` utility for inactive panels.
+- [ ] Manually verify every view transition and page height on desktop and mobile.
+
 ## Recommended implementation order
 
 1. Phase 1 — eliminate the dangerous Start Fresh fallback.
