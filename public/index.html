@@ -34,8 +34,8 @@
   <main class="stage" id="stage">
     <div class="greet-block">
       <h1 class="greet" id="greet">Hisaab</h1>
-      <p class="subtitle" id="subtitle">Your simple business analyst for orders, sales, delivery fees, and offers.</p>
-      <p class="hero-support" id="hero-support">Ask a question about your business, or try demo data to see how it works.</p>
+      <p class="subtitle" id="subtitle">Your simple business analyst for small shops.</p>
+      <p class="hero-support" id="hero-support">Ask questions about orders, sales, delivery fees, discounts, and customers.</p>
     </div>
 
     <!-- Check-back card: appears on session start when the user has an applied
@@ -200,7 +200,7 @@
           <div class="mapping-later-list" id="mapping-later-list"></div>
         </div>
         <div class="mapping-actions">
-          <button class="cta-primary mapping-continue" id="mapping-continue" type="button">Continue</button>
+          <button class="cta-primary mapping-continue" id="mapping-continue" type="button">Ask a question</button>
           <button class="cta-secondary mapping-fix" id="mapping-fix" type="button">Fix detected data</button>
         </div>
       </section>
@@ -377,7 +377,6 @@
         <div class="scenario-grid" id="scenario-grid"></div>
         <div class="threshold-line-block" id="threshold-line-block" hidden>
           <div class="threshold-line-label" data-i18n="scenarios.threshold_label">Where safe turns risky</div>
-          <div class="threshold-track"><div class="threshold-marker" id="threshold-marker"></div></div>
           <div class="threshold-scale">
             <span id="threshold-scale-start"></span>
             <span id="threshold-scale-end"></span>
@@ -423,7 +422,7 @@
       </div>
 
       <div class="conf" id="confidence-block">
-        <div class="conf-badge" id="confidence-badge"><span class="dot"></span><span id="confidence-label">High confidence</span> <span class="pct" id="confidence-pct">· 81%</span></div>
+        <div class="conf-badge" id="confidence-badge"><span class="dot"></span><span id="confidence-label">Evidence strength</span> <span class="pct" id="confidence-pct">· 81%</span></div>
         <div class="range" id="range-line"></div>
         <div id="low-signal-warning" class="weak-note" hidden></div>
         <div id="ai-wording-note" class="ai-wording-note" hidden>Couldn't reach the AI service to write this up — the numbers above are still the real calculated result, just described with a simpler template.</div>

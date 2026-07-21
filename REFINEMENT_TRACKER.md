@@ -631,6 +631,25 @@ Checklist:
 - [x] Keep broad guidance free of regression, confidence, and prediction language.
 - [ ] Manually test broad questions with imported data, Start Fresh, and Demo mode.
 - [ ] Mobile view shows answer, evidence, action, and trend details in that order.
+
+## Experience stabilization pass
+
+Status: implemented in the current working tree.
+
+Checklist:
+
+- [x] Keep the home screen to the two primary paths: Use my data and Try demo.
+- [x] Hide suggestion chips until the guided demo is opened so the home screen has one clear starting point.
+- [x] Hide the primary path chooser during the demo tour to avoid repeated Try demo / Use my data actions.
+- [x] Keep upload CSV, Google Sheet, and daily sales entry inside Use my data.
+- [x] Keep file reading non-blocking: show found fields, missing fields, and compatible questions before asking for mappings.
+- [x] Move question-specific column choices and fallback decisions into the missing-data response.
+- [x] Use one central data-reading card instead of a floating side panel.
+- [x] Make result labels Answer, Why?, Try this, How sure is this?, Data used, and Details.
+- [x] Keep statistical terms and metrics inside Details.
+- [x] Replace visible confidence wording with evidence-strength language.
+- [x] Remove the duplicate threshold marker and duplicate demo/home entry points.
+- [ ] Manually verify clean home, demo, upload, missing discount, broad question, and mobile result flows.
 - `public/script.js`
 - new `test/` or `tests/` fixtures and test files
 - CI configuration if introduced

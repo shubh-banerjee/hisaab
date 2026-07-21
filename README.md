@@ -1,6 +1,6 @@
 # Hisaab
 
-Hisaab is an AI-assisted what-if simulator for small retail business owners. The projected percentage is calculated from order history with simple statistics; Gemini only turns the result into plain-English guidance.
+Hisaab is a simple business analyst for small shops. Owners can use their own data, try a clearly labelled demo, ask a business question, and receive either a plain answer, helpful missing-data guidance, or a safe next step. The projected percentage is calculated from order history with simple statistics; Gemini only turns the result into shop-owner language.
 
 ## Architecture
 
@@ -57,7 +57,7 @@ English, Devanagari Hindi, and Roman-script Hinglish have server-side fallback w
 
 ## Optional Google Sheets Input
 
-The app works without a Sheet link by using the built-in demo dataset. To use real data, paste a publicly viewable Google Sheets URL into the optional field.
+The app works without a Sheet link by using the built-in demo dataset. The home screen starts with only two choices: **Use my data** or **Try demo**. Upload CSV, connect a public Google Sheet, and add daily sales manually appear only after choosing **Use my data**.
 
 Expected columns can be named flexibly:
 
@@ -68,7 +68,7 @@ Expected columns can be named flexibly:
 - `delivery_fee`, `shipping_fee`, or `delivery_charge`
 - `promo_active`, `promo`, `promotion`, or `discount`
 
-When a Sheet or CSV is provided, missing critical fields are not filled with demo data. The API returns `status: "needs_input"` or an evidence limitation with detected columns, missing business concepts, and compatible capabilities. Users can continue without a capability, choose a detected column, or provide a clearly labelled average bill amount. Demo data is used only in explicit Demo example mode.
+When a Sheet or CSV is provided, Hisaab first says **I read your file**, shows only the fields it found, and lists compatible questions. It does not ask the owner to resolve every missing field immediately. Missing fields are handled only when the question actually needs them; the owner can choose a column, say they do not track it, or ask a different question. Demo data is used only in explicit Demo example mode.
 
 Column classification is adaptive: the server sends headers and sample rows to Gemini, which classifies concepts such as order date, order ID, customer identifier, order value, delivery fee, promo flag, and order status. The server then aggregates order-level rows into monthly summaries before running regression.
 

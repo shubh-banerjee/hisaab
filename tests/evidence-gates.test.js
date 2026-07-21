@@ -311,3 +311,20 @@ test('bootstrap trend path keeps daily periods for a 7-day comparison', () => {
   assert.equal(result.trend_summary.granularity, 'daily');
   assert.equal(result.trend_summary.recent_label, 'Recent 7 days');
 });
+
+test('stabilized experience keeps primary paths and technical detail secondary', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const script = fs.readFileSync(path.join(__dirname, '..', 'public', 'script.js'), 'utf8');
+  assert.match(html, /class="path-title">Try demo<\/span>/);
+  assert.match(html, /class="path-title">Use my data<\/span>/);
+  assert.match(html, /<div class="overview-eyebrow">Answer<\/div>/);
+  assert.match(html, />Why\?<\/h2>/);
+  assert.match(html, />Try this<\/h2>/);
+  assert.match(html, /How sure is this\?/);
+  assert.match(html, />Data used<\/h2>/);
+  assert.match(html, /<summary>Details<\/summary>/);
+  assert.doesNotMatch(html, /id="threshold-marker"[^>]*>.*id="threshold-marker"/s);
+  assert.match(script, /sampleSuggestions\.hidden = isReal \|\| isDataChooserOpen \|\| !demoTourOpen/);
+  assert.match(script, /Choose discount column/);
+  assert.match(script, /Ask a different question/);
+});

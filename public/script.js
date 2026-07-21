@@ -9,10 +9,10 @@
       'chrome.new_question': 'New question',
       'chrome.your_decisions': 'Your decisions',
       'result.what_this_means': 'What this means',
-      'result.confidence.high': 'High confidence',
-      'result.confidence.medium': 'Medium confidence',
-      'result.confidence.low': 'Low confidence',
-      'result.confidence.unknown': 'Confidence unknown',
+      'result.confidence.high': 'You can trust this more',
+      'result.confidence.medium': 'Useful direction, but test first',
+      'result.confidence.low': 'Early signal only',
+      'result.confidence.unknown': 'Not enough data yet',
       'result.intent.applied': 'Yes, I tried it',
       'result.intent.skipped': 'No, I skipped it',
       'result.intent.pending': 'Not sure yet',
@@ -73,10 +73,10 @@
       'chrome.new_question': 'नया प्रश्न',
       'chrome.your_decisions': 'आपके निर्णय',
       'result.what_this_means': 'इसका क्या अर्थ है',
-      'result.confidence.high': 'उच्च आत्मविश्वास',
-      'result.confidence.medium': 'मध्यम आत्मविश्वास',
-      'result.confidence.low': 'कम आत्मविश्वास',
-      'result.confidence.unknown': 'आत्मविश्वास अज्ञात',
+      'result.confidence.high': 'इस पर ज़्यादा भरोसा कर सकते हैं',
+      'result.confidence.medium': 'दिशा उपयोगी है, पहले जाँचें',
+      'result.confidence.low': 'अभी शुरुआती संकेत है',
+      'result.confidence.unknown': 'अभी पर्याप्त डेटा नहीं है',
       'result.intent.applied': 'हाँ, मैंने आजमाया',
       'result.intent.skipped': 'नहीं, मैंने छोड़ दिया',
       'result.intent.pending': 'अभी पक्का नहीं है',
@@ -173,6 +173,7 @@
   const greet = document.getElementById('greet');
   const subtitle = document.getElementById('subtitle');
   const heroSupport = document.getElementById('hero-support');
+  const pathChooser = document.getElementById('path-chooser');
   const questionInput = document.getElementById('question-input');
   const sheetUrlInput = document.getElementById('sheet-url-input');
   const clearSheetUrl = document.getElementById('clear-sheet-url');
@@ -420,7 +421,10 @@
     heroSupport.textContent = 'Choose how you want to add your sales. You can change this later.';
     dataOptions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
-  pathReal.addEventListener('click', () => setPath('real'));
+  pathReal.addEventListener('click', () => {
+    setPath('real');
+    csvFileInput.click();
+  });
   if (pathSheet) pathSheet.addEventListener('click', () => {
     setPath('real');
     sheetSlot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -713,10 +717,10 @@
     const isSample = !isReal && !isBootstrap;
     if (demoIntro) demoIntro.hidden = !isSample || !demoIntro.classList.contains('open');
     subtitle.textContent = isSample
-      ? 'Your simple business analyst for orders, sales, delivery fees, and offers.'
+      ? 'Your simple business analyst for small shops.'
       : 'Your data stays yours. Hisaab will tell you clearly what it can and cannot answer.';
     heroSupport.textContent = isSample
-      ? 'This demo uses example data only. It shows how Hisaab works after you add your own data.'
+      ? 'Ask questions about orders, sales, delivery fees, discounts, and customers.'
       : 'Choose how you want to add your sales. You can change this later.';
     pathSample.classList.toggle('active', isSample);
     if (pathUseData) pathUseData.classList.toggle('active', isReal || isBootstrap || !dataOptions.hidden);
@@ -727,6 +731,7 @@
       dataOptions.hidden = isSample;
       dataOptions.classList.toggle('open', !isSample);
     }
+    if (pathChooser) pathChooser.hidden = isSample && demoIntro?.classList.contains('open');
     sheetSlot.classList.toggle('open', isReal);
     const bootstrapSlot = document.getElementById('bootstrap-slot');
     if (bootstrapSlot) bootstrapSlot.classList.toggle('open', isBootstrap);
@@ -765,6 +770,8 @@
       demoIntro.classList.add('open');
       demoIntro.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
+    if (pathChooser) pathChooser.hidden = true;
+    sampleSuggestions.hidden = true;
     questionInput.focus();
   }
 
@@ -880,7 +887,8 @@
   function renderChipVisibility() {
     const isReal = activePath === 'real';
     const isDataChooserOpen = dataOptions && !dataOptions.hidden;
-    sampleSuggestions.hidden = isReal || isDataChooserOpen;
+    const demoTourOpen = demoIntro?.classList.contains('open');
+    sampleSuggestions.hidden = isReal || isDataChooserOpen || !demoTourOpen;
     realSuggestions.hidden = !(isReal && activeDataset.kind !== 'sample');
   }
 
@@ -947,7 +955,7 @@
     mappingPanel.hidden = true;
     mappingPanel.classList.remove('editing');
     mappingFix.hidden = false;
-    mappingContinue.textContent = 'Continue';
+    mappingContinue.textContent = 'Ask a question';
     detectedCaveat.hidden = true;
     detectedDetails.innerHTML = '';
     hideApplyDataCta();
@@ -3161,6 +3169,8 @@
       demoIntro.hidden = true;
       demoIntro.classList.remove('open');
     }
+    if (pathChooser) pathChooser.hidden = false;
+    renderChipVisibility();
     document.getElementById('demo-result-actions')?.setAttribute('hidden', '');
     dataDetected.classList.remove('show');
     detectedHeadline.textContent = '';
@@ -3170,7 +3180,7 @@
     mappingPanel.hidden = true;
     mappingPanel.classList.remove('editing');
     mappingFix.hidden = false;
-    mappingContinue.textContent = 'Continue';
+    mappingContinue.textContent = 'Ask a question';
     detectedCaveat.hidden = true;
     detectedDetails.classList.remove('open');
     detectedDetails.innerHTML = '';
@@ -3254,13 +3264,20 @@
       const label = document.createElement('label');
       label.className = 'missing-field';
       label.textContent = item.prompt;
-      if (['orders', 'avg_order_value', 'customer_identifier', 'promo_active'].includes(item.field)) {
+      if (['orders', 'avg_order_value', 'customer_identifier', 'promo_active', 'delivery_fee'].includes(item.field)) {
         const actions = document.createElement('span');
         actions.className = 'missing-field-actions';
         const choose = document.createElement('button');
         choose.type = 'button';
         choose.className = 'mapping-choice-btn';
-        choose.textContent = 'Choose a column';
+        const chooseLabels = {
+          promo_active: 'Choose discount column',
+          customer_identifier: 'Choose customer column',
+          delivery_fee: 'Choose delivery fee column',
+          avg_order_value: 'Choose sales amount column',
+          orders: 'Choose order column',
+        };
+        choose.textContent = chooseLabels[item.field] || 'Choose a column';
         choose.addEventListener('click', () => {
           dataDetected.classList.add('show');
           mappingPanel.hidden = false;
@@ -3270,6 +3287,32 @@
           mappingPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         });
         actions.appendChild(choose);
+        const choiceMap = {
+          promo_active: { concept: 'promotional_flag', label: 'I don’t track discounts' },
+          customer_identifier: { concept: 'customer_identifier', label: 'I don’t have customer details' },
+        };
+        const skipChoice = choiceMap[item.field];
+        if (skipChoice) {
+          const skip = document.createElement('button');
+          skip.type = 'button';
+          skip.className = 'mapping-choice-btn';
+          skip.textContent = skipChoice.label;
+          skip.addEventListener('click', () => {
+            mappingChoices[skipChoice.concept] = 'unavailable';
+            hideMissingInputs();
+            runSimulation({ skipValidation: true });
+          });
+          actions.appendChild(skip);
+        }
+        const different = document.createElement('button');
+        different.type = 'button';
+        different.className = 'mapping-choice-btn';
+        different.textContent = 'Ask a different question';
+        different.addEventListener('click', () => {
+          hideMissingInputs();
+          questionInput.focus();
+        });
+        actions.appendChild(different);
         if (item.field === 'avg_order_value') {
           const average = document.createElement('button');
           average.type = 'button';
@@ -3290,10 +3333,6 @@
           actions.appendChild(average);
         }
         label.appendChild(actions);
-        const note = document.createElement('span');
-        note.className = 'missing-field-note';
-        note.textContent = 'You can also ask a different question.';
-        label.appendChild(note);
         missingFields.appendChild(label);
         return;
       }
@@ -3306,7 +3345,7 @@
     });
     missingSection.hidden = false;
     missingSection.classList.add('show');
-    missingSubmitBtn.textContent = 'Continue';
+    missingSubmitBtn.textContent = 'Continue with this data';
     missingSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     updateAwayFromLandingState();
   }
@@ -3401,9 +3440,18 @@
   }
 
   function realFieldList(source) {
+    const fieldLabels = {
+      orders: 'orders',
+      order_date: 'dates',
+      avg_order_value: 'total bill amount',
+      delivery_fee: 'delivery fee',
+      promo_active: 'discount or offer details',
+      repeat_orders: 'customer details',
+      customer_identifier: 'customer name or phone',
+    };
     const labels = Object.entries(source.field_sources || {})
       .filter(([, info]) => ['derived', 'derived_manual', 'derived_low_confidence'].includes(info.status))
-      .map(([field]) => field.replace(/_/g, ' '));
+      .map(([field]) => fieldLabels[field] || field.replace(/_/g, ' '));
     return labels.length ? labels.join(', ') : '';
   }
 
@@ -3489,7 +3537,7 @@
     if (!Number.isFinite(value)) return t('result.confidence.unknown');
     const pct = Math.round(value * 100);
     const key = pct >= 70 ? 'result.confidence.high' : pct >= 35 ? 'result.confidence.medium' : 'result.confidence.low';
-    return `${t(key)} · ${pct}%`;
+    return t(key);
   }
 
   function relativeDate(value) {

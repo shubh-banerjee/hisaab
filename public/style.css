@@ -950,21 +950,17 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 
 .data-detected{
   display:none;
-  position:fixed;
-  top:var(--data-panel-top, 112px);
-  left:var(--data-panel-left, auto);
-  right:auto;
-  z-index:40;
-  width:var(--data-panel-width, 360px);
-  max-width:none;
-  max-height:calc(100vh - var(--data-panel-top, 112px) - 28px);
-  margin:0;
+  position:relative;
+  width:100%;
+  max-width:720px;
+  max-height:none;
+  margin:0 auto 18px;
   padding:16px 16px 14px;
   border:1px solid var(--line);
   border-radius:14px;
   background:linear-gradient(135deg, rgba(232,239,254,0.55), var(--surface));
   box-shadow:0 4px 18px rgba(59,111,230,0.06);
-  overflow:auto;
+  overflow:visible;
   animation:fadeInUp .35s ease;
 }
 
@@ -976,6 +972,12 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   max-height:none;
   margin-bottom:18px;
 }
+
+/* Data reading belongs to the same calm central column as the question.
+   The old floating panel made the home screen feel like a dashboard and
+   could create two competing panels on smaller laptops. */
+.data-detected.show{ position:relative; }
+.data-panel-close{ z-index:1; }
 
 .data-panel-close{
   position:absolute;
