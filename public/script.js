@@ -230,7 +230,15 @@
   const fileUploadRemove = document.getElementById('file-upload-remove');
   const readingView = document.getElementById('reading-view');
   const readingStep = document.getElementById('reading-step');
-  const readingProgressBar = document.getElementById('reading-progress-bar');
+  const readingContent = document.getElementById('reading-content');
+  const readingLongMessage = document.getElementById('reading-long-message');
+  const readingRecoveryActions = document.getElementById('reading-recovery-actions');
+  const readingExit = document.getElementById('reading-exit');
+  const readingExitConfirm = document.getElementById('reading-exit-confirm');
+  const readingContinue = document.getElementById('reading-continue');
+  const readingStopExit = document.getElementById('reading-stop-exit');
+  const readingRetry = document.getElementById('reading-retry');
+  const readingChangeSource = document.getElementById('reading-change-source');
   const dataReadyView = document.getElementById('data-ready-view');
   const dataReadyCopy = document.getElementById('data-ready-copy');
   const dataReadyFoundSection = document.getElementById('data-ready-found-section');
@@ -253,6 +261,7 @@
   const fixDataDifferentQuestion = document.getElementById('fix-data-different-question');
   const fixDataDone = document.getElementById('fix-data-done');
   const dataErrorView = document.getElementById('data-error-view');
+  const dataErrorExit = document.getElementById('data-error-exit');
   const dataErrorMessage = document.getElementById('data-error-message');
   const dataErrorHints = document.getElementById('data-error-hints');
   const dataErrorRetry = document.getElementById('data-error-retry');
@@ -470,16 +479,20 @@
   let demoStep = 'intro';
   let selectedDemoQuestion = '';
   let readingTimer = null;
+  let readingLongTimer = null;
+  let readingRecoveryTimer = null;
+  let readingCompletionTimer = null;
+  let activeReadController = null;
+  let readingRequestSequence = 0;
+  let readingState = { sourceType: '', stage: 'opening', message: '', startedAt: null, errorType: null, requestId: null };
   let askExampleTimer = null;
-  let readingStepIndex = 0;
   let parseRequestToken = 0;
   const readingSteps = [
-    'Reading your file...',
-    'Finding orders...',
-    'Checking sales amount...',
-    'Checking delivery fees...',
-    'Checking discounts...',
-    'Preparing simple summary...',
+    'Opening your data…',
+    'Finding orders and dates…',
+    'Checking sales and delivery fees…',
+    'Looking for discounts and returning customers…',
+    'Preparing your business summary…',
   ];
   // The ONE dataset that /api/simulate calls actually use. This is distinct
   // from whatever is currently typed/uploaded in the composer inputs
@@ -1080,31 +1093,89 @@
       window.clearInterval(readingTimer);
       readingTimer = null;
     }
+    window.clearTimeout(readingLongTimer);
+    window.clearTimeout(readingRecoveryTimer);
+    window.clearTimeout(readingCompletionTimer);
+    readingLongTimer = null;
+    readingRecoveryTimer = null;
+    readingCompletionTimer = null;
   }
 
-  function renderReadingStep(index) {
-    readingStepIndex = Math.max(0, Math.min(index, readingSteps.length - 1));
-    if (readingStep) readingStep.textContent = readingSteps[readingStepIndex];
-    if (readingProgressBar) {
-      const progress = ((readingStepIndex + 1) / readingSteps.length) * 100;
-      readingProgressBar.style.width = `${progress}%`;
+  function renderReadingStep(index, { completed = false } = {}) {
+    const safeIndex = Math.max(0, Math.min(index, readingSteps.length - 1));
+    const message = completed ? 'Your data is ready' : readingSteps[safeIndex];
+    readingState = { ...readingState, stage: completed ? 'complete' : ['opening', 'orders', 'sales', 'customers', 'summary'][safeIndex], message };
+    if (readingStep) {
+      readingStep.classList.remove('is-changing');
+      window.requestAnimationFrame(() => {
+        readingStep.textContent = message;
+        readingStep.classList.add('is-changing');
+      });
     }
   }
 
   function startReadingView(source = 'file') {
     stopReadingProgress();
+    activeReadController?.abort();
+    activeReadController = new AbortController();
+    readingState = {
+      sourceType: source === 'sheet' ? 'google_sheet' : 'file',
+      stage: 'opening',
+      message: readingSteps[0],
+      startedAt: Date.now(),
+      errorType: null,
+      requestId: ++readingRequestSequence,
+    };
     setCurrentView('reading');
-    renderReadingStep(source === 'sheet' ? 0 : 0);
+    if (readingExitConfirm) readingExitConfirm.hidden = true;
+    if (readingLongMessage) readingLongMessage.hidden = true;
+    if (readingRecoveryActions) readingRecoveryActions.hidden = true;
+    renderReadingStep(0);
+    let stageIndex = 0;
     readingTimer = window.setInterval(() => {
-      if (readingStepIndex < readingSteps.length - 1) renderReadingStep(readingStepIndex + 1);
-    }, 700);
+      if (stageIndex >= readingSteps.length - 1) return;
+      stageIndex += 1;
+      renderReadingStep(stageIndex);
+    }, 900);
+    readingLongTimer = window.setTimeout(() => {
+      if (currentView === 'reading' && activeReadController) readingLongMessage.hidden = false;
+    }, 9000);
+    readingRecoveryTimer = window.setTimeout(() => {
+      if (currentView === 'reading' && activeReadController) readingRecoveryActions.hidden = false;
+    }, 16000);
   }
 
   function showDataReady(summary) {
     stopReadingProgress();
-    if (readingProgressBar) readingProgressBar.style.width = '100%';
-    renderDataReadySummary(summary);
-    setCurrentView('dataReady');
+    const requestId = readingState.requestId;
+    renderReadingStep(readingSteps.length - 1, { completed: true });
+    activeReadController = null;
+    readingCompletionTimer = window.setTimeout(() => {
+      if (currentView !== 'reading' || readingState.requestId !== requestId) return;
+      renderDataReadySummary(summary);
+      setCurrentView('dataReady');
+    }, 320);
+  }
+
+  function cancelActiveRead() {
+    parseRequestToken += 1;
+    activeReadController?.abort();
+    activeReadController = null;
+    stopReadingProgress();
+    readingState = { ...readingState, stage: 'error', errorType: 'cancelled' };
+  }
+
+  function cancelReadAndExit() {
+    cancelActiveRead();
+    if (readingExitConfirm) readingExitConfirm.hidden = true;
+    resetToLanding();
+  }
+
+  function retryActiveRead() {
+    const source = readingState.sourceType === 'google_sheet' ? 'sheet' : 'file';
+    cancelActiveRead();
+    startReadingView(source);
+    parseConnectedData();
   }
 
   const dataReadyConcepts = {
@@ -1696,6 +1767,8 @@
   function showDataReadError(err) {
     stopReadingProgress();
     console.error('[Hisaab] Data reading failed:', err);
+    readingState = { ...readingState, stage: 'error', errorType: uploadedCsv ? 'file' : 'google_sheet' };
+    activeReadController = null;
     const rawMessage = String(err?.message || '').toLowerCase();
     const isSheetError = !uploadedCsv && Boolean(sheetUrlInput.value.trim());
     if (dataErrorMessage && dataErrorHints) {
@@ -2404,6 +2477,7 @@
       const res = await fetch('/api/parse-sheet', {
         method: 'POST',
         headers: apiHeaders({ 'Content-Type': 'application/json' }),
+        signal: stagedUploadRead ? activeReadController?.signal : undefined,
         body: JSON.stringify(uploadedCsv ? { csvText: uploadedCsv, fileName: uploadedFileName } : { sheetUrl }),
       });
       const body = await readJsonResponse(res);
@@ -4723,6 +4797,8 @@
 
   function resetToLanding() {
     parseRequestToken += 1;
+    activeReadController?.abort();
+    activeReadController = null;
     stopReadingProgress();
     setCurrentView('home');
     demoStep = 'intro';

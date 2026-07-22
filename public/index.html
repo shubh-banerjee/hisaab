@@ -281,12 +281,29 @@
     </section>
 
     <section class="reading-view" id="reading-view" hidden aria-live="polite" aria-label="Reading your data">
-      <div class="transition-card reading-card">
-        <div class="transition-icon reading-icon" aria-hidden="true"><span></span></div>
-        <div class="transition-eyebrow">Reading your data</div>
-        <h2>Reading your data</h2>
-        <p class="reading-step" id="reading-step">Reading your file...</p>
-        <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
+      <div class="reading-stage">
+        <button class="reading-exit" id="reading-exit" type="button" aria-label="Exit to home">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+        <div class="reading-content" id="reading-content">
+          <div class="reading-wordmark" aria-hidden="true"><span>hisaab</span><span class="reading-period">.</span></div>
+          <h2>Reading your sales data</h2>
+          <p>Hisaab is checking what your data can explain.</p>
+          <p class="reading-step" id="reading-step" role="status" aria-live="polite" aria-atomic="true">Opening your data…</p>
+          <p class="reading-long-message" id="reading-long-message" hidden>This is taking a little longer than usual.</p>
+          <div class="reading-recovery-actions" id="reading-recovery-actions" hidden>
+            <button class="cta-primary" id="reading-retry" type="button">Try again</button>
+            <button class="cta-secondary" id="reading-change-source" type="button">Choose different data</button>
+          </div>
+        </div>
+        <div class="reading-exit-confirm" id="reading-exit-confirm" hidden role="dialog" aria-modal="true" aria-labelledby="reading-exit-title">
+          <h2 id="reading-exit-title">Stop reading this data?</h2>
+          <p>Hisaab will not save this unfinished analysis.</p>
+          <div class="reading-confirm-actions">
+            <button class="cta-secondary" id="reading-continue" type="button">Continue reading</button>
+            <button class="cta-primary" id="reading-stop-exit" type="button">Stop and exit</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -338,10 +355,13 @@
     </section>
 
     <section class="data-error-view" id="data-error-view" hidden aria-live="polite" aria-label="Data reading error">
-      <div class="transition-card data-error-card">
+      <div class="transition-card data-error-card reading-error-card">
+        <button class="reading-exit" id="data-error-exit" type="button" aria-label="Exit to home">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
         <div class="transition-icon error-icon" aria-hidden="true">!</div>
         <div class="transition-eyebrow">Data not read</div>
-        <h2>Could not read this data</h2>
+        <h2>Hisaab could not read this data</h2>
         <p id="data-error-message">Please check the file or sheet link and try again.</p>
         <ul id="data-error-hints">
           <li>Make sure the file has order or sales data</li>
@@ -350,7 +370,7 @@
         </ul>
         <div class="transition-actions">
           <button class="cta-primary" id="data-error-retry" type="button">Try again</button>
-          <button class="cta-secondary" id="data-error-upload" type="button">Back to upload options</button>
+          <button class="cta-secondary" id="data-error-upload" type="button">Choose different data</button>
         </div>
       </div>
     </section>
