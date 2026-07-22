@@ -15,7 +15,7 @@ const homeMarkup = String.raw`    <div class="path-chooser" id="path-chooser">
         <span class="path-body">
           <span class="path-title">See a demo shop</span>
           <span class="path-sub">Explore a sample shop and see how Hisaab turns sales data into clear guidance.</span>
-          <span class="path-cta path-cta-secondary">View demo <span aria-hidden="true">→</span></span>
+          <span class="path-cta path-cta-secondary">Try demo</span>
         </span>
       </button>
       <button class="path path-use-data landing-path path-primary" id="path-use-data" type="button" aria-label="Use my sales data">
@@ -25,7 +25,7 @@ const homeMarkup = String.raw`    <div class="path-chooser" id="path-chooser">
         <span class="path-body">
           <span class="path-title">Use my sales data</span>
           <span class="path-sub">Upload a sales file or connect a Google Sheet to understand your own numbers.</span>
-          <span class="path-cta path-cta-primary">Add my data <span aria-hidden="true">→</span></span>
+          <span class="path-cta path-cta-primary">Add my data</span>
         </span>
       </button>
     </div>
@@ -36,13 +36,13 @@ const homeCss = String.raw`
 .home-landing .stage{
   justify-content:flex-start;
   align-items:center;
-  padding:132px 24px 96px;
+  padding:clamp(150px, 18vh, 188px) 24px 88px;
 }
 
 .home-landing .landing-intro{
   width:100%;
   max-width:860px;
-  margin:0 auto 34px;
+  margin:0 auto 32px;
   text-align:center;
 }
 
@@ -73,27 +73,26 @@ const homeCss = String.raw`
 }
 
 .home-landing .path{
-  min-height:292px;
+  min-height:282px;
   display:flex;
   flex-direction:column;
   align-items:center;
   min-width:0;
   padding:30px 30px 28px;
-  border:1px solid rgba(13,24,51,0.10);
+  border:1px solid rgba(13,24,51,0.16);
   border-radius:20px;
-  background:rgba(255,255,255,0.82);
+  background:rgba(255,255,255,0.18);
   color:inherit;
   text-align:center;
-  box-shadow:0 1px 2px rgba(13,24,51,0.03), 0 18px 44px rgba(36,67,126,0.08);
-  backdrop-filter:blur(16px);
-  transition:border-color .2s ease, background .2s ease, box-shadow .2s ease, transform .2s ease;
+  box-shadow:none;
+  backdrop-filter:none;
+  transition:border-color .18s ease, background .18s ease, transform .18s ease;
 }
 
 .home-landing .path:hover{
-  transform:translateY(-2px);
-  border-color:rgba(53,109,255,0.28);
-  background:#fff;
-  box-shadow:0 2px 4px rgba(13,24,51,0.04), 0 24px 54px rgba(36,67,126,0.12);
+  transform:translateY(-1px);
+  border-color:var(--accent);
+  background:rgba(255,255,255,0.28);
 }
 
 .home-landing .path:active{ transform:translateY(0); }
@@ -105,9 +104,9 @@ const homeCss = String.raw`
 }
 
 .home-landing .path.active{
-  border-color:rgba(13,24,51,0.10);
-  background:rgba(255,255,255,0.82);
-  box-shadow:0 1px 2px rgba(13,24,51,0.03), 0 18px 44px rgba(36,67,126,0.08);
+  border-color:rgba(13,24,51,0.16);
+  background:rgba(255,255,255,0.18);
+  box-shadow:none;
 }
 
 .landing-card-visual{
@@ -132,9 +131,8 @@ const homeCss = String.raw`
   place-items:center;
   border-radius:50%;
   color:var(--accent);
-  background:linear-gradient(180deg, #F8FAFF 0%, #EEF4FF 100%);
+  background:rgba(53,109,255,0.07);
   border:1px solid rgba(53,109,255,0.10);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,0.95), 0 10px 24px rgba(53,109,255,0.10);
 }
 
 .demo-mini-stats,
@@ -177,7 +175,6 @@ const homeCss = String.raw`
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:7px;
   min-height:44px;
   margin-top:auto;
   padding:0 18px;
@@ -185,53 +182,44 @@ const homeCss = String.raw`
   font-size:14px;
   font-weight:720;
   line-height:1.2;
-  transition:background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+  transition:background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
 }
-
-.home-landing .path-cta span{
-  transition:transform .18s ease;
-}
-
-.home-landing .path:hover .path-cta span{ transform:translateX(3px); }
 
 .home-landing .path-cta-secondary{
   color:var(--accent);
-  background:#fff;
-  border:1px solid rgba(53,109,255,0.22);
-  box-shadow:0 1px 2px rgba(13,24,51,0.03);
+  background:transparent;
+  border:1px solid rgba(53,109,255,0.34);
 }
 
 .home-landing .path-cta-primary{
   color:#fff;
   background:var(--accent);
   border:1px solid var(--accent);
-  box-shadow:0 10px 24px rgba(53,109,255,0.22);
 }
 
 .home-landing .path:hover .path-cta-secondary{
-  border-color:rgba(53,109,255,0.40);
-  background:#F8FAFF;
+  border-color:var(--accent);
+  background:rgba(53,109,255,0.06);
 }
 
 .home-landing .path:hover .path-cta-primary{
   background:var(--accent-strong);
   border-color:var(--accent-strong);
-  box-shadow:0 12px 28px rgba(53,109,255,0.28);
 }
 
 .home-landing .home-note{
-  width:fit-content;
+  width:100%;
   max-width:min(900px, calc(100vw - 48px));
-  margin:20px auto 0;
-  padding:10px 14px;
-  border:1px solid rgba(13,24,51,0.08);
-  border-radius:999px;
-  background:rgba(255,255,255,0.56);
+  margin:18px auto 0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
   color:var(--ink-mute);
   font-size:13.5px;
-  line-height:1.35;
+  line-height:1.45;
   text-align:center;
-  backdrop-filter:blur(14px);
+  backdrop-filter:none;
 }
 
 .daily-log-link{
@@ -282,7 +270,7 @@ ${responsiveMarker}
   }
 
   .home-landing .path{
-    min-height:270px;
+    min-height:260px;
     padding:24px 20px 22px;
   }
 
@@ -291,9 +279,7 @@ ${responsiveMarker}
   }
 
   .home-landing .home-note{
-    width:auto;
     max-width:520px;
-    border-radius:18px;
     font-size:12.5px;
   }
 }
@@ -308,7 +294,7 @@ function write(file, content) {
 }
 
 function patchIndex(html) {
-  if (html.includes('path-cta-primary') && html.includes('landing-icon-orb')) return html;
+  if (html.includes('path-cta-secondary">Try demo</span>') && html.includes('path-cta-primary">Add my data</span>')) return html;
 
   const pattern = /    <div class="path-chooser" id="path-chooser">[\s\S]*?    <p class="home-note" id="home-note">[\s\S]*?<\/p>/;
   if (!pattern.test(html)) {
