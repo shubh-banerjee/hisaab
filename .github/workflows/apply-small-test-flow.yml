@@ -40,3 +40,5 @@ jobs:
           git add public/index.html public/script.js public/style.css server.js
           git commit -m "Implement small test setup flow"
           git push origin hisaab-small-test-flow
+
+# Updated to trigger the workflow after the workflow file exists on this branch.
