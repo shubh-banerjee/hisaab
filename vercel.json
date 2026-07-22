@@ -1,4 +1,3 @@
 {
-  "buildCommand": "node scripts/fix-splash-wordmark.js && node scripts/implement-small-test-flow.js",
-  "outputDirectory": "public"
+  "buildCommand": "node scripts/fix-splash-wordmark.js && node scripts/implement-small-test-flow.js"
 }
