@@ -230,6 +230,8 @@
   const fileUploadRemove = document.getElementById('file-upload-remove');
   const readingView = document.getElementById('reading-view');
   const readingStep = document.getElementById('reading-step');
+  const readingStepMark = document.getElementById('reading-step-mark');
+  const readingProgressLabel = document.getElementById('reading-progress-label');
   const readingContent = document.getElementById('reading-content');
   const readingLongMessage = document.getElementById('reading-long-message');
   const readingRecoveryActions = document.getElementById('reading-recovery-actions');
@@ -241,6 +243,14 @@
   const readingChangeSource = document.getElementById('reading-change-source');
   const dataReadyView = document.getElementById('data-ready-view');
   const dataReadyCopy = document.getElementById('data-ready-copy');
+  const dataReadyHistory = document.getElementById('data-ready-history');
+  const dataReadyOrders = document.getElementById('data-ready-orders');
+  const dataReadySales = document.getElementById('data-ready-sales');
+  const dataReadySalesLabel = document.getElementById('data-ready-sales-label');
+  const dataReadySource = document.getElementById('data-ready-source');
+  const dataReadyGuidance = document.getElementById('data-ready-guidance');
+  const dataReadyLimitation = document.getElementById('data-ready-limitation');
+  const dataReadyLimitationText = document.getElementById('data-ready-limitation-text');
   const dataReadyFoundSection = document.getElementById('data-ready-found-section');
   const dataReadyFound = document.getElementById('data-ready-found');
   const dataReadyMissingSection = document.getElementById('data-ready-missing-section');
@@ -511,6 +521,7 @@
   let mediaChunks = [];
   let recorderStopTimer = null;
   let recognizing = false;
+  let speechLanguage = 'en-IN';
   // Live-preview speech recognition. Runs alongside MediaRecorder to provide
   // instant "is the mic hearing me?" text feedback while the user speaks.
   // Gemini transcription replaces this text on stop for the authoritative version.
@@ -614,6 +625,12 @@
     questionInput.focus();
   });
   if (askBackDataReady) askBackDataReady.addEventListener('click', backToDataReady);
+  document.querySelectorAll('[data-speech-lang]').forEach(button => button.addEventListener('click', () => {
+    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+      speechLanguage = button.dataset.speechLang || 'en-IN';
+      micBtn.title = `Listening language: ${button.textContent.trim()}`;
+    }
+  }));
   if (dataErrorRetry) dataErrorRetry.addEventListener('click', () => {
     if (uploadedCsv || sheetUrlInput.value.trim()) {
       startReadingView(uploadedCsv ? 'file' : 'sheet');
@@ -788,7 +805,7 @@
     updateAwayFromLandingState();
   });
   questionInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       simulateBtn.click();
     }
@@ -1112,6 +1129,13 @@
         readingStep.classList.add('is-changing');
       });
     }
+    if (readingStepMark) {
+      readingStepMark.textContent = completed ? '✓' : '';
+      readingStepMark.classList.toggle('is-complete', completed);
+    }
+    if (readingProgressLabel) {
+      readingProgressLabel.textContent = completed ? 'Complete' : `Step ${safeIndex + 1} of ${readingSteps.length}`;
+    }
   }
 
   function startReadingView(source = 'file') {
@@ -1270,7 +1294,7 @@
   function renderAskQuestionScreen() {
     const questionSet = buildAskQuestionSet(lastSheetSummary);
     if (askQuestionList) {
-      askQuestionList.innerHTML = questionSet.questions
+      askQuestionList.innerHTML = questionSet.questions.slice(0, 3)
         .map(item => `<button type="button" class="ask-question" data-question="${escapeHtml(item.query)}">${escapeHtml(item.label)}</button>`)
         .join('');
       askQuestionList.querySelectorAll('[data-question]').forEach(button => {
@@ -1431,6 +1455,21 @@
     }
     if (dataReadyQuestionSection) dataReadyQuestionSection.hidden = !uniqueQuestions.length;
     if (dataReadyCopy) dataReadyCopy.textContent = 'I read your sales data and checked what Hisaab can answer.';
+    const months = Number(summary?.months) || 0;
+    const avgOrders = Number(summary?.avg_orders) || 0;
+    const avgOrderValue = Number(summary?.avg_order_value);
+    if (dataReadyHistory) dataReadyHistory.textContent = months ? `${months} month${months === 1 ? '' : 's'}` : '—';
+    if (dataReadyOrders) dataReadyOrders.textContent = avgOrders ? avgOrders.toLocaleString('en-IN') : '—';
+    if (dataReadySales) dataReadySales.textContent = Number.isFinite(avgOrderValue) && avgOrderValue > 0 ? formatMoney(avgOrderValue) : '—';
+    if (dataReadySalesLabel) dataReadySalesLabel.textContent = Number.isFinite(avgOrderValue) && avgOrderValue > 0 ? 'average order' : 'sales amount unavailable';
+    if (dataReadySource) dataReadySource.textContent = months ? `${activeDataset.kind === 'sheet' ? 'Google Sheet' : 'Uploaded CSV'} · ${months} months of history` : 'Date range could not be confirmed';
+    const readyCapabilities = (mapping.available_capabilities || []).filter(item => item.status === 'ready').slice(0, 3);
+    if (dataReadyGuidance) dataReadyGuidance.innerHTML = readyCapabilities.length ? readyCapabilities.map(item => `<span>${escapeHtml(item.label)}</span>`).join('') : '<span>Basic business guidance</span>';
+    const limitation = (mapping.available_capabilities || []).find(item => item.status === 'limited' || item.status === 'missing');
+    if (dataReadyLimitation && dataReadyLimitationText) {
+      dataReadyLimitation.hidden = !limitation;
+      dataReadyLimitationText.textContent = limitation ? `${limitation.label} is limited: ${limitation.reason}` : '';
+    }
   }
 
   function openDataFixFlow() {

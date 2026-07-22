@@ -289,7 +289,11 @@
           <div class="reading-wordmark" aria-hidden="true"><span>hisaab</span><span class="reading-period">.</span></div>
           <h2>Reading your sales data</h2>
           <p>Hisaab is checking what your data can explain.</p>
-          <p class="reading-step" id="reading-step" role="status" aria-live="polite" aria-atomic="true">Opening your data…</p>
+          <div class="reading-progress" aria-live="polite">
+            <span class="reading-step-mark" id="reading-step-mark" aria-hidden="true"></span>
+            <p class="reading-step" id="reading-step" role="status" aria-atomic="true">Opening your data…</p>
+          </div>
+          <p class="reading-progress-label" id="reading-progress-label">Step 1 of 5</p>
           <p class="reading-long-message" id="reading-long-message" hidden>This is taking a little longer than usual.</p>
           <div class="reading-recovery-actions" id="reading-recovery-actions" hidden>
             <button class="cta-primary" id="reading-retry" type="button">Try again</button>
@@ -311,8 +315,15 @@
       <div class="transition-card data-ready-card">
         <div class="transition-icon ready-icon" aria-hidden="true">✓</div>
         <div class="transition-eyebrow">Data ready</div>
-        <h2>Your data is ready</h2>
+        <h2>Your sales data is ready</h2>
         <p id="data-ready-copy">I read your sales data and checked what Hisaab can answer.</p>
+
+        <div class="data-ready-metrics" aria-label="Data summary">
+          <div class="data-ready-metric"><strong id="data-ready-history">—</strong><span>of history</span></div>
+          <div class="data-ready-metric"><strong id="data-ready-orders">—</strong><span>orders found</span></div>
+          <div class="data-ready-metric"><strong id="data-ready-sales">—</strong><span id="data-ready-sales-label">average order</span></div>
+        </div>
+        <p class="data-ready-source" id="data-ready-source">Date range could not be confirmed</p>
 
         <div class="data-ready-section" id="data-ready-found-section">
           <h3>I found</h3>
@@ -325,14 +336,20 @@
         </div>
         <p class="data-ready-all-found" id="data-ready-all-found" hidden>Everything needed for basic guidance is available.</p>
 
+        <div class="data-ready-section guidance-section">
+          <h3>Hisaab can help you check</h3>
+          <div class="data-ready-guidance" id="data-ready-guidance"></div>
+        </div>
+        <div class="data-ready-limitation" id="data-ready-limitation" hidden><strong>For better guidance later</strong><span id="data-ready-limitation-text"></span></div>
+
         <div class="data-ready-section question-section" id="data-ready-question-section">
           <h3>You can ask now</h3>
           <div class="data-ready-questions" id="data-ready-questions"></div>
         </div>
 
         <div class="transition-actions">
-          <button class="cta-primary" id="data-ready-ask" type="button">Ask a question</button>
-          <button class="cta-secondary" id="data-ready-fix" type="button">Fix detected data</button>
+          <button class="cta-primary" id="data-ready-ask" type="button">Ask Hisaab</button>
+          <button class="cta-secondary" id="data-ready-fix" type="button">Review data setup</button>
         </div>
         <button class="data-ready-tertiary" id="data-ready-upload" type="button">Upload different data</button>
       </div>
@@ -376,14 +393,14 @@
     </section>
 
     <section class="ask-view" id="ask-view" hidden aria-live="polite" aria-label="Ask Hisaab">
-      <button class="ask-back" id="ask-back-data-ready" type="button">← Back to Data Ready</button>
+      <button class="ask-back" id="ask-back-data-ready" type="button">← Previous</button>
       <div class="ask-eyebrow">Ask Hisaab</div>
-      <h2>Ask Hisaab</h2>
-      <p>Ask a question about your business. Hisaab will answer only when your data supports it.</p>
-      <div class="ask-example" id="ask-example">Try: Orders kam ho rahe hain kya?</div>
+      <h2>What would you like to understand?</h2>
+      <p>Ask about your orders, sales, delivery fees, discounts, or customers.</p>
+      <div class="ask-voice-note" id="ask-voice-note">Speak in <button type="button" data-speech-lang="en-IN">English</button> · <button type="button" data-speech-lang="hi-IN">हिंदी</button> · <button type="button" data-speech-lang="en-IN">Hinglish</button></div>
 
       <div class="ask-suggestions" id="ask-suggestions" hidden>
-        <div class="ask-section-label">Try one of these</div>
+        <div class="ask-section-label">Not sure what to ask?</div>
         <div class="ask-question-list" id="ask-question-list"></div>
       </div>
 
@@ -392,6 +409,7 @@
         <div class="ask-category-list" id="ask-category-list"></div>
         <div class="ask-category-questions" id="ask-category-questions" hidden></div>
       </div>
+      <div class="ask-understood" id="ask-understood" hidden aria-live="polite"></div>
     </section>
 
     <section class="sheet-slot" id="sheet-slot" aria-label="Connect order data">
