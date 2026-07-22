@@ -175,6 +175,7 @@ const homeCss = String.raw`
   display:inline-flex;
   align-items:center;
   justify-content:center;
+  width:148px;
   min-height:44px;
   margin-top:auto;
   padding:0 18px;
@@ -182,6 +183,7 @@ const homeCss = String.raw`
   font-size:14px;
   font-weight:720;
   line-height:1.2;
+  white-space:nowrap;
   transition:background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
 }
 
@@ -276,6 +278,10 @@ ${responsiveMarker}
 
   .home-landing .path-sub{
     min-height:0;
+  }
+
+  .home-landing .path-cta{
+    width:148px;
   }
 
   .home-landing .home-note{
