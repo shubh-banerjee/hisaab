@@ -17,26 +17,28 @@ function write(file, content) {
   fs.writeFileSync(file, content, 'utf8');
 }
 
+function fail(label) {
+  throw new Error(`Could not find insertion point: ${label}`);
+}
+
 function replaceOnce(source, search, replacement, label) {
-  if (!source.includes(search)) {
-    throw new Error(`Could not find insertion point: ${label}`);
-  }
+  if (!source.includes(search)) fail(label);
   return source.replace(search, replacement);
 }
 
-function insertBefore(source, needle, insertion, label) {
-  if (source.includes(insertion.trim().slice(0, 48))) return source;
+function insertBefore(source, needle, insertion, marker, label) {
+  if (source.includes(marker)) return source;
   return replaceOnce(source, needle, `${insertion}\n${needle}`, label);
 }
 
-function insertAfter(source, needle, insertion, label) {
-  if (source.includes(insertion.trim().slice(0, 48))) return source;
+function insertAfter(source, needle, insertion, marker, label) {
+  if (source.includes(marker)) return source;
   return replaceOnce(source, needle, `${needle}\n${insertion}`, label);
 }
 
 function patchIndex() {
   let html = read(files.index);
-  const section = `    <section class="test-setup-view guided-view" id="test-setup-view" hidden aria-labelledby="test-setup-title">
+  const insertion = String.raw`    <section class="test-setup-view guided-view" id="test-setup-view" hidden aria-labelledby="test-setup-title">
       <div class="guided-card test-setup-card">
         <div class="guided-top-row">
           <button class="guided-close" id="test-setup-exit" type="button" aria-label="Exit to home">×</button>
@@ -98,9 +100,15 @@ function patchIndex() {
           <button class="cta-primary" id="test-setup-save" type="button">Save test</button>
         </div>
       </div>
-    </section>
-`;
-  html = insertBefore(html, '    <section class="decision-log" id="decision-log" hidden>', section, 'test setup before decision log');
+    </section>`;
+
+  html = insertBefore(
+    html,
+    '    <section class="decision-log" id="decision-log" hidden>',
+    insertion,
+    'id="test-setup-view"',
+    'test setup section before decision log',
+  );
   write(files.index, html);
 }
 
@@ -109,7 +117,7 @@ function patchScript() {
 
   js = insertAfter(js,
     "  const decisionLog = document.getElementById('decision-log');",
-    `  const testSetupView = document.getElementById('test-setup-view');
+    String.raw`  const testSetupView = document.getElementById('test-setup-view');
   const testSetupExit = document.getElementById('test-setup-exit');
   const testSetupBack = document.getElementById('test-setup-back');
   const testSetupSave = document.getElementById('test-setup-save');
@@ -122,7 +130,9 @@ function patchScript() {
   const testWatchMetric = document.getElementById('test-watch-metric');
   const testHonestyNote = document.getElementById('test-honesty-note');
   const testSaveStatus = document.getElementById('test-save-status');`,
-    'test setup DOM refs');
+    "const testSetupView = document.getElementById('test-setup-view');",
+    'test setup DOM refs',
+  );
 
   js = js.replace('    resultsSection,\n    decisionLog,', '    resultsSection,\n    testSetupView,\n    decisionLog,');
   js = js.replace("    'result',\n    'demoIntro',", "    'result',\n    'testSetup',\n    'demoIntro',");
@@ -134,7 +144,7 @@ function patchScript() {
 
   js = insertAfter(js,
     "  if (askBackDataReady) askBackDataReady.addEventListener('click', backToDataReady);",
-    `  if (testSetupExit) testSetupExit.addEventListener('click', resetToLanding);
+    String.raw`  if (testSetupExit) testSetupExit.addEventListener('click', resetToLanding);
   if (testSetupBack) testSetupBack.addEventListener('click', () => {
     setCurrentView('result');
     if (resultsSection) {
@@ -143,14 +153,14 @@ function patchScript() {
     }
   });
   if (testSetupSave) testSetupSave.addEventListener('click', saveSmallTestPlan);`,
-    'test setup event listeners');
+    "testSetupSave.addEventListener('click', saveSmallTestPlan)",
+    'test setup event listeners',
+  );
 
   js = js.replace("primary: isDemo ? null : { label: 'Track this decision', handler: showTrackPrompt },", "primary: isDemo ? null : { label: 'Set up this test', handler: openSmallTestSetup },");
   js = js.replace("primary: { label: 'Track this decision', handler: showTrackPrompt },", "primary: { label: 'Set up this test', handler: openSmallTestSetup },");
 
-  js = insertBefore(js,
-    "  function showTrackPrompt() {",
-    `  function metricLabelForTest(metric) {
+  const functions = String.raw`  function metricLabelForTest(metric) {
     const normalized = String(metric || '').toLowerCase();
     if (normalized.includes('repeat')) return 'Repeat customers';
     if (normalized.includes('sales') || normalized.includes('revenue') || normalized.includes('value')) return 'Daily sales';
@@ -180,10 +190,10 @@ function patchScript() {
     if (Number.isFinite(currentValue) && Number.isFinite(change)) {
       const next = Math.round((currentValue + change) * 100) / 100;
       const sign = change > 0 ? '+' : change < 0 ? '−' : '';
-      changeCopy = `${leverLabel}: ₹${currentValue} → ₹${next} (${sign}₹${Math.abs(change)})`;
+      changeCopy = leverLabel + ': ₹' + currentValue + ' → ₹' + next + ' (' + sign + '₹' + Math.abs(change) + ')';
     } else if (Number.isFinite(change)) {
       const sign = change > 0 ? '+' : change < 0 ? '−' : '';
-      changeCopy = `${leverLabel}: ${sign}${Math.abs(change)} change`;
+      changeCopy = leverLabel + ': ' + sign + Math.abs(change) + ' change';
     }
 
     return {
@@ -203,7 +213,7 @@ function patchScript() {
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
-    input.value = `${yyyy}-${mm}-${dd}`;
+    input.value = yyyy + '-' + mm + '-' + dd;
   }
 
   function openSmallTestSetup() {
@@ -280,7 +290,7 @@ function patchScript() {
         body: JSON.stringify(payload),
       });
       const saved = await readJsonResponse(res);
-      if (!res.ok) throw new Error(saved.error || `Server error (HTTP ${res.status})`);
+      if (!res.ok) throw new Error(saved.error || 'Server error (HTTP ' + res.status + ')');
       lastSavedDecisionId = saved.id;
       const wasKnown = savedDecisions.some(item => item.id === saved.id);
       savedDecisions = [saved, ...savedDecisions.filter(item => item.id !== saved.id)];
@@ -291,7 +301,7 @@ function patchScript() {
         testSaveStatus.textContent = 'Saved. Hisaab will help compare this test when newer data is available.';
       }
       testSetupSave.textContent = 'Saved';
-      viewInLog.hidden = false;
+      if (viewInLog) viewInLog.hidden = false;
     } catch (err) {
       if (testSaveStatus) {
         testSaveStatus.classList.add('error');
@@ -301,11 +311,12 @@ function patchScript() {
       testSetupSave.textContent = 'Save test';
     }
   }
-`,
-    'small test functions');
+`;
+
+  js = insertBefore(js, '  function showTrackPrompt() {', functions, 'function openSmallTestSetup()', 'small test functions');
 
   js = js.replace('  function decisionPayload(snapshot, intent) {', '  function decisionPayload(snapshot, intent, extras = {}) {');
-  js = js.replace("      actualValue: null,\n    };\n  }\n\n  async function saveIntentStartDate()", "      actualValue: null,\n      ...extras,\n    };\n  }\n\n  async function saveIntentStartDate()");
+  js = js.replace('      actualValue: null,\n    };\n  }\n\n  async function saveIntentStartDate()', '      actualValue: null,\n      ...extras,\n    };\n  }\n\n  async function saveIntentStartDate()');
 
   write(files.script, js);
 }
@@ -313,7 +324,7 @@ function patchScript() {
 function patchStyle() {
   let css = read(files.style);
   if (css.includes('.test-setup-card')) return;
-  css += `
+  css += String.raw`
 
 /* Small test setup flow */
 .test-setup-view {
@@ -356,13 +367,15 @@ function patchStyle() {
   max-width: 560px;
 }
 
-.test-plan-summary {
+.test-plan-summary,
+.test-form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
-.test-plan-summary > div {
+.test-plan-summary > div,
+.test-field {
   border: 1px solid var(--line);
   border-radius: 20px;
   padding: 16px;
@@ -382,19 +395,6 @@ function patchStyle() {
   display: block;
   color: var(--text);
   line-height: 1.25;
-}
-
-.test-form-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.test-field {
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 14px;
-  background: #fff;
 }
 
 .test-field input,
@@ -448,10 +448,9 @@ function patchStyle() {
 
 function patchServer() {
   let js = read(files.server);
-
   js = insertBefore(js,
     'function normalizeDecisionPayload(body) {',
-    `function normalizeTestPlanPayload(raw = {}) {
+    String.raw`function normalizeTestPlanPayload(raw = {}) {
   if (!raw || typeof raw !== 'object') return null;
   const durationDays = Number(raw.durationDays);
   return {
@@ -465,12 +464,13 @@ function patchServer() {
 }
 
 `,
-    'normalize test plan helper');
+    'function normalizeTestPlanPayload',
+    'normalize test plan helper',
+  );
 
-  js = js.replace('    sheetUrl: String(body.sheetUrl || \'\').trim(),\n    status,', '    sheetUrl: String(body.sheetUrl || \'\').trim(),\n    testPlan: normalizeTestPlanPayload(body.testPlan),\n    status,');
-  js = js.replace('    sourceType: isDemoDecision(data) ? \'demo\' : (data.sourceType || \'real\'),\n    sheetUrl: data.sheetUrl || \'\',', '    sourceType: isDemoDecision(data) ? \'demo\' : (data.sourceType || \'real\'),\n    sheetUrl: data.sheetUrl || \'\',\n    testPlan: data.testPlan || null,');
-  js = js.replace('      sheetUrl: payload.dataSource === \'sheet\' ? payload.sheetUrl : \'\',\n      status: payload.status,', '      sheetUrl: payload.dataSource === \'sheet\' ? payload.sheetUrl : \'\',\n      testPlan: payload.testPlan,\n      status: payload.status,');
-
+  js = js.replace("    sheetUrl: String(body.sheetUrl || '').trim(),\n    status,", "    sheetUrl: String(body.sheetUrl || '').trim(),\n    testPlan: normalizeTestPlanPayload(body.testPlan),\n    status,");
+  js = js.replace("    sourceType: isDemoDecision(data) ? 'demo' : (data.sourceType || 'real'),\n    sheetUrl: data.sheetUrl || '',", "    sourceType: isDemoDecision(data) ? 'demo' : (data.sourceType || 'real'),\n    sheetUrl: data.sheetUrl || '',\n    testPlan: data.testPlan || null,");
+  js = js.replace("      sheetUrl: payload.dataSource === 'sheet' ? payload.sheetUrl : '',\n      status: payload.status,", "      sheetUrl: payload.dataSource === 'sheet' ? payload.sheetUrl : '',\n      testPlan: payload.testPlan,\n      status: payload.status,");
   write(files.server, js);
 }
 
@@ -479,6 +479,7 @@ function main() {
   patchScript();
   patchStyle();
   patchServer();
+  console.log('Small test setup flow applied.');
 }
 
 main();
