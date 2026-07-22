@@ -10,15 +10,16 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="intro-loading home-landing">
-  <section class="intro-loader" id="intro-loader" aria-label="Loading hisaab">
-    <div class="intro-greeting" id="intro-greeting">Hello</div>
-    <div class="intro-logo" id="intro-logo" aria-hidden="true">
-      <div class="intro-logo-name">hisaab<span>.</span></div>
+  <section class="intro-loader" id="intro-loader">
+    <div class="splash-brand">
+      <div class="hisaab-wordmark splash-wordmark" id="intro-logo" role="img" aria-label="Hisaab">
+        <span class="hisaab-word" aria-hidden="true"><span class="intro-letter" data-letter="h"></span><span class="intro-letter" data-letter="i"></span><span class="intro-letter" data-letter="s"></span><span class="intro-letter" data-letter="a"></span><span class="intro-letter" data-letter="a"></span><span class="intro-letter" data-letter="b"></span></span><span class="hisaab-period intro-period" id="intro-period" aria-hidden="true">.</span>
+      </div>
     </div>
   </section>
 
-  <button class="brand" id="brand-reset" type="button" aria-label="hisaab" hidden>
-    <div class="brand-name">hisaab<span>.</span></div>
+  <button class="brand" id="brand-reset" type="button" aria-label="Hisaab" hidden>
+    <span class="hisaab-wordmark header-wordmark" aria-hidden="true"><span class="hisaab-word">hisaab</span><span class="hisaab-period">.</span></span>
   </button>
   <div class="top-actions" aria-label="Page actions">
     <button class="your-decisions" id="open-decisions" type="button" hidden>
@@ -32,10 +33,12 @@
   </div>
 
   <main class="stage" id="stage">
-    <div class="greet-block">
-      <h1 class="greet" id="greet">Hisaab</h1>
-      <p class="subtitle" id="subtitle">Your simple business analyst for small shops.</p>
-      <p class="hero-support" id="hero-support">Understand orders, sales, delivery fees, discounts, and customers — without confusing reports.</p>
+    <div class="greet-block landing-intro">
+      <h1 class="landing-heading">What would you like to do?</h1>
+      <p class="landing-support">See how Hisaab works, or use your own sales data to understand your business.</p>
+      <h2 class="greet" id="greet" hidden>Hisaab</h2>
+      <p class="subtitle" id="subtitle" hidden>Your simple business analyst for small shops.</p>
+      <p class="hero-support" id="hero-support" hidden>Understand orders, sales, delivery fees, discounts, and customers — without confusing reports.</p>
     </div>
 
     <!-- Check-back card: appears on session start when the user has an applied
@@ -64,30 +67,32 @@
     </section>
 
     <div class="path-chooser" id="path-chooser">
-      <button class="path active" id="path-sample" type="button">
-        <span class="path-icon" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg>
+      <button class="path landing-path" id="path-sample" type="button" aria-label="See a demo shop">
+        <span class="landing-card-visual demo-card-visual" aria-hidden="true">
+          <span class="demo-shop-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v9H4z"/><path d="M3 10l2-5h14l2 5"/><path d="M8 19v-5h4v5"/><path d="M16 14h1"/></svg></span>
+          <span class="demo-mini-stats"><strong>12 months</strong><strong>5,240 orders</strong><strong>₹11.8L sales</strong></span>
         </span>
         <span class="path-body">
-          <span class="path-title">Try Demo</span>
-          <span class="path-sub">See how Hisaab reads a shop’s sales and gives simple guidance.</span>
-          <span class="path-helper">Best if you want to understand how it works first.</span>
-          <span class="path-cta">Start demo</span>
+          <span class="path-title">See a demo shop</span>
+          <span class="path-sub">Learn how Hisaab turns sales data into a clear business decision.</span>
+          <span class="path-helper">Takes about 2 minutes</span>
+          <span class="path-cta">Start demo <span aria-hidden="true">→</span></span>
         </span>
       </button>
-      <button class="path path-use-data" id="path-use-data" type="button">
-        <span class="path-icon" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <button class="path path-use-data landing-path" id="path-use-data" type="button" aria-label="Use my sales data">
+        <span class="landing-card-visual data-card-visual" aria-hidden="true">
+          <span class="data-file-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h6M9 16h6M9 8h2"/></svg></span>
+          <span class="data-mini-rows"><i></i><i></i><i></i></span>
         </span>
         <span class="path-body">
-          <span class="path-title">Upload Your Data</span>
+          <span class="path-title">Use my sales data</span>
           <span class="path-sub">Upload a sales file or connect Google Sheet to get guidance from your own numbers.</span>
-          <span class="path-helper">Best if you already have order or sales data.</span>
-          <span class="path-cta">Add data</span>
+          <span class="path-helper">CSV, Excel or Google Sheets</span>
+          <span class="path-cta">Add my data <span aria-hidden="true">→</span></span>
         </span>
       </button>
     </div>
-    <p class="home-note" id="home-note">No spreadsheet yet? You can add daily sales manually after choosing Upload Your Data.</p>
+    <p class="home-note" id="home-note">No sales file yet? You can start with a <button class="daily-log-link" id="daily-log-link" type="button">simple daily sales log</button>.</p>
 
     <section class="demo-intro" id="demo-intro" hidden aria-live="polite">
       <div class="demo-progress" aria-label="Demo progress">
@@ -182,38 +187,83 @@
       </section>
     </section>
 
-    <section class="data-options upload-view" id="data-options" hidden aria-label="Add your sales data">
-      <button class="upload-back" id="upload-back" type="button">← Back</button>
-      <div class="upload-view-header">
-        <div class="upload-eyebrow">Upload Your Data</div>
-        <h2>Add your sales data</h2>
-        <p>Upload a sales file or connect a Google Sheet. Hisaab will read it and tell you what it can answer.</p>
+    <section class="data-options data-source-flow" id="data-options" hidden aria-label="Choose where your sales data is stored">
+      <div class="data-source-nav">
+        <button class="data-source-exit" id="upload-back" type="button" aria-label="Exit to home">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+        <div class="data-source-progress" aria-label="Progress: step 1 of 3"><span class="is-active"></span><span></span><span></span></div>
+        <span class="data-source-step-label" id="data-source-step-label">Step 1 of 3</span>
       </div>
-      <div class="upload-option-grid">
-        <section class="upload-option-card" aria-labelledby="upload-file-title">
-          <div class="upload-option-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          </div>
-          <h3 id="upload-file-title">Upload CSV / Excel</h3>
-          <p>Choose a file from your computer with orders or sales.</p>
-          <span class="upload-option-helper">Works best with date, orders, sales amount, delivery fee, discount, or customer details.</span>
-          <button class="upload-option-button" id="path-real" type="button">Choose file</button>
-        </section>
-        <section class="upload-option-card" aria-labelledby="upload-sheet-title">
-          <div class="upload-option-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg>
-          </div>
-          <h3 id="upload-sheet-title">Connect Google Sheet</h3>
-          <p>Paste a public Google Sheet link with your order or sales data.</p>
-          <span class="upload-option-helper">Make sure the sheet is viewable with the link.</span>
-          <label class="upload-sheet-field" for="upload-sheet-url">
-            <span class="sr-only">Google Sheet link</span>
-            <input id="upload-sheet-url" type="url" placeholder="Paste Google Sheet link" autocomplete="url">
-          </label>
-          <button class="upload-option-button" id="path-sheet" type="button">Connect sheet</button>
-        </section>
+
+      <div class="data-source-step" id="data-source-choice-step">
+        <div class="data-source-heading">
+          <h2>Where is your sales data?</h2>
+          <p>Choose how you keep your orders or sales. You can change this later.</p>
+        </div>
+        <div class="data-source-cards" role="radiogroup" aria-label="Choose where your sales data is stored">
+          <button class="data-source-card" id="data-source-file" type="button" role="radio" aria-checked="false">
+            <span class="data-source-card-visual" aria-hidden="true"><span class="source-icon"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h6M9 16h6M9 8h2"/></svg></span><span class="source-rows"><i></i><i></i><i></i></span></span>
+            <span class="data-source-card-copy"><strong>Upload a sales file</strong><span>Choose a CSV or Excel file from your device.</span><em>CSV or Excel</em></span>
+            <span class="data-source-check" aria-hidden="true">✓</span>
+          </button>
+          <button class="data-source-card" id="data-source-sheet" type="button" role="radio" aria-checked="false">
+            <span class="data-source-card-visual" aria-hidden="true"><span class="source-icon"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg></span><span class="source-link-mark">↗</span></span>
+            <span class="data-source-card-copy"><strong>Connect Google Sheet</strong><span>Use a Google Sheet that contains your orders or sales.</span><em>The Sheet must be viewable with the link.</em></span>
+            <span class="data-source-check" aria-hidden="true">✓</span>
+          </button>
+        </div>
+        <button class="upload-manual-link" id="path-bootstrap" type="button">No sales file yet? Start a simple daily sales log.</button>
       </div>
-      <button class="upload-manual-link" id="path-bootstrap" type="button">No file yet? Add daily sales manually</button>
+
+      <div class="data-source-step" id="data-source-file-step" hidden>
+        <div class="data-source-heading">
+          <h2>Upload your sales file</h2>
+          <p>Choose one CSV file from your device. Hisaab will read it after you continue.</p>
+        </div>
+        <div class="file-upload-area" id="file-upload-area">
+          <div class="file-upload-empty" id="file-upload-empty">
+            <span class="file-upload-icon" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h6M9 16h6M9 8h2"/></svg></span>
+            <strong>Drop your CSV file here</strong>
+            <span>or choose a file from your device</span>
+            <button class="file-upload-browse" id="file-upload-browse" type="button">Choose file</button>
+          </div>
+          <div class="file-upload-selected" id="file-upload-selected" hidden>
+            <span class="file-upload-icon" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h6M9 16h6M9 8h2"/></svg></span>
+            <strong id="file-upload-name"></strong>
+            <span id="file-upload-meta"></span>
+            <span class="file-upload-ready">Ready to read</span>
+          </div>
+        </div>
+        <p class="file-upload-format" id="file-upload-format">CSV only · Maximum 5 MB</p>
+        <p class="file-upload-status" id="file-upload-status" role="status" aria-live="polite"></p>
+        <div class="file-upload-actions" id="file-upload-actions" hidden>
+          <button id="file-upload-replace" type="button">Replace file</button>
+          <button id="file-upload-remove" type="button">Remove</button>
+        </div>
+        <details class="file-upload-help">
+          <summary>What should the file include?</summary>
+          <p>A CSV export with a date and orders or sales works best. Delivery fee, discount, and customer details are helpful when you have them.</p>
+        </details>
+        <p class="file-upload-privacy">Your file is only read to prepare your Hisaab analysis.</p>
+      </div>
+
+      <div class="data-source-step" id="data-source-sheet-step" hidden>
+        <div class="data-source-heading">
+          <h2>Connect your Google Sheet</h2>
+          <p>Paste a link to the Sheet with your orders or sales.</p>
+        </div>
+        <label class="data-source-sheet-field" for="upload-sheet-url">
+          <span>Google Sheet link</span>
+          <input id="upload-sheet-url" type="url" placeholder="Paste Google Sheet link" autocomplete="url">
+          <small>Make sure the Sheet is viewable with the link.</small>
+        </label>
+      </div>
+
+      <div class="data-source-footer">
+        <button class="data-source-previous" id="data-source-previous" type="button">Previous</button>
+        <button class="data-source-continue" id="data-source-continue" type="button" disabled>Continue</button>
+      </div>
     </section>
 
     <section class="reading-view" id="reading-view" hidden aria-live="polite" aria-label="Reading your data">

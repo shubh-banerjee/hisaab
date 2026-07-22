@@ -340,11 +340,12 @@ test('bootstrap trend path keeps daily periods for a 7-day comparison', () => {
 test('stabilized experience keeps primary paths and technical detail secondary', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const script = fs.readFileSync(path.join(__dirname, '..', 'public', 'script.js'), 'utf8');
-  assert.match(html, /class="path-title">Try Demo<\/span>/);
-  assert.match(html, /class="path-title">Upload Your Data<\/span>/);
-  assert.match(html, /Your simple business analyst for small shops\./);
-  assert.match(html, /without confusing reports\./);
-  assert.match(html, /No spreadsheet yet\? You can add daily sales manually after choosing Upload Your Data\./);
+  assert.match(html, /What would you like to do\?/);
+  assert.match(html, /class="path-title">See a demo shop<\/span>/);
+  assert.match(html, /class="path-title">Use my sales data<\/span>/);
+  assert.match(html, /See how Hisaab works, or use your own sales data to understand your business\./);
+  assert.match(html, /No sales file yet\? You can start with a/);
+  assert.match(html, /id="daily-log-link"/);
   assert.match(html, /<div class="overview-eyebrow">Answer<\/div>/);
   assert.match(html, />Why\?<\/h2>/);
   assert.match(html, />Try this<\/h2>/);

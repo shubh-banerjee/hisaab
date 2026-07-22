@@ -167,8 +167,9 @@
 
   const stage = document.getElementById('stage');
   const introLoader = document.getElementById('intro-loader');
-  const introGreeting = document.getElementById('intro-greeting');
   const introLogo = document.getElementById('intro-logo');
+  const introLetters = introLogo ? [...introLogo.querySelectorAll('[data-letter]')] : [];
+  const introPeriod = document.getElementById('intro-period');
   const brandReset = document.getElementById('brand-reset');
   const greet = document.getElementById('greet');
   const subtitle = document.getElementById('subtitle');
@@ -184,6 +185,7 @@
   const csvFileInput = document.getElementById('csv-file-input');
   const pathSample = document.getElementById('path-sample');
   const pathUseData = document.getElementById('path-use-data');
+  const dailyLogLink = document.getElementById('daily-log-link');
   const demoIntro = document.getElementById('demo-intro');
   const demoUseData = document.getElementById('demo-use-data');
   const demoAnotherQuestion = document.getElementById('demo-another-question');
@@ -201,11 +203,28 @@
   const demoResultWhy = document.getElementById('demo-result-why');
   const demoResultAction = document.getElementById('demo-result-action');
   const demoResultStrength = document.getElementById('demo-result-strength');
-  const pathReal = document.getElementById('path-real');
-  const pathSheet = document.getElementById('path-sheet');
   const pathBootstrap = document.getElementById('path-bootstrap');
   const uploadBack = document.getElementById('upload-back');
   const dataOptions = document.getElementById('data-options');
+  const dataSourceFile = document.getElementById('data-source-file');
+  const dataSourceSheet = document.getElementById('data-source-sheet');
+  const dataSourcePrevious = document.getElementById('data-source-previous');
+  const dataSourceContinue = document.getElementById('data-source-continue');
+  const dataSourceChoiceStep = document.getElementById('data-source-choice-step');
+  const dataSourceFileStep = document.getElementById('data-source-file-step');
+  const dataSourceSheetStep = document.getElementById('data-source-sheet-step');
+  const dataSourceStepLabel = document.getElementById('data-source-step-label');
+  const dataSourceProgress = dataOptions?.querySelector('.data-source-progress');
+  const fileUploadArea = document.getElementById('file-upload-area');
+  const fileUploadBrowse = document.getElementById('file-upload-browse');
+  const fileUploadEmpty = document.getElementById('file-upload-empty');
+  const fileUploadSelected = document.getElementById('file-upload-selected');
+  const fileUploadName = document.getElementById('file-upload-name');
+  const fileUploadMeta = document.getElementById('file-upload-meta');
+  const fileUploadStatus = document.getElementById('file-upload-status');
+  const fileUploadActions = document.getElementById('file-upload-actions');
+  const fileUploadReplace = document.getElementById('file-upload-replace');
+  const fileUploadRemove = document.getElementById('file-upload-remove');
   const readingView = document.getElementById('reading-view');
   const readingStep = document.getElementById('reading-step');
   const readingProgressBar = document.getElementById('reading-progress-bar');
@@ -410,15 +429,22 @@
   ].filter(Boolean);
 
   const pageGreetingPhrases = ['Hisaab'];
-  const loaderPhrases = ['Hello', 'नमस्ते', 'নমস্কার', 'வணக்கம்'];
   const decisionVocabulary = /\b(raise|raised|raising|lower|lowered|change|changed|add|added|remove|removed|stop|start|increase|increased|decrease|decreased|run|running|try|offer|offering|reduce|reduced|cut|discount)\b/i;
   const subjectVocabulary = /\b(fee|fees|price|prices|promo|promotion|discount|cod|cash on delivery|delivery|shipping|orders?|repeat|customer|customers|revenue|aov|month|months)\b/i;
+  const SPLASH_SEEN_KEY = 'hisaabSplashSeen';
+  const SPLASH_FORCE_REPLAY = false;
+  const SPLASH_LETTER_DELAY = 85;
+  const SPLASH_EXIT_DURATION = 620;
+  const SPLASH_MAX_DURATION = 2200;
 
   let activePath = 'sample';
   let currentView = 'home';
+  let selectedDataSource = null;
   const VIEW_NAMES = [
     'home',
-    'upload',
+    'dataSource',
+    'fileUpload',
+    'sheetConnect',
     'reading',
     'dataReady',
     'ask',
@@ -474,12 +500,15 @@
   let livePreviewActive = false;
   let livePreviewText = '';
   let introTimers = [];
+  let splashCompleted = false;
   let subtitleTimer = null;
   let intentPromptTimer = null;
   let parseTimer = null;
   let lastSheetSummary = null;
   let uploadedCsv = null;
   let uploadedFileName = '';
+  let selectedSalesFile = null;
+  let fileReadInFlight = false;
   let connectedDataLabel = '';
   let lastUploadId = null;
   let lastSimulationPersistence = null;
@@ -540,7 +569,14 @@
   if (pathUseData) pathUseData.addEventListener('click', () => {
     openUploadOptions();
   });
-  if (uploadBack) uploadBack.addEventListener('click', () => resetToLanding());
+  if (dailyLogLink) dailyLogLink.addEventListener('click', () => {
+    openManualEntry();
+  });
+  if (uploadBack) uploadBack.addEventListener('click', () => {
+    clearSelectedSalesFile();
+    clearDataSourceSelection();
+    resetToLanding();
+  });
   if (dataReadyAsk) dataReadyAsk.addEventListener('click', () => {
     dataDetected.classList.remove('show');
     showQuestionComposer();
@@ -566,26 +602,12 @@
     }
   });
   if (dataErrorUpload) dataErrorUpload.addEventListener('click', openUploadOptions);
-  pathReal.addEventListener('click', () => {
-    document.body.classList.add('upload-view-active');
-    setPath('real');
-    sheetSlot.classList.remove('open');
-    csvFileInput.click();
-  });
-  if (pathSheet) pathSheet.addEventListener('click', () => {
-    const value = uploadSheetUrlInput?.value.trim() || '';
-    if (!value) {
-      uploadSheetUrlInput?.focus();
-      return;
-    }
-    document.body.classList.add('upload-view-active');
-    sheetUrlInput.value = value;
-    window.clearTimeout(parseTimer);
-    setPath('real');
-    sheetSlot.classList.remove('open');
-    parseConnectedData();
-  });
+  if (dataSourceFile) dataSourceFile.addEventListener('click', () => selectDataSource('file'));
+  if (dataSourceSheet) dataSourceSheet.addEventListener('click', () => selectDataSource('googleSheet'));
+  if (dataSourcePrevious) dataSourcePrevious.addEventListener('click', previousDataSourceStep);
+  if (dataSourceContinue) dataSourceContinue.addEventListener('click', continueDataSourceFlow);
   if (pathBootstrap) pathBootstrap.addEventListener('click', () => {
+    clearDataSourceSelection();
     openManualEntry();
   });
   if (bootstrapGateAdd) bootstrapGateAdd.addEventListener('click', () => {
@@ -651,6 +673,30 @@
     csvFileInput.click();
   });
   csvFileInput.addEventListener('change', handleCsvFile);
+  if (fileUploadArea) {
+    fileUploadArea.addEventListener('click', () => csvFileInput.click());
+    fileUploadArea.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      fileUploadArea.classList.add('is-dragging');
+    });
+    fileUploadArea.addEventListener('dragleave', () => fileUploadArea.classList.remove('is-dragging'));
+    fileUploadArea.addEventListener('drop', (event) => {
+      event.preventDefault();
+      fileUploadArea.classList.remove('is-dragging');
+      const files = [...(event.dataTransfer?.files || [])];
+      if (files.length !== 1) {
+        setSelectedFileMessage(files.length > 1 ? 'Choose one CSV file at a time.' : 'Choose a CSV file to continue.', 'error');
+        return;
+      }
+      selectSalesFile(files[0]);
+    });
+  }
+  if (fileUploadBrowse) fileUploadBrowse.addEventListener('click', (event) => {
+    event.stopPropagation();
+    csvFileInput.click();
+  });
+  if (fileUploadReplace) fileUploadReplace.addEventListener('click', () => csvFileInput.click());
+  if (fileUploadRemove) fileUploadRemove.addEventListener('click', clearSelectedSalesFile);
   if (uploadSheetUrlInput) uploadSheetUrlInput.addEventListener('input', () => {
     if (sheetUrlInput.value && sheetUrlInput.value !== uploadSheetUrlInput.value) {
       sheetUrlInput.value = '';
@@ -811,63 +857,89 @@
     playIntroLoader();
   }
 
-  function playIntroLoader() {
-    if (!introLoader || !introGreeting || !introLogo) {
-      document.body.classList.remove('intro-loading');
-      document.body.classList.add('intro-done');
-      subtitleTimer = window.setTimeout(() => subtitle.classList.add('show'), 600);
-      return;
+  function splashWasSeen() {
+    try {
+      return window.sessionStorage.getItem(SPLASH_SEEN_KEY) === 'true';
+    } catch (_err) {
+      return false;
     }
+  }
 
+  function markSplashSeen() {
+    try {
+      window.sessionStorage.setItem(SPLASH_SEEN_KEY, 'true');
+    } catch (_err) {
+      // Private browsing or blocked storage should never block the app.
+    }
+  }
+
+  function clearSplashTimers() {
     introTimers.forEach(timer => window.clearTimeout(timer));
     introTimers = [];
     clearTimeout(subtitleTimer);
+  }
+
+  function completeIntro() {
+    clearTimeout(subtitleTimer);
+    if (!introLoader || splashCompleted) return;
+    splashCompleted = true;
+    clearSplashTimers();
+    document.body.classList.remove('intro-loading');
+    document.body.classList.add('intro-done');
+    introLoader.classList.add('hide');
+    window.setTimeout(() => introLoader.remove(), 380);
+  }
+
+  function playIntroLoader() {
+    if (!introLoader || !introLogo || !introLetters.length) {
+      completeIntro();
+      return;
+    }
+
+    splashCompleted = false;
+
+    if (!SPLASH_FORCE_REPLAY && splashWasSeen()) {
+      introLetters.forEach(letter => letter.classList.add('is-typed'));
+      introPeriod?.classList.add('show');
+      completeIntro();
+      return;
+    }
+
+    markSplashSeen();
+    clearSplashTimers();
     document.body.classList.add('intro-loading');
     document.body.classList.remove('intro-done');
     introLoader.hidden = false;
     introLoader.classList.remove('hide');
-    introGreeting.classList.remove('show', 'exit');
-    introLogo.classList.remove('show', 'zoom');
-    introGreeting.textContent = loaderPhrases[0];
+    introLoader.classList.remove('exit');
+    introLetters.forEach(letter => letter.classList.remove('is-typed'));
+    introPeriod?.classList.remove('show');
 
-    loaderPhrases.forEach((phrase, index) => {
-      const base = index * 820;
-      introTimers.push(window.setTimeout(() => {
-        introGreeting.classList.remove('exit');
-        introGreeting.textContent = phrase;
-        window.requestAnimationFrame(() => introGreeting.classList.add('show'));
-      }, base));
-      introTimers.push(window.setTimeout(() => {
-        introGreeting.classList.add('exit');
-      }, base + 610));
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      introLetters.forEach(letter => letter.classList.add('is-typed'));
+      introPeriod?.classList.add('show');
+      introTimers.push(window.setTimeout(completeIntro, 520));
+      return;
+    }
+
+    introLetters.forEach((letter, index) => {
+      introTimers.push(window.setTimeout(() => letter.classList.add('is-typed'), index * SPLASH_LETTER_DELAY));
     });
-
-    const logoStart = loaderPhrases.length * 820 + 240;
-    introTimers.push(window.setTimeout(() => {
-      introGreeting.classList.remove('show', 'exit');
-      introLogo.classList.add('show');
-    }, logoStart));
-    introTimers.push(window.setTimeout(() => {
-      introLogo.classList.add('zoom');
-    }, logoStart + 1280));
-    introTimers.push(window.setTimeout(() => {
-      document.body.classList.remove('intro-loading');
-      document.body.classList.add('intro-done');
-      introLoader.classList.add('hide');
-      subtitleTimer = window.setTimeout(() => subtitle.classList.add('show'), 600);
-    }, logoStart + 2100));
-    introTimers.push(window.setTimeout(() => {
-      introLoader.hidden = true;
-    }, logoStart + 2900));
+    const wordCompleteAt = introLetters.length * SPLASH_LETTER_DELAY + 80;
+    introTimers.push(window.setTimeout(() => introPeriod?.classList.add('show'), wordCompleteAt));
+    const exitAt = wordCompleteAt + 590;
+    introTimers.push(window.setTimeout(() => introLoader.classList.add('exit'), exitAt));
+    introTimers.push(window.setTimeout(completeIntro, Math.min(SPLASH_MAX_DURATION, exitAt + SPLASH_EXIT_DURATION)));
+    introTimers.push(window.setTimeout(completeIntro, SPLASH_MAX_DURATION));
   }
 
   function stopIntro() {
-    introTimers.forEach(timer => window.clearTimeout(timer));
-    introTimers = [];
-    clearTimeout(subtitleTimer);
-    if (introLoader) introLoader.hidden = true;
-    document.body.classList.remove('intro-loading');
-    document.body.classList.add('intro-done');
+    clearSplashTimers();
+    if (!introLoader) return;
+    introLetters.forEach(letter => letter.classList.add('is-typed'));
+    introPeriod?.classList.add('show');
+    completeIntro();
     greet.style.opacity = '1';
     greet.textContent = pageGreetingPhrases[0];
     subtitle.classList.add('show');
@@ -897,7 +969,7 @@
     if (currentView === 'home') {
       reveal(pathChooser, homeNote);
       if (checkbackShouldShow) reveal(checkbackCard);
-    } else if (currentView === 'upload') {
+    } else if (currentView === 'dataSource' || currentView === 'fileUpload' || currentView === 'sheetConnect') {
       reveal(dataOptions);
     } else if (currentView === 'reading') {
       reveal(readingView);
@@ -940,7 +1012,7 @@
     if (currentView !== 'home' && checkbackCard) checkbackCard.hidden = true;
     if (currentView !== 'result') stage.classList.remove('connecting-data');
     document.body.classList.toggle('home-landing', currentView === 'home');
-    document.body.classList.toggle('upload-view-active', currentView === 'upload');
+    document.body.classList.toggle('upload-view-active', ['dataSource', 'fileUpload', 'sheetConnect'].includes(currentView));
     console.debug('[Hisaab] View changed:', currentView);
   }
 
@@ -1615,13 +1687,15 @@
     parseRequestToken += 1;
     window.clearTimeout(parseTimer);
     clearCsvUpload();
+    clearSelectedSalesFile();
     sheetUrlInput.value = '';
     if (uploadSheetUrlInput) uploadSheetUrlInput.value = '';
     lastSheetSummary = null;
     lastUploadId = null;
     connectedDataLabel = '';
     hideResults();
-    setCurrentView('upload');
+    clearDataSourceSelection();
+    setCurrentView('dataSource');
     document.body.classList.remove('home-landing');
     document.body.classList.add('upload-view-active');
     composer.hidden = true;
@@ -1635,8 +1709,95 @@
     dataOptions.classList.add('open');
     pathUseData.classList.add('active');
     renderChipVisibility();
-    heroSupport.textContent = 'Choose how you want to add your sales. You can change this later.';
+    renderDataSourceStep('source');
     dataOptions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function clearDataSourceSelection() {
+    selectedDataSource = null;
+    dataSourceFile?.setAttribute('aria-checked', 'false');
+    dataSourceSheet?.setAttribute('aria-checked', 'false');
+    dataSourceFile?.classList.remove('selected');
+    dataSourceSheet?.classList.remove('selected');
+    if (dataSourceContinue) dataSourceContinue.disabled = true;
+  }
+
+  function selectDataSource(source) {
+    selectedDataSource = source === 'googleSheet' ? 'googleSheet' : 'file';
+    const fileSelected = selectedDataSource === 'file';
+    dataSourceFile?.setAttribute('aria-checked', String(fileSelected));
+    dataSourceSheet?.setAttribute('aria-checked', String(!fileSelected));
+    dataSourceFile?.classList.toggle('selected', fileSelected);
+    dataSourceSheet?.classList.toggle('selected', !fileSelected);
+    if (dataSourceContinue) dataSourceContinue.disabled = false;
+  }
+
+  function renderDataSourceStep(step) {
+    const sourceStep = step === 'source';
+    const fileStep = step === 'file';
+    dataSourceChoiceStep.hidden = !sourceStep;
+    dataSourceFileStep.hidden = !fileStep;
+    dataSourceSheetStep.hidden = sourceStep || fileStep;
+    const stepNumber = sourceStep ? 1 : 2;
+    if (dataSourceStepLabel) dataSourceStepLabel.textContent = `Step ${stepNumber} of 3`;
+    if (dataSourceProgress) {
+      dataSourceProgress.setAttribute('aria-label', `Progress: step ${stepNumber} of 3`);
+      dataSourceProgress.querySelectorAll('span').forEach((dot, index) => dot.classList.toggle('is-active', index < stepNumber));
+    }
+    if (dataSourcePrevious) dataSourcePrevious.textContent = sourceStep ? 'Previous' : 'Back';
+    if (dataSourceContinue) {
+      dataSourceContinue.textContent = sourceStep ? 'Continue' : fileStep ? 'Continue' : 'Connect sheet';
+      dataSourceContinue.disabled = sourceStep
+        ? !selectedDataSource
+        : fileStep
+          ? !selectedSalesFile || fileReadInFlight
+          : false;
+    }
+    if (fileStep) renderSelectedSalesFile();
+  }
+
+  function previousDataSourceStep() {
+    if (currentView === 'dataSource') {
+      clearDataSourceSelection();
+      resetToLanding();
+      return;
+    }
+    setCurrentView('dataSource');
+    renderDataSourceStep('source');
+  }
+
+  function continueDataSourceFlow() {
+    if (currentView === 'dataSource') {
+      if (!selectedDataSource) return;
+      if (selectedDataSource === 'file') {
+        setCurrentView('fileUpload');
+        renderDataSourceStep('file');
+      } else {
+        setCurrentView('sheetConnect');
+        renderDataSourceStep('sheet');
+        window.setTimeout(() => uploadSheetUrlInput?.focus(), 0);
+      }
+      return;
+    }
+
+    if (currentView === 'fileUpload') {
+      startSelectedSalesFileRead();
+      return;
+    }
+
+    if (currentView === 'sheetConnect') {
+      const value = uploadSheetUrlInput?.value.trim() || '';
+      if (!value) {
+        uploadSheetUrlInput?.focus();
+        return;
+      }
+      sheetUrlInput.value = value;
+      window.clearTimeout(parseTimer);
+      setPath('real', { skipScheduledParse: true });
+      sheetSlot.classList.remove('open');
+      startReadingView('sheet');
+      parseConnectedData();
+    }
   }
 
   function openManualEntry() {
@@ -1733,7 +1894,7 @@
     if (demoResultStrength) demoResultStrength.textContent = result.strength;
   }
 
-  function setPath(path) {
+  function setPath(path, options = {}) {
     activePath = path;
     const isReal = path === 'real';
     const isBootstrap = path === 'bootstrap';
@@ -1747,7 +1908,6 @@
       : 'Choose how you want to add your sales. You can change this later.';
     pathSample.classList.toggle('active', isSample);
     if (pathUseData) pathUseData.classList.toggle('active', isReal || isBootstrap || !dataOptions.hidden);
-    pathReal.classList.toggle('active', isReal);
     const pathBootstrapBtn = document.getElementById('path-bootstrap');
     if (pathBootstrapBtn) pathBootstrapBtn.classList.toggle('active', isBootstrap);
     if (dataOptions) {
@@ -1781,7 +1941,7 @@
       // goes through the same gate as everything else, so on the analysis
       // screen it doesn't revert the active dataset until Apply is clicked.
       reconcilePendingDataset();
-    } else {
+    } else if (!options.skipScheduledParse) {
       scheduleSheetParse();
     }
     renderView();
@@ -1819,25 +1979,111 @@
     document.body.classList.remove('upload-view-active');
   }
 
+  const SALES_FILE_RULES = {
+    maxBytes: 5 * 1024 * 1024,
+    maxRows: 100000,
+    acceptedExtension: 'csv',
+  };
+
+  function formatFileSize(bytes) {
+    if (!Number.isFinite(bytes)) return '';
+    return bytes < 1024 * 1024
+      ? `${Math.max(1, Math.round(bytes / 1024))} KB`
+      : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function setSelectedFileMessage(message = '', type = '') {
+    if (!fileUploadStatus) return;
+    fileUploadStatus.textContent = message;
+    fileUploadStatus.classList.toggle('is-error', type === 'error');
+    fileUploadStatus.classList.toggle('is-success', type === 'success');
+  }
+
+  function renderSelectedSalesFile() {
+    const hasFile = Boolean(selectedSalesFile);
+    if (fileUploadEmpty) fileUploadEmpty.hidden = hasFile;
+    if (fileUploadSelected) fileUploadSelected.hidden = !hasFile;
+    if (fileUploadActions) fileUploadActions.hidden = !hasFile;
+    fileUploadArea?.classList.toggle('has-file', hasFile);
+    if (hasFile) {
+      if (fileUploadName) fileUploadName.textContent = selectedSalesFile.file.name;
+      if (fileUploadMeta) fileUploadMeta.textContent = `${formatFileSize(selectedSalesFile.file.size)} · CSV file`;
+      setSelectedFileMessage('Your file is ready. Choose Continue when you are ready for Hisaab to read it.', 'success');
+    }
+    if (dataSourceContinue && currentView === 'fileUpload') {
+      dataSourceContinue.disabled = !hasFile || fileReadInFlight;
+      dataSourceContinue.textContent = fileReadInFlight ? 'Reading…' : 'Continue';
+    }
+  }
+
+  function clearSelectedSalesFile() {
+    selectedSalesFile = null;
+    csvFileInput.value = '';
+    renderSelectedSalesFile();
+    setSelectedFileMessage('Choose a CSV file to continue.');
+  }
+
+  async function validateSalesFile(file) {
+    if (!file) return { error: 'Choose a CSV file to continue.' };
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (extension !== SALES_FILE_RULES.acceptedExtension) return { error: 'This file is not a CSV. Please choose a CSV sales file.' };
+    if (!file.size) return { error: 'This file is empty. Choose a CSV file with sales data.' };
+    if (file.size > SALES_FILE_RULES.maxBytes) return { error: 'This file is larger than 5 MB. Export a smaller CSV and try again.' };
+    try {
+      const text = await file.text();
+      const rows = text.split(/\r?\n/).filter((row) => row.trim().length > 0);
+      if (!rows.length) return { error: 'This file is empty. Choose a CSV file with sales data.' };
+      if (rows.length === 1) return { error: 'This file only has headers. Add sales rows and try again.' };
+      if (rows.length > SALES_FILE_RULES.maxRows) return { error: 'This file has too many rows. Export a shorter sales period and try again.' };
+      return { text };
+    } catch (err) {
+      return { error: 'Hisaab could not read this file. Save it as a CSV and try again.' };
+    }
+  }
+
+  async function selectSalesFile(file) {
+    if (selectedSalesFile && selectedSalesFile.file.name === file.name && selectedSalesFile.file.size === file.size && selectedSalesFile.file.lastModified === file.lastModified) {
+      setSelectedFileMessage('This file is already selected. Choose Continue when you are ready.', 'success');
+      return;
+    }
+    setSelectedFileMessage('Checking your file…');
+    const result = await validateSalesFile(file);
+    if (result.error) {
+      setSelectedFileMessage(result.error, 'error');
+      return;
+    }
+    selectedSalesFile = { file, text: result.text };
+    renderSelectedSalesFile();
+  }
+
   async function handleCsvFile() {
     const file = csvFileInput.files?.[0];
-    if (!file) return;
-    setPath('real');
-    startReadingView('file');
+    if (file) await selectSalesFile(file);
+  }
+
+  async function startSelectedSalesFileRead() {
+    if (!selectedSalesFile || fileReadInFlight) return;
+    fileReadInFlight = true;
+    renderSelectedSalesFile();
     manualMappings = {};
     mappingChoices = {};
     manualInputs = {};
     sheetUrlInput.value = '';
     if (uploadSheetUrlInput) uploadSheetUrlInput.value = '';
     try {
-      uploadedFileName = file.name;
-      uploadedCsv = await file.text();
+      uploadedFileName = selectedSalesFile.file.name;
+      uploadedCsv = selectedSalesFile.text;
       connectedDataLabel = uploadedFileName;
       renderCsvUploadState();
       renderSheetUrlState();
+      setPath('real', { skipScheduledParse: true });
+      startReadingView('file');
       await parseConnectedData();
     } catch (err) {
       showDataReadError(err);
+    } finally {
+      fileReadInFlight = false;
+      renderSelectedSalesFile();
     }
   }
 
@@ -1999,8 +2245,8 @@
 
     const requestToken = ++parseRequestToken;
 
-    const stagedUploadRead = currentView === 'upload' || currentView === 'reading';
-    if (currentView === 'upload') {
+    const stagedUploadRead = ['dataSource', 'fileUpload', 'sheetConnect', 'reading'].includes(currentView);
+    if (['dataSource', 'fileUpload', 'sheetConnect'].includes(currentView)) {
       startReadingView(uploadedCsv ? 'file' : 'sheet');
     }
 
@@ -4221,7 +4467,7 @@
   function updateAwayFromLandingState() {
     const inAnalysis = isAnalysisPage();
     newQuestion.hidden = !inAnalysis;
-    brandReset.hidden = !inAnalysis;
+    brandReset.hidden = false;
     brandReset.classList.toggle('is-resettable', inAnalysis);
     brandReset.setAttribute('aria-disabled', inAnalysis ? 'false' : 'true');
     brandReset.tabIndex = inAnalysis ? 0 : -1;
@@ -4386,6 +4632,8 @@
     hideError();
     restoreDataConnectorToHome();
     clearCsvUpload();
+    clearSelectedSalesFile();
+    clearDataSourceSelection();
     document.body.classList.remove('upload-view-active');
     document.body.classList.add('home-landing');
     composer.hidden = true;
