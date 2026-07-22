@@ -1,130 +1,227 @@
 const fs = require('fs');
 const path = require('path');
 
-const stylePath = path.resolve(__dirname, '..', 'public', 'style.css');
+const root = path.resolve(__dirname, '..');
+const files = {
+  index: path.join(root, 'public', 'index.html'),
+  script: path.join(root, 'public', 'script.js'),
+  style: path.join(root, 'public', 'style.css'),
+};
 
-function replaceBlock(source, selector, replacement) {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`${escaped}\\s*\\{[\\s\\S]*?\\n\\}`, 'm');
-  if (!re.test(source)) {
-    throw new Error(`Could not find CSS block: ${selector}`);
+function read(file) {
+  return fs.readFileSync(file, 'utf8');
+}
+
+function write(file, content) {
+  fs.writeFileSync(file, content, 'utf8');
+}
+
+function assertChanged(before, after, label) {
+  if (before === after) {
+    throw new Error(`Splash rebuild did not change ${label}.`);
   }
-  return source.replace(re, replacement);
+  return after;
 }
 
-function upsertBlock(source, selector, block) {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`${escaped}\\s*\\{[\\s\\S]*?\\n\\}`, 'm');
-  if (re.test(source)) return source.replace(re, block);
-  return `${source.trimEnd()}\n\n${block}\n`;
+function patchIndex(html) {
+  if (html.includes('class="splash-logo-word"') && html.includes('class="splash-logo-period"')) {
+    return html;
+  }
+
+  const cleanWordmark = `      <div class="hisaab-wordmark splash-wordmark" id="intro-logo" role="img" aria-label="Hisaab">
+        <span class="splash-logo-word" aria-hidden="true">hisaab</span><span class="splash-logo-period" id="intro-period" aria-hidden="true">.</span>
+      </div>`;
+
+  const next = html.replace(
+    /      <div class="hisaab-wordmark splash-wordmark" id="intro-logo" role="img" aria-label="Hisaab">[\s\S]*?      <\/div>/,
+    cleanWordmark,
+  );
+
+  return assertChanged(html, next, 'index splash wordmark');
 }
 
-function patchSplashWordmark(css) {
-  css = replaceBlock(css, '.hisaab-wordmark', `.hisaab-wordmark{
+function patchScript(js) {
+  let next = js;
+
+  next = next.replace(
+    `  const introLogo = document.getElementById('intro-logo');
+  const introLetters = introLogo ? [...introLogo.querySelectorAll('[data-letter]')] : [];
+  const introPeriod = document.getElementById('intro-period');`,
+    `  const introLogo = document.getElementById('intro-logo');
+  const introWord = introLogo ? introLogo.querySelector('.splash-logo-word') : null;
+  const introLetters = introLogo ? [...introLogo.querySelectorAll('[data-letter]')] : [];
+  const introPeriod = document.getElementById('intro-period');`,
+  );
+
+  const cleanIntroFunctions = `  function revealIntroWordmark() {
+    introWord?.classList.add('is-visible');
+    introLetters.forEach(letter => letter.classList.add('is-typed'));
+    introPeriod?.classList.add('show');
+  }
+
+  function resetIntroWordmark() {
+    introWord?.classList.remove('is-visible');
+    introLetters.forEach(letter => letter.classList.remove('is-typed'));
+    introPeriod?.classList.remove('show');
+  }
+
+  function playIntroLoader() {
+    if (!introLoader || !introLogo) {
+      completeIntro();
+      return;
+    }
+
+    splashCompleted = false;
+
+    if (!SPLASH_FORCE_REPLAY && splashWasSeen()) {
+      revealIntroWordmark();
+      completeIntro();
+      return;
+    }
+
+    markSplashSeen();
+    clearSplashTimers();
+    document.body.classList.add('intro-loading');
+    document.body.classList.remove('intro-done');
+    introLoader.hidden = false;
+    introLoader.classList.remove('hide');
+    introLoader.classList.remove('exit');
+    resetIntroWordmark();
+
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      revealIntroWordmark();
+      introTimers.push(window.setTimeout(completeIntro, 520));
+      return;
+    }
+
+    if (introWord) {
+      introTimers.push(window.setTimeout(() => introWord.classList.add('is-visible'), 90));
+      introTimers.push(window.setTimeout(() => introPeriod?.classList.add('show'), 520));
+      introTimers.push(window.setTimeout(() => introLoader.classList.add('exit'), 1120));
+      introTimers.push(window.setTimeout(completeIntro, 1120 + SPLASH_EXIT_DURATION));
+      introTimers.push(window.setTimeout(completeIntro, SPLASH_MAX_DURATION));
+      return;
+    }
+
+    introLetters.forEach((letter, index) => {
+      introTimers.push(window.setTimeout(() => letter.classList.add('is-typed'), index * SPLASH_LETTER_DELAY));
+    });
+    const wordCompleteAt = introLetters.length * SPLASH_LETTER_DELAY + 80;
+    introTimers.push(window.setTimeout(() => introPeriod?.classList.add('show'), wordCompleteAt));
+    const exitAt = wordCompleteAt + 590;
+    introTimers.push(window.setTimeout(() => introLoader.classList.add('exit'), exitAt));
+    introTimers.push(window.setTimeout(completeIntro, Math.min(SPLASH_MAX_DURATION, exitAt + SPLASH_EXIT_DURATION)));
+    introTimers.push(window.setTimeout(completeIntro, SPLASH_MAX_DURATION));
+  }
+
+  function stopIntro() {
+    clearSplashTimers();
+    if (!introLoader) return;
+    revealIntroWordmark();
+    completeIntro();
+    greet.style.opacity = '1';
+    greet.textContent = pageGreetingPhrases[0];
+    subtitle.classList.add('show');
+  }
+
+`;
+
+  next = next.replace(
+    /  function playIntroLoader\(\) \{[\s\S]*?  function renderView\(\) \{/,
+    `${cleanIntroFunctions}  function renderView() {`,
+  );
+
+  return assertChanged(js, next, 'script splash animation');
+}
+
+function patchStyle(css) {
+  const marker = '/* Clean splash wordmark rebuild */';
+  if (css.includes(marker)) return css;
+
+  return `${css}
+
+${marker}
+.splash-wordmark{
   display:inline-flex;
   align-items:flex-end;
-  white-space:nowrap;
-  font-kerning:normal;
-}`);
-
-  css = replaceBlock(css, '.splash-wordmark', `.splash-wordmark{
-  gap:0;
+  justify-content:center;
+  gap:.018em;
   color:var(--ink);
   font-size:clamp(62px, 11vw, 118px);
   font-weight:700;
   letter-spacing:-.045em;
   line-height:1;
   transform-origin:center;
-}`);
+}
 
-  css = replaceBlock(css, '.hisaab-word', `.hisaab-word{
-  display:inline-flex;
-  align-items:flex-end;
-  white-space:nowrap;
-  line-height:1;
-}`);
-
-  css = replaceBlock(css, '.intro-letter', `.intro-letter{
-  position:relative;
+.splash-logo-word{
   display:inline-block;
-  width:.58em;
-  height:1em;
+  color:var(--ink);
   line-height:1;
-  color:transparent;
   opacity:0;
-  transform:translateY(.12em);
-  transition:opacity .16s ease, transform .16s cubic-bezier(.2,.8,.2,1), color .16s ease;
-}`);
+  clip-path:inset(0 100% 0 0);
+  transform:translateY(.08em);
+  transition:opacity .2s ease, clip-path .58s cubic-bezier(.2,.8,.2,1), transform .28s cubic-bezier(.2,.8,.2,1);
+}
 
-  css = replaceBlock(css, '.intro-letter::after', `.intro-letter::after{
-  content:attr(data-letter);
-  position:absolute;
-  inset:0;
-  color:inherit;
-  text-align:center;
-  line-height:1;
-}`);
+.splash-logo-word.is-visible{
+  opacity:1;
+  clip-path:inset(0 0 0 0);
+  transform:translateY(0);
+}
 
-  css = replaceBlock(css, '.intro-period', `.intro-period{
+.splash-logo-period{
   display:inline-block;
-  align-self:flex-end;
-  width:.14em;
-  height:1em;
-  margin-left:-.02em;
-  opacity:0;
-  color:transparent;
-  font-size:1em;
-  line-height:1;
-  position:relative;
-  top:0;
-  transform:translateY(0) scale(.7);
-  transform-origin:center 82%;
-  transition:opacity .16s ease, transform .16s cubic-bezier(.2,.8,.2,1);
-}`);
-
-  css = upsertBlock(css, '.intro-period::after', `.intro-period::after{
-  content:"";
-  position:absolute;
-  left:50%;
-  bottom:.115em;
-  width:.14em;
-  height:.14em;
-  border-radius:999px;
-  background:var(--accent);
-  transform:translateX(-50%);
-}`);
-
-  css = replaceBlock(css, '.hisaab-period', `.hisaab-period{
   color:var(--accent);
-  line-height:1;
-  margin-left:0;
-  transform-origin:center;
-}`);
+  font-size:.68em;
+  font-weight:700;
+  line-height:.8;
+  margin-left:-.035em;
+  opacity:0;
+  transform:translateY(.04em) scale(.82);
+  transform-origin:center bottom;
+}
 
-  css = replaceBlock(css, '.intro-period.hisaab-period', `.intro-period.hisaab-period{
-  margin-left:-.02em;
-}`);
+.splash-logo-period.show{
+  animation:splashCleanPeriodIn .38s cubic-bezier(.2,.8,.2,1) both;
+}
 
-  css = css.replace(/@keyframes splashPeriodIn\s*\{[\s\S]*?\n\}/m, `@keyframes splashPeriodIn{
-  0%{ opacity:0; transform:translateY(0) scale(.7); }
-  45%{ opacity:1; transform:translateY(0) scale(1.08); filter:drop-shadow(0 0 6px rgba(53,109,255,.24)); }
-  100%{ opacity:1; transform:translateY(0) scale(1); filter:none; }
-}`);
+@keyframes splashCleanPeriodIn{
+  0%{ opacity:0; transform:translateY(.04em) scale(.82); }
+  58%{ opacity:1; transform:translateY(.04em) scale(1.08); filter:drop-shadow(0 0 6px rgba(53,109,255,.22)); }
+  100%{ opacity:1; transform:translateY(.04em) scale(1); filter:none; }
+}
 
-  css = css.replace(/\.intro-period\.show\{\s*animation:none;\s*opacity:1;\s*transform:[^;]+;\s*filter:none;\s*\}/m, `.intro-period.show{
+.splash-wordmark .hisaab-word,
+.splash-wordmark .intro-letter,
+.splash-wordmark .intro-period:not(.splash-logo-period){
+  display:none !important;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .splash-logo-word{
+    opacity:1;
+    clip-path:inset(0 0 0 0);
+    transform:none;
+    transition:none;
+  }
+
+  .splash-logo-period.show{
     animation:none;
     opacity:1;
-    transform:translateY(0) scale(1);
+    transform:translateY(.04em) scale(1);
     filter:none;
-  }`);
-
-  return css;
+  }
+}
+`;
 }
 
 function main() {
-  const css = fs.readFileSync(stylePath, 'utf8');
-  fs.writeFileSync(stylePath, patchSplashWordmark(css), 'utf8');
+  write(files.index, patchIndex(read(files.index)));
+  write(files.script, patchScript(read(files.script)));
+  write(files.style, patchStyle(read(files.style)));
 }
 
 if (require.main === module) main();
-module.exports = { patchSplashWordmark };
+module.exports = { patchIndex, patchScript, patchStyle };
