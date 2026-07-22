@@ -180,6 +180,9 @@
   const questionInput = document.getElementById('question-input');
   const sheetUrlInput = document.getElementById('sheet-url-input');
   const uploadSheetUrlInput = document.getElementById('upload-sheet-url');
+  const sheetLinkStatus = document.getElementById('sheet-link-status');
+  const sheetLinkStatusIcon = document.getElementById('sheet-link-status-icon');
+  const sheetLinkStatusText = document.getElementById('sheet-link-status-text');
   const clearSheetUrl = document.getElementById('clear-sheet-url');
   const csvUploadLink = document.getElementById('csv-upload-link');
   const csvFileInput = document.getElementById('csv-file-input');
@@ -250,6 +253,8 @@
   const fixDataDifferentQuestion = document.getElementById('fix-data-different-question');
   const fixDataDone = document.getElementById('fix-data-done');
   const dataErrorView = document.getElementById('data-error-view');
+  const dataErrorMessage = document.getElementById('data-error-message');
+  const dataErrorHints = document.getElementById('data-error-hints');
   const dataErrorRetry = document.getElementById('data-error-retry');
   const dataErrorUpload = document.getElementById('data-error-upload');
   const askView = document.getElementById('ask-view');
@@ -509,6 +514,9 @@
   let uploadedFileName = '';
   let selectedSalesFile = null;
   let fileReadInFlight = false;
+  let sheetConnection = { url: '', status: 'empty', message: '', parsedSheetId: null, parsedGid: null };
+  let sheetValidationTimer = null;
+  let sheetReadInFlight = false;
   let connectedDataLabel = '';
   let lastUploadId = null;
   let lastSimulationPersistence = null;
@@ -697,12 +705,20 @@
   });
   if (fileUploadReplace) fileUploadReplace.addEventListener('click', () => csvFileInput.click());
   if (fileUploadRemove) fileUploadRemove.addEventListener('click', clearSelectedSalesFile);
-  if (uploadSheetUrlInput) uploadSheetUrlInput.addEventListener('input', () => {
-    if (sheetUrlInput.value && sheetUrlInput.value !== uploadSheetUrlInput.value) {
-      sheetUrlInput.value = '';
-      renderSheetUrlState();
-    }
-  });
+  if (uploadSheetUrlInput) {
+    uploadSheetUrlInput.addEventListener('input', () => scheduleSheetLinkValidation());
+    uploadSheetUrlInput.addEventListener('paste', () => window.setTimeout(scheduleSheetLinkValidation, 0));
+    uploadSheetUrlInput.addEventListener('blur', () => {
+      uploadSheetUrlInput.value = uploadSheetUrlInput.value.trim();
+      validateSheetLink();
+    });
+    uploadSheetUrlInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && sheetConnection.status === 'valid') {
+        event.preventDefault();
+        continueDataSourceFlow();
+      }
+    });
+  }
   sheetUrlInput.addEventListener('input', () => {
     clearCsvUpload();
     manualMappings = {};
@@ -1680,6 +1696,20 @@
   function showDataReadError(err) {
     stopReadingProgress();
     console.error('[Hisaab] Data reading failed:', err);
+    const rawMessage = String(err?.message || '').toLowerCase();
+    const isSheetError = !uploadedCsv && Boolean(sheetUrlInput.value.trim());
+    if (dataErrorMessage && dataErrorHints) {
+      if (isSheetError && /private|restricted|401|403/.test(rawMessage)) {
+        dataErrorMessage.textContent = 'Hisaab cannot open this Sheet yet.';
+        dataErrorHints.innerHTML = '<li>Set access to “Anyone with the link can view”</li><li>Copy the full Google Sheet link and try again</li>';
+      } else if (isSheetError) {
+        dataErrorMessage.textContent = 'This Sheet could not be opened. Check the link and sharing settings.';
+        dataErrorHints.innerHTML = '<li>Make sure it is a Google Sheet link</li><li>Make sure the Sheet is viewable with the link</li><li>Try again after checking the link</li>';
+      } else {
+        dataErrorMessage.textContent = 'Please check the file or sheet link and try again.';
+        dataErrorHints.innerHTML = '<li>Make sure the file has order or sales data</li><li>For Google Sheets, make sure the link is viewable</li><li>Try uploading CSV if the sheet does not work</li>';
+      }
+    }
     setCurrentView('error');
   }
 
@@ -1689,7 +1719,7 @@
     clearCsvUpload();
     clearSelectedSalesFile();
     sheetUrlInput.value = '';
-    if (uploadSheetUrlInput) uploadSheetUrlInput.value = '';
+    resetSheetConnection({ clearUrl: true });
     lastSheetSummary = null;
     lastUploadId = null;
     connectedDataLabel = '';
@@ -1732,6 +1762,89 @@
     if (dataSourceContinue) dataSourceContinue.disabled = false;
   }
 
+  function setSheetConnectionState(status, message = '', details = {}) {
+    sheetConnection = {
+      ...sheetConnection,
+      ...details,
+      url: uploadSheetUrlInput?.value.trim() || '',
+      status,
+      message,
+    };
+    const hasStatus = status !== 'empty';
+    if (sheetLinkStatus) {
+      sheetLinkStatus.hidden = !hasStatus;
+      sheetLinkStatus.className = `data-source-sheet-status is-${status}`;
+    }
+    if (sheetLinkStatusText) sheetLinkStatusText.textContent = message;
+    if (sheetLinkStatusIcon) sheetLinkStatusIcon.textContent = status === 'valid' ? '✓' : status === 'invalid' ? '!' : '…';
+    if (uploadSheetUrlInput) uploadSheetUrlInput.setAttribute('aria-invalid', String(status === 'invalid'));
+    if (dataSourceContinue && currentView === 'sheetConnect') {
+      dataSourceContinue.disabled = status !== 'valid' || sheetReadInFlight;
+      dataSourceContinue.textContent = sheetReadInFlight ? 'Reading…' : 'Continue';
+    }
+  }
+
+  function resetSheetConnection({ clearUrl = false } = {}) {
+    window.clearTimeout(sheetValidationTimer);
+    if (clearUrl && uploadSheetUrlInput) uploadSheetUrlInput.value = '';
+    sheetConnection = { url: '', status: 'empty', message: '', parsedSheetId: null, parsedGid: null };
+    setSheetConnectionState('empty');
+  }
+
+  function sheetLinkDetails(value) {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return { error: '' };
+    let url;
+    try {
+      url = new URL(trimmed);
+    } catch (_err) {
+      return { error: 'This does not look like a Google Sheet link. Paste a link from Google Sheets.' };
+    }
+    if (url.hostname !== 'docs.google.com') {
+      return { error: 'This does not look like a Google Sheet link. Paste a link from Google Sheets.' };
+    }
+    if (/^\/(document|presentation|forms)\//.test(url.pathname)) {
+      return { error: 'This does not look like a Google Sheet link. Paste a link from Google Sheets.' };
+    }
+    const publishedMatch = url.pathname.match(/^\/spreadsheets\/d\/e\/([a-zA-Z0-9_-]+)\/pub/);
+    const sheetMatch = url.pathname.match(/^\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    const id = publishedMatch?.[1] || sheetMatch?.[1] || null;
+    if (!id) {
+      return { error: 'This link is incomplete. Copy the full link from Google Sheets and paste it again.' };
+    }
+    const gid = url.searchParams.get('gid');
+    if (gid && !/^\d+$/.test(gid)) {
+      return { error: 'This link is incomplete. Copy the full link from Google Sheets and paste it again.' };
+    }
+    return { id, gid: gid && /^\d+$/.test(gid) ? gid : null };
+  }
+
+  function scheduleSheetLinkValidation() {
+    window.clearTimeout(sheetValidationTimer);
+    const value = uploadSheetUrlInput?.value.trim() || '';
+    if (!value) {
+      setSheetConnectionState('empty');
+      return;
+    }
+    setSheetConnectionState('checking', 'Checking the link…');
+    sheetValidationTimer = window.setTimeout(validateSheetLink, 350);
+  }
+
+  function validateSheetLink() {
+    window.clearTimeout(sheetValidationTimer);
+    const details = sheetLinkDetails(uploadSheetUrlInput?.value);
+    if (!uploadSheetUrlInput?.value.trim()) {
+      setSheetConnectionState('empty');
+      return false;
+    }
+    if (details.error) {
+      setSheetConnectionState('invalid', details.error);
+      return false;
+    }
+    setSheetConnectionState('valid', 'Sheet link looks good', { parsedSheetId: details.id, parsedGid: details.gid });
+    return true;
+  }
+
   function renderDataSourceStep(step) {
     const sourceStep = step === 'source';
     const fileStep = step === 'file';
@@ -1746,14 +1859,15 @@
     }
     if (dataSourcePrevious) dataSourcePrevious.textContent = sourceStep ? 'Previous' : 'Back';
     if (dataSourceContinue) {
-      dataSourceContinue.textContent = sourceStep ? 'Continue' : fileStep ? 'Continue' : 'Connect sheet';
+      dataSourceContinue.textContent = sourceStep ? 'Continue' : 'Continue';
       dataSourceContinue.disabled = sourceStep
         ? !selectedDataSource
         : fileStep
           ? !selectedSalesFile || fileReadInFlight
-          : false;
+          : sheetConnection.status !== 'valid' || sheetReadInFlight;
     }
     if (fileStep) renderSelectedSalesFile();
+    if (!sourceStep && !fileStep) setSheetConnectionState(sheetConnection.status, sheetConnection.message);
   }
 
   function previousDataSourceStep() {
@@ -1786,17 +1900,34 @@
     }
 
     if (currentView === 'sheetConnect') {
-      const value = uploadSheetUrlInput?.value.trim() || '';
-      if (!value) {
+      if (sheetConnection.status !== 'valid' || sheetReadInFlight) {
+        validateSheetLink();
         uploadSheetUrlInput?.focus();
         return;
       }
-      sheetUrlInput.value = value;
-      window.clearTimeout(parseTimer);
-      setPath('real', { skipScheduledParse: true });
-      sheetSlot.classList.remove('open');
-      startReadingView('sheet');
-      parseConnectedData();
+      startSheetConnectionRead();
+    }
+  }
+
+  async function startSheetConnectionRead() {
+    if (sheetReadInFlight || sheetConnection.status !== 'valid') return;
+    sheetReadInFlight = true;
+    setSheetConnectionState('valid', 'Sheet link looks good');
+    const value = sheetConnection.url;
+    sheetUrlInput.value = value;
+    uploadedCsv = null;
+    uploadedFileName = '';
+    lastSheetSummary = null;
+    lastUploadId = null;
+    connectedDataLabel = dataLabelFromSheetUrl(value);
+    window.clearTimeout(parseTimer);
+    setPath('real', { skipScheduledParse: true });
+    sheetSlot.classList.remove('open');
+    startReadingView('sheet');
+    try {
+      await parseConnectedData();
+    } finally {
+      sheetReadInFlight = false;
     }
   }
 
@@ -2069,7 +2200,7 @@
     mappingChoices = {};
     manualInputs = {};
     sheetUrlInput.value = '';
-    if (uploadSheetUrlInput) uploadSheetUrlInput.value = '';
+    resetSheetConnection({ clearUrl: true });
     try {
       uploadedFileName = selectedSalesFile.file.name;
       uploadedCsv = selectedSalesFile.text;
@@ -4618,7 +4749,7 @@
 
     questionInput.value = '';
     sheetUrlInput.value = '';
-    if (uploadSheetUrlInput) uploadSheetUrlInput.value = '';
+    resetSheetConnection({ clearUrl: true });
     refineQuestion.value = '';
     questionInput.style.height = '';
     resizeQuestion();
