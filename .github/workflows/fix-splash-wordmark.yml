@@ -1,0 +1,43 @@
+name: Fix splash wordmark
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/fix-splash-wordmark.js
+      - .github/workflows/fix-splash-wordmark.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-splash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply splash wordmark fix
+        run: node scripts/fix-splash-wordmark.js
+      - name: Validate JavaScript
+        run: |
+          node --check public/script.js
+          node --check server.js
+          node --check scripts/fix-splash-wordmark.js
+      - name: Run tests
+        run: npm test
+      - name: Commit generated style fix
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/style.css
+          git commit -m "Fix splash wordmark alignment"
+          git push origin main
