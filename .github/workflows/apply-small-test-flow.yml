@@ -3,7 +3,7 @@ name: Apply small test flow
 on:
   push:
     branches:
-      - hisaab-small-test-flow
+      - main
     paths:
       - scripts/implement-small-test-flow.js
       - .github/workflows/apply-small-test-flow.yml
@@ -16,10 +16,10 @@ jobs:
   apply:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout branch
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: hisaab-small-test-flow
+          ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Apply product changes
         run: node scripts/implement-small-test-flow.js
@@ -39,6 +39,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/index.html public/script.js public/style.css server.js
           git commit -m "Implement small test setup flow"
-          git push origin hisaab-small-test-flow
-
-# Updated to trigger the workflow after the workflow file exists on this branch.
+          git push origin main
