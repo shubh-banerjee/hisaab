@@ -1340,12 +1340,16 @@
     grid.innerHTML = '';
     bundle.scenarios.forEach((s) => {
       const card = document.createElement('div');
-      card.className = 'scenario' + (s.is_best_fit ? ' best' : '') + (lowConf ? ' low-conf' : '');
+      const hasRisk = s.has_downside_risk === true;
+      card.className = 'scenario' + (s.is_best_fit ? ' best' : '') + (lowConf ? ' low-conf' : '') + (hasRisk ? ' has-risk' : '');
       const revenue = Number(s.headline_revenue) || 0;
-      // When low-confidence, don't paint the number green/red — muted grey
-      // signals "directional, not a firm gain/loss". The baseline (₹0) is
-      // always neutral regardless.
-      const revenueClass = lowConf ? 'muted' : (revenue > 0 ? 'good' : revenue < 0 ? 'bad' : '');
+      // When low-confidence OR when this specific scenario carries real
+      // downside risk (its own range straddles zero, even though the point
+      // estimate is positive), don't paint the number confidently green —
+      // that would hide the real chance of a loss behind a bigger, more
+      // certain-looking number. Muted grey signals "directional, not a
+      // guaranteed gain" in both cases. The baseline (₹0) stays neutral.
+      const revenueClass = (lowConf || hasRisk) ? 'muted' : (revenue > 0 ? 'good' : revenue < 0 ? 'bad' : '');
       const symbol = bundle.currency_symbol || '₹';
       const revenueFormatted = revenue === 0
         ? `${symbol}0`
@@ -1356,13 +1360,16 @@
       const flagHtml = s.is_best_fit
         ? `<span class="best-flag">${escapeHtml(t('scenarios.best_fit') !== 'scenarios.best_fit' ? t('scenarios.best_fit') : (currentUILang === 'hi' ? 'आपके डेटा के लिए सबसे उपयुक्त' : 'Best fit for your data'))}</span>`
         : '';
+      const riskBadgeHtml = hasRisk
+        ? `<span class="risk-flag">${escapeHtml(currentUILang === 'hi' ? 'नुकसान का जोखिम' : 'Risk of loss')}</span>`
+        : '';
       card.innerHTML = `
         ${flagHtml}
         <div class="s-label">${escapeHtml(s.label || '')}</div>
         <div class="s-action">${escapeHtml(s.action_short || '')}</div>
         <div class="s-outcome-label">${escapeHtml(currentUILang === 'hi' ? 'इस महीने, संभावित' : 'This month, likely')}</div>
         <div class="s-outcome ${revenueClass}">${revenueFormatted}</div>
-        <div class="s-outcome-note">${escapeHtml(s.headline_note || '')}</div>
+        <div class="s-outcome-note">${escapeHtml(s.headline_note || '')}${riskBadgeHtml}</div>
         <div class="s-why">${escapeHtml(s.why || '')}</div>
         <button class="s-cta" type="button" data-scenario-id="${escapeHtml(s.id || '')}">${escapeHtml(s.cta || '')}</button>
       `;
@@ -1442,74 +1449,12 @@
     block.hidden = false;
     results.classList.add('with-scenarios');
 
-    // Fetch and render the track-record strip asynchronously — never blocks
-    // the scenarios from showing. Hidden by default; only appears if the user
-    // has reconciled decisions to show.
-    fetchAndRenderTrackStrip();
-  }
-
-  // Fetch the track record and populate the strip at the top of the scenarios
-  // block. Runs async and fails silent — a network hiccup or a brand-new user
-  // with no history simply leaves the strip hidden, never an error state on
-  // the result screen. Uses the same demo flag the decisions log uses so the
-  // seeded demo history shows during sample-data runs.
-  async function fetchAndRenderTrackStrip() {
-    const strip = document.getElementById('track-record-strip');
-    if (!strip) return;
-    // Hide first — if this render is for a user with no history, it stays hidden.
-    strip.hidden = true;
-    try {
-      const useDemo = activeDataset.kind === 'sample';
-      const url = '/api/decisions/track-record' + (useDemo ? '?demo=true' : '');
-      const res = await fetch(url, { headers: apiHeaders() });
-      if (!res.ok) return;
-      const body = await readJsonResponse(res);
-      // Need at least one reconciled decision to show anything honest.
-      if (!body || !Number.isFinite(Number(body.matchedCount)) || body.matchedCount < 1) return;
-      if (!body.latestReconciled) return;
-
-      const ringFg = document.getElementById('tr-ring-fg');
-      const ringLabel = document.getElementById('tr-ring-label');
-      const textBody = document.getElementById('tr-text-body');
-      if (!ringFg || !ringLabel || !textBody) return;
-
-      // Ring: accuracyPct maps to stroke-dashoffset. Circumference = 2πr,
-      // r=18.5 → ~116. offset = circumference * (1 - pct/100).
-      const pct = Number.isFinite(Number(body.accuracyPct)) ? Number(body.accuracyPct) : null;
-      const circumference = 116;
-      if (pct !== null) {
-        ringFg.setAttribute('stroke-dashoffset', String(Math.round(circumference * (1 - pct / 100))));
-        ringLabel.textContent = `${pct}%`;
-      } else {
-        ringFg.setAttribute('stroke-dashoffset', String(circumference));
-        ringLabel.textContent = '';
-      }
-
-      // Text: "Last time we said X, you got Y." + "within N pts on H of last T".
-      const latest = body.latestReconciled;
-      const fmtPp = (v) => {
-        const n = Number(v);
-        if (!Number.isFinite(n)) return '';
-        const sign = n > 0 ? '+' : n < 0 ? '−' : '';
-        return `${sign}${Math.abs(n).toFixed(1)}%`;
-      };
-      const latestSentence = t('track.latest')
-        .replace('{predicted}', fmtPp(latest.predictedValue))
-        .replace('{actual}', fmtPp(latest.actualValue));
-      const withinSentence = (Number(body.recentWindowCount) >= 1)
-        ? ' ' + t('track.within')
-            .replace('{pp}', body.hitThresholdPp)
-            .replace('{hits}', body.hitsInWindow)
-            .replace('{total}', body.recentWindowCount)
-        : '';
-      // Build with escaped values; only the bolded numbers use markup.
-      textBody.innerHTML = escapeHtml(latestSentence) + escapeHtml(withinSentence);
-
-      strip.hidden = false;
-    } catch (_err) {
-      // Fail silent — the strip is an enhancement, never a blocker.
-      strip.hidden = true;
-    }
+    // Track-record strip removed per explicit user feedback: showing
+    // "within 3 points on 1 of your last 2 calls" reads as absurd/confusing
+    // for anyone without substantial genuine history, including brand-new
+    // users. The underlying data/endpoint still exists (untouched) in case
+    // this gets revisited with a proper minimum-sample-size gate later, but
+    // it no longer renders on the result screen at all.
   }
 
   // Minimal HTML escape for user/backend text going into innerHTML. Never

@@ -2738,9 +2738,15 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
     const isHindi = generated.detected_language === 'hi';
     const asked = computed.assumed_change;
     const bigger = asked * 2;
-    const currentValue = computed.lever === 'delivery_fee'
+    // Rounded here, once, at the source — summary.current_delivery_fee/
+    // avg_order_value are raw averages from real sheet data and can carry
+    // many decimal places (e.g. 80.14923076923077). Every downstream use
+    // (the baseline "Keep at ₹X" label, current_value, and every delta
+    // built from this) must never display that raw precision.
+    const rawCurrentValue = computed.lever === 'delivery_fee'
       ? Number(summary.current_delivery_fee) || 0
       : Number(summary.avg_order_value) || 0;
+    const currentValue = Math.round(rawCurrentValue * 100) / 100;
     const baselineRevenue = Number(summary.baseline_monthly_revenue) || 0;
     const currencySymbol = '₹';
 
@@ -2776,6 +2782,20 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
     const baseline = { lever_change: 0, new_lever_value: currentValue || null, pct_change: 0, revenue_impact: 0, revenue_low: 0, revenue_high: 0 };
     const askedResult = projectFor(asked);
     const biggerResult = projectFor(bigger);
+
+    // Real downside-risk detection — a scenario "has risk" when its own
+    // confidence range straddles zero (revenue_low < 0 < revenue_high),
+    // even if the POINT ESTIMATE is positive. The linear model can never
+    // flip the point estimate's sign by itself, but the range widening
+    // with distance is real, honest statistical uncertainty — surfacing
+    // it explicitly is what actually answers "if I push further, could
+    // this hurt me instead of help me?" rather than just showing a
+    // bigger, more confident-looking positive number.
+    const askedHasRisk = askedResult.revenue_low < 0 && askedResult.revenue_high > 0;
+    const biggerHasRisk = biggerResult.revenue_low < 0 && biggerResult.revenue_high > 0;
+    const fmtMoney = (v) => `${currencySymbol}${Math.abs(Math.round(v)).toLocaleString('en-IN')}`;
+    const riskWhyEn = (result) => `This isn't a sure gain — your history shows this could range from a loss of ${fmtMoney(result.revenue_low)} to a gain of ${fmtMoney(result.revenue_high)}. Worth a small test before committing.`;
+    const riskWhyHi = (result) => `यह पक्का फायदा नहीं है — आपके इतिहास के अनुसार यह ${fmtMoney(Math.abs(result.revenue_low))} के नुकसान से लेकर ${fmtMoney(result.revenue_high)} के फायदे तक कुछ भी हो सकता है। पूरी तरह अपनाने से पहले एक छोटा परीक्षण करें।`;
 
     // Threshold: linear projection of where revenue impact = 0. Only include
     // when the slope has a real sign — |slope| effectively > 0 in a way the
@@ -2851,7 +2871,10 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
           headline_note: isHindi
             ? `${currencySymbol}${Math.abs(askedResult.revenue_low).toLocaleString('en-IN')} से ${currencySymbol}${Math.abs(askedResult.revenue_high).toLocaleString('en-IN')} के बीच`
             : `Could vary ${currencySymbol}${Math.abs(askedResult.revenue_low).toLocaleString('en-IN')} to ${currencySymbol}${Math.abs(askedResult.revenue_high).toLocaleString('en-IN')}`,
-          why: generated.recommendation || (isHindi ? 'आपके इतिहास के अनुसार यह पैटर्न टिकाऊ रहा है।' : 'Your history shows this pattern has held up.'),
+          why: askedHasRisk
+            ? (isHindi ? riskWhyHi(askedResult) : riskWhyEn(askedResult))
+            : (generated.recommendation || (isHindi ? 'आपके इतिहास के अनुसार यह पैटर्न टिकाऊ रहा है।' : 'Your history shows this pattern has held up.')),
+          has_downside_risk: askedHasRisk,
           cta: isHindi ? 'यही आजमाएं' : 'Try this',
           is_best_fit: true,
           projection: askedResult,
@@ -2870,9 +2893,12 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
           headline_note: isHindi
             ? `${currencySymbol}${Math.abs(biggerResult.revenue_low).toLocaleString('en-IN')} से ${currencySymbol}${Math.abs(biggerResult.revenue_high).toLocaleString('en-IN')} के बीच`
             : `Could vary ${currencySymbol}${Math.abs(biggerResult.revenue_low).toLocaleString('en-IN')} to ${currencySymbol}${Math.abs(biggerResult.revenue_high).toLocaleString('en-IN')}`,
-          why: isHindi
-            ? 'यह आपके अब तक देखे गए बदलावों से बड़ा है — पूर्वानुमान का दायरा भी बड़ा है।'
-            : 'This goes beyond changes you\'ve tried before — the range of outcomes widens accordingly.',
+          why: biggerHasRisk
+            ? (isHindi ? riskWhyHi(biggerResult) : riskWhyEn(biggerResult))
+            : (isHindi
+              ? 'यह आपके अब तक देखे गए बदलावों से बड़ा है — पूर्वानुमान का दायरा भी बड़ा है।'
+              : 'This goes beyond changes you\'ve tried before — the range of outcomes widens accordingly.'),
+          has_downside_risk: biggerHasRisk,
           cta: isHindi ? 'फिर भी आजमाएं' : 'Try anyway',
           is_best_fit: false,
           projection: biggerResult,
