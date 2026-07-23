@@ -327,7 +327,7 @@
   });
 
   pathSample.addEventListener('click', () => openDemoLesson());
-  pathReal.addEventListener('click', () => setPath('real'));
+  pathReal.addEventListener('click', () => openDataConnectPage());
   const pathBootstrapBtn = document.getElementById('path-bootstrap');
   if (pathBootstrapBtn) pathBootstrapBtn.addEventListener('click', () => setPath('bootstrap'));
   csvUploadLink.addEventListener('click', () => {
@@ -443,6 +443,7 @@
   wireCheckBack();
   wireBootstrap();
   wireDemoLesson();
+  wireDataConnectPage();
   checkForPendingCheckBack();
   protectComposerChrome();
   window.addEventListener('resize', alignDataPanelToSheetSlot);
@@ -752,6 +753,15 @@
 
     hideError();
     const isInlineRefresh = stage.classList.contains('connecting-data') && Boolean(currentResult);
+    const readingLoader = document.getElementById('reading-loader');
+    // The minimal full-page loader is for the FIRST connect only — an
+    // in-place refresh of already-connected data (while a result is on
+    // screen) keeps the existing quieter inline behavior instead of
+    // re-showing a big loading moment.
+    if (readingLoader && !isInlineRefresh) {
+      readingLoader.hidden = false;
+      dataDetected.classList.remove('show');
+    }
     detectedHeadline.textContent = isInlineRefresh ? 'Reading this data for your analysis...' : 'Reading your order data...';
     detectedBody.textContent = isInlineRefresh ? 'I will update the result below once the columns are ready.' : 'Checking the columns before I use them.';
     capabilityList.hidden = true;
@@ -759,7 +769,7 @@
     detectedCaveat.hidden = true;
     detectedDetails.innerHTML = '';
     hideApplyDataCta();
-    dataDetected.classList.add('show');
+    if (isInlineRefresh) dataDetected.classList.add('show');
     alignDataPanelToSheetSlot();
     updateAwayFromLandingState();
 
@@ -774,6 +784,8 @@
       if (body.session_id) localStorage.setItem('hisaabSessionId', body.session_id);
       lastUploadId = body.persistence?.uploadId || lastUploadId;
       lastSheetSummary = body.sheet_summary || body;
+      if (readingLoader) readingLoader.hidden = true;
+      dataDetected.classList.add('show');
       renderSheetSummary(lastSheetSummary);
       alignDataPanelToSheetSlot();
       if (isAnalysisScreenGated()) {
@@ -788,6 +800,8 @@
       }
     } catch (err) {
       lastSheetSummary = null;
+      if (readingLoader) readingLoader.hidden = true;
+      dataDetected.classList.add('show');
       detectedHeadline.textContent = 'I could not read that sheet yet.';
       detectedBody.textContent = err.message;
       capabilityList.hidden = true;
@@ -1774,6 +1788,33 @@
     document.addEventListener('keydown', (e) => {
       const overlay = document.getElementById('demo-lesson');
       if (e.key === 'Escape' && overlay && !overlay.hidden) closeDemoLesson();
+    });
+  }
+
+  // ── Add-my-data full-page flow ──────────────────────────────────────────
+  // Same presentation pattern as the demo lesson (header/strip hidden,
+  // centered card), but wraps the REAL, already-working data-connect logic
+  // (sheet-slot, parseConnectedData, capability summary, composer) rather
+  // than introducing any new parsing mechanics.
+  function openDataConnectPage() {
+    document.body.classList.add('data-connect-active');
+    const overlay = document.getElementById('data-connect-page');
+    if (overlay) overlay.hidden = false;
+    setPath('real');
+  }
+
+  function closeDataConnectPage() {
+    document.body.classList.remove('data-connect-active');
+    const overlay = document.getElementById('data-connect-page');
+    if (overlay) overlay.hidden = true;
+  }
+
+  function wireDataConnectPage() {
+    const closeBtn = document.getElementById('data-connect-close');
+    if (closeBtn) closeBtn.addEventListener('click', closeDataConnectPage);
+    document.addEventListener('keydown', (e) => {
+      const overlay = document.getElementById('data-connect-page');
+      if (e.key === 'Escape' && overlay && !overlay.hidden) closeDataConnectPage();
     });
   }
 

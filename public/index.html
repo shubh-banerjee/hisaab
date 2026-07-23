@@ -101,19 +101,19 @@
           <h2 class="demo-title">Pick what the shop owner wants to understand</h2>
           <p class="demo-desc">These are real questions a small business owner might ask.</p>
           <div class="demo-card-grid">
-            <button class="demo-question-card" type="button" data-demo-q="orders_trend">
+            <button class="demo-info-card demo-question-card" type="button" data-demo-q="orders_trend">
               <div class="demo-info-title">Are orders going up or down?</div>
               <div class="demo-info-body">Check whether the shop is growing, slowing, or having a normal month.</div>
             </button>
-            <button class="demo-question-card" type="button" data-demo-q="delivery_fee">
+            <button class="demo-info-card demo-question-card" type="button" data-demo-q="delivery_fee">
               <div class="demo-info-title">Should this shop increase delivery fee?</div>
               <div class="demo-info-body">See whether a higher delivery fee may reduce orders.</div>
             </button>
-            <button class="demo-question-card" type="button" data-demo-q="discounts">
+            <button class="demo-info-card demo-question-card" type="button" data-demo-q="discounts">
               <div class="demo-info-title">Did discounts actually help?</div>
               <div class="demo-info-body">Compare offer days with normal days before repeating the offer.</div>
             </button>
-            <button class="demo-question-card" type="button" data-demo-q="repeat_customers">
+            <button class="demo-info-card demo-question-card" type="button" data-demo-q="repeat_customers">
               <div class="demo-info-title">Are customers coming back?</div>
               <div class="demo-info-body">Understand whether the shop is getting repeat orders.</div>
             </button>
@@ -149,6 +149,99 @@
       <div class="demo-lesson-footer">
         <button class="demo-btn-outline" id="demo-go-back" type="button" hidden>Go back</button>
         <button class="demo-btn-filled" id="demo-primary-btn" type="button">Start demo</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Add-my-data page: a dedicated full-page flow, matching the demo
+       lesson's presentation (header/strip hidden, centered card). Contains,
+       in order: the upload box, a minimal reading-loader shown while the
+       sheet/CSV is being parsed, the existing capability summary (reused
+       as-is — same IDs, same renderSheetSummary()/parseConnectedData()
+       logic, no changes to the real parsing mechanics), and the question
+       composer once data is ready. -->
+  <section class="data-connect-page" id="data-connect-page" hidden aria-label="Use my sales data">
+    <div class="data-connect-frame">
+      <div class="data-connect-header">
+        <div class="data-connect-title">Use my sales data</div>
+        <button class="demo-close" id="data-connect-close" type="button" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="data-connect-body">
+        <section class="sheet-slot" id="sheet-slot" aria-label="Connect order data">
+          <div class="lbl">Paste a public Google Sheets link. Hisaab reads whatever columns exist.</div>
+          <div class="sheet-url-field">
+            <input id="sheet-url-input" type="url" placeholder="https://docs.google.com/spreadsheets/..." aria-label="Google Sheets URL">
+            <button class="clear-link-btn" id="clear-sheet-url" type="button" aria-label="Clear Google Sheets link" hidden>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+          <div class="or">or <button id="csv-upload-link" type="button">upload a CSV file</button></div>
+          <div class="sheet-actions">
+            <div class="pending-data-note" id="pending-data-note" hidden>
+              <span class="dot"></span>
+              <span id="pending-data-note-text">New data detected — not used yet.</span>
+            </div>
+            <button class="apply-data-btn" id="apply-data-btn" type="button" hidden>Apply to analysis</button>
+          </div>
+          <input id="csv-file-input" type="file" accept=".csv,text/csv" hidden>
+        </section>
+
+        <!-- Minimal reading-loader — shown only while parseConnectedData()'s
+             fetch is in flight, replacing the old plain-text-only status
+             line with a proper visual loading moment. -->
+        <div class="reading-loader" id="reading-loader" hidden aria-live="polite">
+          <div class="reading-spinner"></div>
+          <div class="reading-loader-title">Reading your data…</div>
+          <div class="reading-loader-sub">Checking which columns are usable before I calculate anything.</div>
+        </div>
+
+        <section class="data-detected" id="data-detected" aria-live="polite">
+          <button class="data-panel-close" id="data-panel-close" type="button" aria-label="Dismiss data context">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+          <div class="dd-headline"><span class="pulse"></span><span id="detected-headline"></span></div>
+          <div class="dd-body" id="detected-body"></div>
+          <div class="capability-list" id="capability-list" hidden></div>
+          <div class="dd-caveat" id="detected-caveat" hidden></div>
+          <div class="dd-actions">
+            <button class="dd-details-link" id="detected-toggle" type="button">See what I read from your sheet ↓</button>
+          </div>
+          <div class="dd-details" id="detected-details"></div>
+        </section>
+
+        <div class="ask-block" id="ask-block" hidden>
+          <div class="composer" id="composer">
+            <textarea id="question-input" placeholder="e.g. If I raise my delivery fee by ₹20, what happens to repeat orders?" rows="1" aria-label="Ask a what-if question" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
+            <button class="icon-btn mic" id="mic-btn" title="Tap to speak your question — in any language" type="button">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+            <button class="icon-btn send" id="simulate-btn" title="Calculate" type="button">
+              <span class="btn-text" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.4 1.4 5.6 5.6H4v2h12.2l-5.6 5.6L12 20l8-8-8-8z"/></svg>
+              </span>
+              <span class="btn-loader" hidden><span class="spinner"></span></span>
+            </button>
+          </div>
+          <div class="loading-status" id="loading-status" hidden aria-live="polite">Running the numbers...</div>
+
+          <div class="suggestions" id="sample-suggestions">
+            <button class="chip" data-q="If I raise my delivery fee by ₹20, what happens to repeat orders?" type="button">Raise delivery fee</button>
+            <button class="chip" data-q="If I run a promotional discount next month, what lift can I expect?" type="button">Run a promo</button>
+            <button class="chip" data-q="If I increase product prices by 5%, how does it affect total orders?" type="button">Change my price</button>
+            <button class="chip" data-q="If I stop offering cash on delivery, what happens to total orders?" type="button">Stop cash on delivery</button>
+          </div>
+          <div class="suggestions" id="real-suggestions" hidden>
+            <button class="chip" data-q="What's driving the change in my repeat customer rate recently?" type="button">What's dragging my repeat rate?</button>
+            <button class="chip" data-q="Where in my order history could I safely raise prices without losing volume?" type="button">Where can I safely raise prices?</button>
+            <button class="chip" data-q="What if my worst month had been an average month — what did it cost me?" type="button">What did my worst month cost me?</button>
+            <button class="chip" data-q="Which lever in my data has the strongest effect on total orders?" type="button">What actually moves my orders?</button>
+          </div>
+
+          <div class="lang-note">Speak in <b>English, हिन्दी, বাংলা,</b> or <b>தமிழ்</b> — I'll figure it out</div>
+        </div>
       </div>
     </div>
   </section>
@@ -206,25 +299,6 @@
       <span>No sales file yet? </span><button id="path-bootstrap" type="button" data-i18n="path.bootstrap_link">Start with a simple daily sales log</button>
     </div>
 
-    <section class="sheet-slot" id="sheet-slot" aria-label="Connect order data">
-      <div class="lbl">Paste a public Google Sheets link. Hisaab reads whatever columns exist.</div>
-      <div class="sheet-url-field">
-        <input id="sheet-url-input" type="url" placeholder="https://docs.google.com/spreadsheets/..." aria-label="Google Sheets URL">
-        <button class="clear-link-btn" id="clear-sheet-url" type="button" aria-label="Clear Google Sheets link" hidden>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
-      </div>
-      <div class="or">or <button id="csv-upload-link" type="button">upload a CSV file</button></div>
-      <div class="sheet-actions">
-        <div class="pending-data-note" id="pending-data-note" hidden>
-          <span class="dot"></span>
-          <span id="pending-data-note-text">New data detected — not used yet.</span>
-        </div>
-        <button class="apply-data-btn" id="apply-data-btn" type="button" hidden>Apply to analysis</button>
-      </div>
-      <input id="csv-file-input" type="file" accept=".csv,text/csv" hidden>
-    </section>
-
     <!-- Bootstrap daily check-in panel: for zero-data users. Logs one rough
          number a day; after enough days, questions run on real bootstrapped
          history. Hidden until the "start fresh" path is chosen. -->
@@ -244,51 +318,6 @@
       <div class="bs-progress-label" id="bs-progress-label"></div>
       <div class="bs-done-note" id="bs-done-note" hidden></div>
     </section>
-
-    <section class="data-detected" id="data-detected" aria-live="polite">
-      <button class="data-panel-close" id="data-panel-close" type="button" aria-label="Dismiss data context">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-      <div class="dd-headline"><span class="pulse"></span><span id="detected-headline"></span></div>
-      <div class="dd-body" id="detected-body"></div>
-      <div class="capability-list" id="capability-list" hidden></div>
-      <div class="dd-caveat" id="detected-caveat" hidden></div>
-      <div class="dd-actions">
-        <button class="dd-details-link" id="detected-toggle" type="button">See what I read from your sheet ↓</button>
-      </div>
-      <div class="dd-details" id="detected-details"></div>
-    </section>
-
-    <div class="ask-block" id="ask-block" hidden>
-      <div class="composer" id="composer">
-        <textarea id="question-input" placeholder="e.g. If I raise my delivery fee by ₹20, what happens to repeat orders?" rows="1" aria-label="Ask a what-if question" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
-        <button class="icon-btn mic" id="mic-btn" title="Tap to speak your question — in any language" type="button">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-        </button>
-        <button class="icon-btn send" id="simulate-btn" title="Calculate" type="button">
-          <span class="btn-text" aria-hidden="true">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.4 1.4 5.6 5.6H4v2h12.2l-5.6 5.6L12 20l8-8-8-8z"/></svg>
-          </span>
-          <span class="btn-loader" hidden><span class="spinner"></span></span>
-        </button>
-      </div>
-      <div class="loading-status" id="loading-status" hidden aria-live="polite">Running the numbers...</div>
-
-      <div class="suggestions" id="sample-suggestions">
-        <button class="chip" data-q="If I raise my delivery fee by ₹20, what happens to repeat orders?" type="button">Raise delivery fee</button>
-        <button class="chip" data-q="If I run a promotional discount next month, what lift can I expect?" type="button">Run a promo</button>
-        <button class="chip" data-q="If I increase product prices by 5%, how does it affect total orders?" type="button">Change my price</button>
-        <button class="chip" data-q="If I stop offering cash on delivery, what happens to total orders?" type="button">Stop cash on delivery</button>
-      </div>
-      <div class="suggestions" id="real-suggestions" hidden>
-        <button class="chip" data-q="What's driving the change in my repeat customer rate recently?" type="button">What's dragging my repeat rate?</button>
-        <button class="chip" data-q="Where in my order history could I safely raise prices without losing volume?" type="button">Where can I safely raise prices?</button>
-        <button class="chip" data-q="What if my worst month had been an average month — what did it cost me?" type="button">What did my worst month cost me?</button>
-        <button class="chip" data-q="Which lever in my data has the strongest effect on total orders?" type="button">What actually moves my orders?</button>
-      </div>
-
-      <div class="lang-note">Speak in <b>English, हिन्दी, বাংলা,</b> or <b>தமிழ்</b> — I'll figure it out</div>
-    </div>
 
     <section class="nudge" id="validation-nudge" hidden>
       <b>That's a bit too open for a calculation.</b>
