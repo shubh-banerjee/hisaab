@@ -934,6 +934,54 @@ function summarizeSheetParse(parsed) {
     return `${metricDisplayName(field)} — unavailable in this sheet`;
   });
 
+  // Honest, structured facts for the "Data ready" summary card — computed
+  // directly from the real parsed rows, never invented. If there's nothing
+  // real to report for a given fact, it's simply absent (null/empty), and
+  // the frontend must show "not found" rather than fabricate a value.
+  const monthKeys = (parsed.monthlyRows || []).map(r => r.month).filter(Boolean).sort();
+  const dateRange = monthKeys.length
+    ? `${formatMonthLabel(monthKeys[0])} – ${formatMonthLabel(monthKeys[monthKeys.length - 1])}`
+    : null;
+
+  // Which optional fields were actually found vs genuinely not found, in
+  // plain user-facing labels — the summary card renders these directly,
+  // no guessing from prose.
+  const OPTIONAL_FIELD_LABELS = {
+    repeat_orders: 'Customer / repeat orders',
+    avg_order_value: 'Order value',
+    delivery_fee: 'Delivery fee',
+    promo_active: 'Discounts / promos',
+  };
+  const foundOptionalLabels = [];
+  const missingOptionalLabels = [];
+  for (const [field, label] of Object.entries(OPTIONAL_FIELD_LABELS)) {
+    const status = sources[field]?.status;
+    if (['derived', 'derived_manual', 'derived_low_confidence'].includes(status)) {
+      foundOptionalLabels.push(label);
+    } else {
+      missingOptionalLabels.push(label);
+    }
+  }
+  const ordersFound = ['derived', 'derived_manual', 'derived_low_confidence'].includes(sources.orders?.status);
+
+  // Contextual suggested questions — only ever drawn from capabilities that
+  // are actually ready or limited (real, askable questions), never from a
+  // capability marked missing. Ready capabilities are preferred; limited
+  // ones fill in if there aren't 3 ready ones yet.
+  const QUESTION_BY_KEY = {
+    sales_trend: 'Are my orders going up or down?',
+    pricing: 'What happens if I change my prices?',
+    delivery_fee: 'Should I raise my delivery fee?',
+    promotions: 'Are my discounts actually working?',
+    repeat_customers: 'Are customers coming back?',
+  };
+  const askableCapabilities = capabilityMap.capabilities.filter(c => c.status === 'ready')
+    .concat(capabilityMap.capabilities.filter(c => c.status === 'limited'));
+  const suggestedQuestions = askableCapabilities
+    .map(c => QUESTION_BY_KEY[c.key])
+    .filter(Boolean)
+    .slice(0, 3);
+
   return {
     months,
     raw_rows: parsed.rawRows?.length || 0,
@@ -951,6 +999,12 @@ function summarizeSheetParse(parsed) {
     capability_map: capabilityMap,
     capability_line: `${capabilityMap.ready_count} ready · ${capabilityMap.limited_count} limited · ${capabilityMap.missing_count} missing`,
     details,
+    // Honest facts for the Data-ready summary card:
+    date_range: dateRange,
+    orders_found: ordersFound,
+    found_optional_labels: foundOptionalLabels,
+    missing_optional_labels: missingOptionalLabels,
+    suggested_questions: suggestedQuestions,
   };
 }
 

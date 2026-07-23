@@ -596,7 +596,19 @@
     connectedDataLabel = uploadedFileName;
     renderCsvUploadState();
     renderSheetUrlState();
-    await parseConnectedData();
+    // Fresh connect: selecting a file just enables "Read data" — parsing is
+    // explicit now, not automatic. The inline refresh-from-a-result flow
+    // keeps its existing auto-parse-on-select behavior, unchanged.
+    const isInlineRefresh = stage.classList.contains('connecting-data') && Boolean(currentResult);
+    if (isInlineRefresh) {
+      await parseConnectedData();
+    } else {
+      updateDcReadButtonState();
+      const noteText = document.getElementById('pending-data-note-text');
+      const note = document.getElementById('pending-data-note');
+      if (noteText) noteText.textContent = `${uploadedFileName} selected — click Read data.`;
+      if (note) note.hidden = false;
+    }
   }
 
   function clearCsvUpload() {
@@ -737,6 +749,14 @@
   function scheduleSheetParse() {
     window.clearTimeout(parseTimer);
     if (activePath !== 'real') return;
+    updateDcReadButtonState();
+    // The fresh Add-my-data flow now requires an explicit "Read data" click
+    // (see dc-read-data-btn's handler) rather than auto-parsing as the user
+    // types/pastes. The inline refresh-from-a-result flow
+    // (openInlineDataConnector) is a different, quieter in-place-update UX
+    // and keeps its existing auto-parse-on-input behavior, unchanged.
+    const isInlineRefresh = stage.classList.contains('connecting-data') && Boolean(currentResult);
+    if (!isInlineRefresh) return;
     const value = sheetUrlInput.value.trim();
     if (!uploadedCsv && value.length <= 20) {
       dataDetected.classList.remove('show');
@@ -753,23 +773,57 @@
 
     hideError();
     const isInlineRefresh = stage.classList.contains('connecting-data') && Boolean(currentResult);
-    const readingLoader = document.getElementById('reading-loader');
-    // The minimal full-page loader is for the FIRST connect only — an
-    // in-place refresh of already-connected data (while a result is on
-    // screen) keeps the existing quieter inline behavior instead of
-    // re-showing a big loading moment.
-    if (readingLoader && !isInlineRefresh) {
-      readingLoader.hidden = false;
-      dataDetected.classList.remove('show');
+
+    if (!isInlineRefresh) {
+      // Fresh connect: show the loader screen, hide the upload screen
+      // entirely (no old content visible behind it), cycle through the
+      // reading messages.
+      setDcScreen('loader');
+      startReadingMessages();
+      const readBtn = document.getElementById('dc-read-data-btn');
+      if (readBtn) readBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/parse-sheet', {
+          method: 'POST',
+          headers: apiHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(uploadedCsv ? { csvText: uploadedCsv, fileName: uploadedFileName } : { sheetUrl }),
+        });
+        const body = await readJsonResponse(res);
+        if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);
+        if (body.session_id) localStorage.setItem('hisaabSessionId', body.session_id);
+        lastUploadId = body.persistence?.uploadId || lastUploadId;
+        lastSheetSummary = body.sheet_summary || body;
+        stopReadingMessages();
+        renderDcSummary(lastSheetSummary);
+        setDcScreen('summary');
+        // Data is real and parsed — promote it immediately so the
+        // subsequent Ask Hisaab question actually uses it. No "Apply to
+        // analysis" gate here since there's no existing result on screen
+        // in this fresh-connect context.
+        hideApplyDataCta();
+        applyPendingDataset();
+      } catch (err) {
+        stopReadingMessages();
+        lastSheetSummary = null;
+        setDcScreen('upload');
+        if (readBtn) readBtn.disabled = false;
+        dcShowError(err.message);
+      }
+      return;
     }
-    detectedHeadline.textContent = isInlineRefresh ? 'Reading this data for your analysis...' : 'Reading your order data...';
-    detectedBody.textContent = isInlineRefresh ? 'I will update the result below once the columns are ready.' : 'Checking the columns before I use them.';
+
+    // Inline refresh (updating already-connected data while a result is on
+    // screen, via openInlineDataConnector) — unchanged from before this
+    // redesign, still using the dataDetected/capabilityList panel.
+    detectedHeadline.textContent = 'Reading this data for your analysis...';
+    detectedBody.textContent = 'I will update the result below once the columns are ready.';
     capabilityList.hidden = true;
     capabilityList.innerHTML = '';
     detectedCaveat.hidden = true;
     detectedDetails.innerHTML = '';
     hideApplyDataCta();
-    if (isInlineRefresh) dataDetected.classList.add('show');
+    dataDetected.classList.add('show');
     alignDataPanelToSheetSlot();
     updateAwayFromLandingState();
 
@@ -784,7 +838,6 @@
       if (body.session_id) localStorage.setItem('hisaabSessionId', body.session_id);
       lastUploadId = body.persistence?.uploadId || lastUploadId;
       lastSheetSummary = body.sheet_summary || body;
-      if (readingLoader) readingLoader.hidden = true;
       dataDetected.classList.add('show');
       renderSheetSummary(lastSheetSummary);
       alignDataPanelToSheetSlot();
@@ -800,7 +853,6 @@
       }
     } catch (err) {
       lastSheetSummary = null;
-      if (readingLoader) readingLoader.hidden = true;
       dataDetected.classList.add('show');
       detectedHeadline.textContent = 'I could not read that sheet yet.';
       detectedBody.textContent = err.message;
@@ -1792,21 +1844,143 @@
   }
 
   // ── Add-my-data full-page flow ──────────────────────────────────────────
-  // Same presentation pattern as the demo lesson (header/strip hidden,
-  // centered card), but wraps the REAL, already-working data-connect logic
-  // (sheet-slot, parseConnectedData, capability summary, composer) rather
-  // than introducing any new parsing mechanics.
+  // Four distinct screens (upload -> loader -> summary -> ask), one visible
+  // at a time. Wraps the REAL, already-working parsing logic
+  // (parseConnectedData -> /api/parse-sheet) — only the presentation is new.
+  // The summary screen shows ONLY facts the server actually returned
+  // (date_range, orders_found, found/missing optional labels, suggested
+  // questions) — never invented, never padded.
+  const READING_MESSAGES = [
+    'Opening your data',
+    'Finding orders and dates',
+    'Checking sales fields',
+    'Looking for discounts, delivery fees, and customers',
+    'Preparing your summary',
+  ];
+  let readingMessageTimer = null;
+
+  function setDcScreen(name) {
+    document.querySelectorAll('.dc-screen').forEach((el) => {
+      el.hidden = el.getAttribute('data-dc-screen') !== name;
+    });
+  }
+
+  function updateDcReadButtonState() {
+    const btn = document.getElementById('dc-read-data-btn');
+    if (!btn) return;
+    const hasValidInput = Boolean(uploadedCsv) || sheetUrlInput.value.trim().length > 20;
+    btn.disabled = !hasValidInput;
+  }
+
+  function startReadingMessages() {
+    stopReadingMessages();
+    const msgEl = document.getElementById('reading-loader-msg');
+    let idx = 0;
+    if (msgEl) msgEl.textContent = READING_MESSAGES[0];
+    readingMessageTimer = window.setInterval(() => {
+      idx = (idx + 1) % READING_MESSAGES.length;
+      if (!msgEl) return;
+      msgEl.textContent = READING_MESSAGES[idx];
+      // Restart the fade-in animation on each message change.
+      msgEl.style.animation = 'none';
+      void msgEl.offsetWidth; // eslint-disable-line no-void -- force reflow to restart animation
+      msgEl.style.animation = '';
+    }, 1100);
+  }
+
+  function stopReadingMessages() {
+    if (readingMessageTimer) { window.clearInterval(readingMessageTimer); readingMessageTimer = null; }
+  }
+
+  function dcShowError(message) {
+    const banner = document.getElementById('dc-error-banner');
+    const msgEl = document.getElementById('dc-error-msg');
+    if (msgEl) msgEl.textContent = message;
+    if (banner) banner.hidden = false;
+  }
+
+  function dcHideError() {
+    const banner = document.getElementById('dc-error-banner');
+    if (banner) banner.hidden = true;
+  }
+
+  // Renders the honest "Data ready" summary from real sheet_summary fields
+  // only. Never fabricates a value — anything not actually present is shown
+  // via the missing-fields line instead.
+  function renderDcSummary(summary) {
+    const factsEl = document.getElementById('dc-summary-facts');
+    const missingEl = document.getElementById('dc-summary-missing');
+    const questionsLabelEl = document.getElementById('dc-summary-questions-label');
+    const questionsEl = document.getElementById('dc-summary-questions');
+    if (!factsEl) return;
+
+    const facts = [];
+    if (summary.date_range) facts.push(`Date range: ${summary.date_range}`);
+    if (Number.isFinite(summary.raw_rows) && summary.raw_rows > 0) {
+      facts.push(`${summary.raw_rows} row${summary.raw_rows === 1 ? '' : 's'} found`);
+    }
+    if (summary.orders_found) facts.push('Orders — found');
+    (summary.found_optional_labels || []).forEach((label) => facts.push(`${label} — found`));
+
+    factsEl.innerHTML = facts.map((f) => `
+      <div class="dc-fact-row">
+        <span class="dc-fact-icon" aria-hidden="true">✓</span>
+        <span>${escapeHtml(f)}</span>
+      </div>
+    `).join('');
+
+    const missingLabels = summary.missing_optional_labels || [];
+    if (missingLabels.length) {
+      missingEl.textContent = `Not found yet: ${missingLabels.join(' / ')}`;
+      missingEl.hidden = false;
+    } else {
+      missingEl.hidden = true;
+    }
+
+    const questions = summary.suggested_questions || [];
+    if (questions.length) {
+      questionsLabelEl.hidden = false;
+      questionsEl.innerHTML = questions.map((q) => `<div class="dc-summary-question-item">${escapeHtml(q)}</div>`).join('');
+    } else {
+      questionsLabelEl.hidden = true;
+      questionsEl.innerHTML = '';
+    }
+  }
+
+  // Populates the Ask Hisaab screen's suggested prompts as real, clickable
+  // chips (fills the textarea, never auto-submits — matching every other
+  // chip in the app).
+  function renderDcSuggestedPrompts(questions) {
+    const container = document.getElementById('dc-suggested-questions');
+    if (!container) return;
+    container.innerHTML = (questions || []).map((q) => `<button class="chip" type="button" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('');
+    container.querySelectorAll('.chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        questionInput.value = btn.dataset.q;
+        resizeQuestion();
+        updateQuestionState();
+        hideValidationNudge();
+        questionInput.focus();
+        updateAwayFromLandingState();
+      });
+    });
+  }
+
   function openDataConnectPage() {
     document.body.classList.add('data-connect-active');
     const overlay = document.getElementById('data-connect-page');
     if (overlay) overlay.hidden = false;
     setPath('real');
+    setDcScreen('upload');
+    dcHideError();
+    updateDcReadButtonState();
   }
 
   function closeDataConnectPage() {
     document.body.classList.remove('data-connect-active');
     const overlay = document.getElementById('data-connect-page');
     if (overlay) overlay.hidden = true;
+    stopReadingMessages();
   }
 
   function wireDataConnectPage() {
@@ -1815,6 +1989,19 @@
     document.addEventListener('keydown', (e) => {
       const overlay = document.getElementById('data-connect-page');
       if (e.key === 'Escape' && overlay && !overlay.hidden) closeDataConnectPage();
+    });
+
+    const readBtn = document.getElementById('dc-read-data-btn');
+    if (readBtn) readBtn.addEventListener('click', () => {
+      dcHideError();
+      parseConnectedData();
+    });
+
+    const askCtaBtn = document.getElementById('dc-ask-cta-btn');
+    if (askCtaBtn) askCtaBtn.addEventListener('click', () => {
+      renderDcSuggestedPrompts(lastSheetSummary?.suggested_questions || []);
+      setDcScreen('ask');
+      questionInput.focus();
     });
   }
 
@@ -2360,7 +2547,9 @@
   function setRecordingState(isRecording) {
     recognizing = isRecording;
     micBtn.classList.toggle('recording', isRecording);
-    micBtn.title = isRecording ? 'Listening... tap to stop' : 'Tap to speak your question — in any language';
+    micBtn.title = isRecording ? 'Listening... tap to stop' : 'Tap to speak your question — in English, Hindi, or Hinglish';
+    const listeningNote = document.getElementById('mic-listening-note');
+    if (listeningNote) listeningNote.hidden = !isRecording;
   }
 
   function stopRecorderTracks(stream) {
