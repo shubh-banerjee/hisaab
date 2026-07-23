@@ -2622,6 +2622,20 @@ body.data-connect-active .top-actions{
   min-height:420px;
 }
 
+.dc-summary-screen,
+.dc-ask-screen,
+.dc-manual-screen{
+  display:flex;
+  flex-direction:column;
+  min-height:420px;
+}
+
+.dc-ask-screen .ask-block{
+  display:flex;
+  flex-direction:column;
+  flex:1;
+}
+
 .data-connect-title{
   font-size:13px;
   font-weight:700;
@@ -2746,7 +2760,8 @@ body.data-connect-active .top-actions{
   to{ opacity:1; transform:translateY(0); }
 }
 
-/* ── Screen 3: honest data-ready summary ── */
+/* ── Screen 3: honest data-ready summary. Compact, grouped, never a long
+   list — even with many detected fields, only a handful show by default. ── */
 .dc-summary-title{
   font-size:20px;
   font-weight:700;
@@ -2758,91 +2773,220 @@ body.data-connect-active .top-actions{
   font-size:14px;
   color:var(--ink-soft);
   line-height:1.5;
-  margin-bottom:20px;
-}
-
-.dc-summary-facts{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  margin-bottom:16px;
-}
-
-.dc-fact-row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:11px 14px;
-  border-radius:11px;
-  background:var(--surface-2);
-  font-size:13.5px;
-  color:var(--ink);
-}
-
-.dc-fact-row .dc-fact-icon{
-  color:var(--good);
-  flex-shrink:0;
-}
-
-.dc-summary-missing{
-  font-size:13px;
-  color:var(--ink-mute);
-  line-height:1.5;
-  margin-bottom:20px;
-  padding:11px 14px;
-  border-radius:11px;
-  background:var(--warn-soft);
-}
-
-.dc-summary-questions-label{
-  font-size:12px;
-  font-weight:700;
-  color:var(--ink-mute);
-  text-transform:uppercase;
-  letter-spacing:0.04em;
-  margin-bottom:10px;
-}
-
-.dc-summary-questions{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
   margin-bottom:24px;
 }
 
-.dc-summary-question-item{
-  font-family:var(--sans);
-  text-align:left;
-  padding:11px 14px;
-  border-radius:11px;
-  border:1px solid var(--line);
-  background:var(--surface);
-  color:var(--ink-soft);
-  font-size:13.5px;
-  cursor:default;
+.dc-section{
+  margin-bottom:22px;
 }
 
-.dc-ask-cta{
-  width:100%;
+.dc-section-label{
+  font-size:11.5px;
+  font-weight:700;
+  color:var(--ink-mute);
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  margin-bottom:10px;
+}
+
+/* Compact chip groups — used for "I found", "Missing or limited", and
+   "You can ask about". Wraps naturally; never forces a full-width stacked
+   row per item, which is what made long lists of detected fields feel
+   endless before. */
+.dc-chip-group{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.dc-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:8px 13px;
+  border-radius:999px;
+  background:var(--surface-2);
+  color:var(--ink);
+  font-size:13px;
+  font-weight:500;
+  white-space:nowrap;
+}
+
+.dc-chip .dc-chip-icon{ color:var(--good); flex-shrink:0; }
+
+.dc-chip-group-muted .dc-chip{
+  background:var(--warn-soft);
+  color:#6b4a0d;
+}
+
+.dc-chip-group-accent .dc-chip{
+  background:var(--accent-soft);
+  color:var(--accent-strong);
+  border:1px solid rgba(53,109,255,0.16);
+}
+
+.dc-more-link{
+  display:inline-block;
+  margin-top:10px;
   font-family:var(--sans);
-  font-size:14.5px;
+  font-size:12.5px;
   font-weight:600;
-  padding:13px 20px;
+  color:var(--accent);
+  background:none;
+  border:none;
+  cursor:pointer;
+  padding:0;
+}
+
+.dc-more-link:hover{ color:var(--accent-strong); }
+
+/* The "+X more" drawer — an inline expandable area WITHIN the same
+   section, not a page-growing list. Opens/closes in place. */
+.dc-more-drawer{
+  margin-top:10px;
+  padding:12px 14px;
+  border:1px solid var(--line);
   border-radius:12px;
+  background:var(--surface);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.dc-more-drawer-item{
+  font-size:12.5px;
+  color:var(--ink-soft);
+}
+
+.dc-gentle-note,
+.dc-directional-note{
+  font-size:12.5px;
+  color:var(--ink-mute);
+  line-height:1.5;
+  margin:10px 0 0;
+}
+
+.dc-manual-link{
+  display:block;
+  margin:4px 0 20px;
+  font-family:var(--sans);
+  font-size:12.5px;
+  font-weight:500;
+  color:var(--ink-mute);
+  text-decoration:underline;
+  text-underline-offset:2px;
+  background:none;
+  border:none;
+  cursor:pointer;
+  text-align:left;
+}
+
+.dc-manual-link:hover{ color:var(--ink-soft); }
+
+/* Shared compact CTA used across upload/summary/ask — consistent width,
+   never full-bleed on desktop, stroke + solid-blue fill, no heavy shadow. */
+.dc-ask-cta{
+  font-family:var(--sans);
+  font-size:13.5px;
+  font-weight:600;
+  padding:10px 22px;
+  border-radius:10px;
   border:1.5px solid var(--accent);
   background:var(--accent);
   color:#fff;
   cursor:pointer;
+  transition:background-color .15s ease, opacity .15s ease;
 }
 
 .dc-ask-cta:hover{ background:var(--accent-strong); }
+
+.dc-ask-cta:disabled{
+  background:transparent;
+  border-color:var(--line);
+  color:var(--ink-mute);
+  opacity:0.6;
+  cursor:not-allowed;
+}
+
+.dc-btn-outline{
+  font-family:var(--sans);
+  font-size:13.5px;
+  font-weight:600;
+  padding:10px 20px;
+  border-radius:10px;
+  border:1.5px solid var(--line-strong);
+  background:transparent;
+  color:var(--ink-soft);
+  cursor:pointer;
+}
+
+.dc-btn-outline:hover{ background:var(--surface-2); }
 
 /* ── Screen 4: Ask Hisaab ── */
 .dc-ask-title{
   font-size:22px;
   font-weight:700;
   color:var(--ink);
+  margin:0 0 6px;
+}
+
+.dc-ask-subtitle{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  line-height:1.5;
   margin:0 0 20px;
+}
+
+/* Input + mic only — the send/CTA button no longer lives cramped inside
+   this pill. A large, calm input block, mic on the right. */
+.dc-ask-input-wrap{
+  width:100%;
+  display:flex;
+  align-items:flex-end;
+  gap:8px;
+  padding:14px 12px 14px 18px;
+  border:1.5px solid var(--line-strong);
+  border-radius:16px;
+  background:var(--surface);
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+
+.dc-ask-input-wrap:focus-within{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(53,109,255,0.12);
+}
+
+.dc-ask-input-wrap textarea{
+  flex:1;
+  min-height:64px;
+  max-height:200px;
+  padding:2px 4px 0;
+  border:none;
+  outline:none;
+  resize:none;
+  background:transparent;
+  color:var(--ink);
+  font-size:15.5px;
+  line-height:1.5;
+}
+
+.dc-ask-input-wrap textarea::placeholder{ color:var(--ink-mute); }
+
+.dc-ask-missing-note{
+  font-size:12.5px;
+  color:var(--ink-mute);
+  line-height:1.5;
+  margin-top:10px;
+}
+
+.dc-try-asking-label{
+  font-size:11.5px;
+  font-weight:700;
+  color:var(--ink-mute);
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  margin-top:20px;
+  margin-bottom:10px;
 }
 
 .mic-listening-note{
@@ -2857,10 +3001,50 @@ body.data-connect-active .top-actions{
   color:var(--bad);
 }
 
+/* ── Screen 5: manual data entry ── */
+.dc-manual-title{
+  font-size:18px;
+  font-weight:700;
+  color:var(--ink);
+  margin:0 0 6px;
+}
+
+.dc-manual-sub{
+  font-size:13.5px;
+  color:var(--ink-soft);
+  line-height:1.5;
+  margin:0 0 20px;
+}
+
+.dc-manual-input-row input{
+  width:100%;
+  padding:12px 14px;
+  border:1.5px solid var(--line-strong);
+  border-radius:12px;
+  outline:none;
+  background:var(--surface);
+  color:var(--ink);
+  font-size:14.5px;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+
+.dc-manual-input-row input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(53,109,255,0.12);
+}
+
+.dc-manual-cta-row{
+  justify-content:flex-end;
+  gap:10px;
+}
+
 @media (max-width: 720px){
   .data-connect-page{ padding:16px; }
   .data-connect-frame{ max-height:calc(100vh - 32px); }
   .dc-screen{ padding:24px 20px 20px; }
   .dc-upload-screen{ min-height:0; }
   .dc-loader-screen{ padding:56px 20px; min-height:280px; }
+  .dc-ask-cta{ width:100%; }
+  .dc-manual-cta-row .dc-btn-outline{ flex:1; }
+  .dc-manual-cta-row .dc-ask-cta{ flex:1; }
 }

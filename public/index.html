@@ -230,37 +230,58 @@
 
       <!-- Screen 3: honest data-ready summary. Every fact shown here comes
            directly from the real sheet_summary the server returned — never
-           invented. Missing optional fields are stated plainly, not hidden. -->
-      <div class="dc-screen" id="dc-screen-summary" data-dc-screen="summary" hidden>
+           invented. Grouped and capped so it never grows into a long
+           vertical list, even with many detected fields. -->
+      <div class="dc-screen dc-summary-screen" id="dc-screen-summary" data-dc-screen="summary" hidden>
         <div class="dc-summary-title">Your sales data is ready</div>
         <div class="dc-summary-sub">I found enough information to start answering simple business questions.</div>
-        <div class="dc-summary-facts" id="dc-summary-facts"></div>
-        <div class="dc-summary-missing" id="dc-summary-missing" hidden></div>
-        <div class="dc-summary-questions-label" id="dc-summary-questions-label" hidden>You can ask things like:</div>
-        <div class="dc-summary-questions" id="dc-summary-questions"></div>
-        <button class="dc-ask-cta" id="dc-ask-cta-btn" type="button">Ask Hisaab</button>
+
+        <div class="dc-section">
+          <div class="dc-section-label">I found</div>
+          <div class="dc-chip-group" id="dc-found-chips"></div>
+          <button class="dc-more-link" id="dc-more-found-link" type="button" hidden></button>
+          <div class="dc-more-drawer" id="dc-more-found-drawer" hidden></div>
+        </div>
+
+        <div class="dc-section" id="dc-missing-section" hidden>
+          <div class="dc-section-label">Missing or limited</div>
+          <div class="dc-chip-group dc-chip-group-muted" id="dc-missing-chips"></div>
+          <p class="dc-gentle-note">Some answers may be less accurate because this data is missing, but Hisaab can still guide you with what is available.</p>
+        </div>
+
+        <div class="dc-section" id="dc-capability-section" hidden>
+          <div class="dc-section-label">You can ask about</div>
+          <div class="dc-chip-group dc-chip-group-accent" id="dc-capability-chips"></div>
+          <p class="dc-directional-note" id="dc-directional-note" hidden>Some answers will be directional, not exact.</p>
+        </div>
+
+        <button class="dc-manual-link" id="dc-manual-link" type="button">Need to add missing data manually?</button>
+
+        <div class="dc-cta-row">
+          <button class="dc-ask-cta" id="dc-ask-cta-btn" type="button">Ask Hisaab</button>
+        </div>
       </div>
 
       <!-- Screen 4: Ask Hisaab. Reuses the real composer/mic/submit logic
            (same element IDs: question-input, mic-btn, simulate-btn,
            loading-status) — only the presentation and the suggested
-           prompts are new. -->
-      <div class="dc-screen" id="dc-screen-ask" data-dc-screen="ask" hidden>
+           prompts are new. The CTA now lives in its own footer row instead
+           of being crammed as a circular icon button inside the input. -->
+      <div class="dc-screen dc-ask-screen" id="dc-screen-ask" data-dc-screen="ask" hidden>
         <div class="ask-block" id="ask-block">
           <h2 class="dc-ask-title">What would you like to understand?</h2>
-          <div class="composer" id="composer">
+          <p class="dc-ask-subtitle">Ask about your orders, sales, delivery fees, discounts, or customers.</p>
+
+          <div class="dc-ask-input-wrap">
             <textarea id="question-input" placeholder="For example: Are my orders going down?" rows="1" aria-label="Ask a what-if question" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
             <button class="icon-btn mic" id="mic-btn" title="Tap to speak your question — in English, Hindi, or Hinglish" type="button">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
             </button>
-            <button class="icon-btn send" id="simulate-btn" title="Ask Hisaab" type="button">
-              <span class="btn-text" aria-hidden="true">Ask Hisaab</span>
-              <span class="btn-loader" hidden><span class="spinner"></span></span>
-            </button>
           </div>
           <div class="mic-listening-note" id="mic-listening-note" hidden>Listening…</div>
-          <div class="loading-status" id="loading-status" hidden aria-live="polite">Running the numbers...</div>
+          <div class="dc-ask-missing-note" id="dc-ask-missing-note" hidden></div>
 
+          <div class="dc-try-asking-label" id="dc-try-asking-label" hidden>Try asking</div>
           <div class="suggestions" id="dc-suggested-questions"></div>
           <div class="suggestions" id="sample-suggestions" hidden>
             <button class="chip" data-q="If I raise my delivery fee by ₹20, what happens to repeat orders?" type="button">Raise delivery fee</button>
@@ -275,11 +296,37 @@
             <button class="chip" data-q="Which lever in my data has the strongest effect on total orders?" type="button">What actually moves my orders?</button>
           </div>
 
+          <div class="loading-status" id="loading-status" hidden aria-live="polite">Running the numbers...</div>
           <div class="lang-note">Speak in <b>English, हिन्दी,</b> or <b>Hinglish</b> — I'll figure it out</div>
+
+          <div class="dc-cta-row">
+            <button class="dc-ask-cta" id="simulate-btn" type="button" disabled>
+              <span class="btn-text" aria-hidden="true">Ask Hisaab</span>
+              <span class="btn-loader" hidden><span class="spinner"></span></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screen 5: manual data entry — a lightweight secondary flow, offered
+           from both the summary and ask screens via dc-manual-link. Only
+           ever asks for the ONE missing field that would most help the
+           current data, never a long form. Lives in the same shell (toggled
+           via setDcScreen('manual')), not a separate popup. -->
+      <div class="dc-screen dc-manual-screen" id="dc-screen-manual" data-dc-screen="manual" hidden aria-label="Add missing data manually">
+        <div class="dc-manual-title" id="dc-manual-title">Add missing detail</div>
+        <p class="dc-manual-sub" id="dc-manual-sub">Just this one thing helps Hisaab give you a better answer.</p>
+        <div class="dc-manual-input-row">
+          <input id="dc-manual-value-input" type="text" placeholder="" aria-label="Missing field value">
+        </div>
+        <div class="dc-cta-row dc-manual-cta-row">
+          <button class="dc-btn-outline" id="dc-manual-cancel-btn" type="button">Cancel</button>
+          <button class="dc-ask-cta" id="dc-manual-save-btn" type="button">Save</button>
         </div>
       </div>
     </div>
   </section>
+
 
   <main class="stage" id="stage">
     <div class="greet-block">

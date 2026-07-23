@@ -1957,53 +1957,95 @@
   // Renders the honest "Data ready" summary from real sheet_summary fields
   // only. Never fabricates a value — anything not actually present is shown
   // via the missing-fields line instead.
+  const DC_FOUND_CHIP_CAP = 4;
+
   function renderDcSummary(summary) {
-    const factsEl = document.getElementById('dc-summary-facts');
-    const missingEl = document.getElementById('dc-summary-missing');
-    const questionsLabelEl = document.getElementById('dc-summary-questions-label');
-    const questionsEl = document.getElementById('dc-summary-questions');
-    if (!factsEl) return;
+    const foundChipsEl = document.getElementById('dc-found-chips');
+    const moreLink = document.getElementById('dc-more-found-link');
+    const moreDrawer = document.getElementById('dc-more-found-drawer');
+    const missingSection = document.getElementById('dc-missing-section');
+    const missingChipsEl = document.getElementById('dc-missing-chips');
+    const capSection = document.getElementById('dc-capability-section');
+    const capChipsEl = document.getElementById('dc-capability-chips');
+    const directionalNote = document.getElementById('dc-directional-note');
+    if (!foundChipsEl) return;
 
-    const facts = [];
-    if (summary.date_range) facts.push(`Date range: ${summary.date_range}`);
+    // Build the full "found" list, then cap what's shown by default —
+    // never a long stacked list, even with many detected fields.
+    const foundItems = [];
+    if (summary.date_range) foundItems.push(summary.date_range);
     if (Number.isFinite(summary.raw_rows) && summary.raw_rows > 0) {
-      facts.push(`${summary.raw_rows} row${summary.raw_rows === 1 ? '' : 's'} found`);
+      foundItems.push(`${summary.raw_rows} row${summary.raw_rows === 1 ? '' : 's'}`);
     }
-    if (summary.orders_found) facts.push('Orders — found');
-    (summary.found_optional_labels || []).forEach((label) => facts.push(`${label} — found`));
+    if (summary.orders_found) foundItems.push('Orders');
+    (summary.found_optional_labels || []).forEach((label) => foundItems.push(label));
 
-    factsEl.innerHTML = facts.map((f) => `
-      <div class="dc-fact-row">
-        <span class="dc-fact-icon" aria-hidden="true">✓</span>
-        <span>${escapeHtml(f)}</span>
-      </div>
+    const visibleFound = foundItems.slice(0, DC_FOUND_CHIP_CAP);
+    const restFound = foundItems.slice(DC_FOUND_CHIP_CAP);
+    foundChipsEl.innerHTML = visibleFound.map((f) => `
+      <span class="dc-chip"><span class="dc-chip-icon" aria-hidden="true">✓</span>${escapeHtml(f)}</span>
     `).join('');
 
-    const missingLabels = summary.missing_optional_labels || [];
-    if (missingLabels.length) {
-      missingEl.textContent = `Not found yet: ${missingLabels.join(' / ')}`;
-      missingEl.hidden = false;
+    if (restFound.length) {
+      moreLink.hidden = false;
+      moreLink.textContent = `+ ${restFound.length} more found`;
+      moreDrawer.innerHTML = restFound.map((f) => `<div class="dc-more-drawer-item">✓ ${escapeHtml(f)}</div>`).join('');
+      moreDrawer.hidden = true;
+      moreLink.onclick = () => {
+        const isOpen = !moreDrawer.hidden;
+        moreDrawer.hidden = isOpen;
+        moreLink.textContent = isOpen ? `+ ${restFound.length} more found` : 'Show less';
+      };
     } else {
-      missingEl.hidden = true;
+      moreLink.hidden = true;
+      moreDrawer.hidden = true;
     }
 
-    const questions = summary.suggested_questions || [];
-    if (questions.length) {
-      questionsLabelEl.hidden = false;
-      questionsEl.innerHTML = questions.map((q) => `<div class="dc-summary-question-item">${escapeHtml(q)}</div>`).join('');
+    // Missing/limited — only shown at all if something is actually missing.
+    // Framed as a gentle limitation, never as an error.
+    const missingLabels = summary.missing_optional_labels || [];
+    if (missingLabels.length) {
+      missingSection.hidden = false;
+      missingChipsEl.innerHTML = missingLabels.map((m) => `<span class="dc-chip">${escapeHtml(m)} not found</span>`).join('');
     } else {
-      questionsLabelEl.hidden = true;
-      questionsEl.innerHTML = '';
+      missingSection.hidden = true;
+    }
+
+    // Capability chips — short labels (not full questions), capped to 3,
+    // drawn only from capabilities that are actually ready or limited.
+    const capabilities = summary.capability_map?.capabilities || [];
+    const CAP_SHORT_LABEL = {
+      sales_trend: 'Order trend',
+      pricing: 'Pricing changes',
+      delivery_fee: 'Delivery fee impact',
+      promotions: 'Promo impact',
+      repeat_customers: 'Repeat customers',
+    };
+    const askable = capabilities.filter((c) => c.status === 'ready')
+      .concat(capabilities.filter((c) => c.status === 'limited'));
+    const capLabels = askable.map((c) => CAP_SHORT_LABEL[c.key]).filter(Boolean).slice(0, 3);
+    const anyLimited = askable.some((c) => c.status === 'limited');
+    if (capLabels.length) {
+      capSection.hidden = false;
+      capChipsEl.innerHTML = capLabels.map((l) => `<span class="dc-chip">${escapeHtml(l)}</span>`).join('');
+      directionalNote.hidden = !anyLimited;
+    } else {
+      capSection.hidden = true;
     }
   }
 
   // Populates the Ask Hisaab screen's suggested prompts as real, clickable
   // chips (fills the textarea, never auto-submits — matching every other
-  // chip in the app).
+  // chip in the app). Capped to 3 by the server already
+  // (summarizeSheetParse's suggested_questions), so no extra capping needed
+  // here.
   function renderDcSuggestedPrompts(questions) {
     const container = document.getElementById('dc-suggested-questions');
+    const label = document.getElementById('dc-try-asking-label');
     if (!container) return;
-    container.innerHTML = (questions || []).map((q) => `<button class="chip" type="button" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('');
+    const list = (questions || []).slice(0, 3);
+    if (label) label.hidden = list.length === 0;
+    container.innerHTML = list.map((q) => `<button class="chip" type="button" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('');
     container.querySelectorAll('.chip').forEach((btn) => {
       btn.addEventListener('click', () => {
         questionInput.value = btn.dataset.q;
@@ -2014,6 +2056,21 @@
         updateAwayFromLandingState();
       });
     });
+  }
+
+  // The ask screen's gentle "some answers may be directional" note —
+  // computed from the same missing_optional_labels the summary screen
+  // uses, so the two screens never disagree about what's missing.
+  function renderDcAskMissingNote(summary) {
+    const noteEl = document.getElementById('dc-ask-missing-note');
+    if (!noteEl) return;
+    const missingLabels = (summary?.missing_optional_labels || []).map((l) => l.toLowerCase());
+    if (missingLabels.length) {
+      noteEl.hidden = false;
+      noteEl.textContent = `Some answers may be directional because ${missingLabels.join(', ')} data is missing.`;
+    } else {
+      noteEl.hidden = true;
+    }
   }
 
   function openDataConnectPage() {
@@ -2034,6 +2091,47 @@
     stopReadingMessages();
   }
 
+  // Maps the user-facing missing-field labels (as sent by
+  // summarizeSheetParse's OPTIONAL_FIELD_LABELS) back to the technical
+  // field key manualInputs/the /api/simulate payload expects.
+  const DC_LABEL_TO_FIELD_KEY = {
+    'Customer / repeat orders': 'repeat_orders_proxy',
+    'Order value': 'avg_order_value',
+    'Delivery fee': 'delivery_fee',
+    'Discounts / promos': 'promo_active',
+  };
+  const DC_FIELD_PROMPT = {
+    repeat_orders_proxy: { title: 'Add customer info', sub: 'Do most of your orders come from repeat customers? Just answer yes or no.', placeholder: 'yes or no' },
+    avg_order_value: { title: 'Add order value', sub: 'Roughly what does a typical order come to?', placeholder: 'e.g. 350' },
+    delivery_fee: { title: 'Add delivery fee', sub: "What's your current delivery fee?", placeholder: 'e.g. 40' },
+    promo_active: { title: 'Add discount info', sub: 'Have you run any discounts or promos recently? Just answer yes or no.', placeholder: 'yes or no' },
+  };
+  let dcManualFieldKey = null;
+
+  function openDcManualEntry() {
+    const missingLabels = lastSheetSummary?.missing_optional_labels || [];
+    const firstLabel = missingLabels[0];
+    const fieldKey = firstLabel ? DC_LABEL_TO_FIELD_KEY[firstLabel] : null;
+    const prompt = fieldKey ? DC_FIELD_PROMPT[fieldKey] : null;
+    dcManualFieldKey = fieldKey;
+
+    const titleEl = document.getElementById('dc-manual-title');
+    const subEl = document.getElementById('dc-manual-sub');
+    const input = document.getElementById('dc-manual-value-input');
+    if (prompt) {
+      titleEl.textContent = prompt.title;
+      subEl.textContent = prompt.sub;
+      input.placeholder = prompt.placeholder;
+    } else {
+      titleEl.textContent = 'Add missing detail';
+      subEl.textContent = 'Add anything that would help Hisaab understand your business better.';
+      input.placeholder = '';
+    }
+    input.value = '';
+    setDcScreen('manual');
+    input.focus();
+  }
+
   function wireDataConnectPage() {
     const closeBtn = document.getElementById('data-connect-close');
     if (closeBtn) closeBtn.addEventListener('click', closeDataConnectPage);
@@ -2051,8 +2149,31 @@
     const askCtaBtn = document.getElementById('dc-ask-cta-btn');
     if (askCtaBtn) askCtaBtn.addEventListener('click', () => {
       renderDcSuggestedPrompts(lastSheetSummary?.suggested_questions || []);
+      renderDcAskMissingNote(lastSheetSummary);
       setDcScreen('ask');
       questionInput.focus();
+    });
+
+    const manualLink = document.getElementById('dc-manual-link');
+    if (manualLink) manualLink.addEventListener('click', openDcManualEntry);
+
+    const manualCancelBtn = document.getElementById('dc-manual-cancel-btn');
+    if (manualCancelBtn) manualCancelBtn.addEventListener('click', () => {
+      setDcScreen('summary');
+    });
+
+    const manualSaveBtn = document.getElementById('dc-manual-save-btn');
+    if (manualSaveBtn) manualSaveBtn.addEventListener('click', () => {
+      const input = document.getElementById('dc-manual-value-input');
+      const value = input?.value.trim();
+      if (value && dcManualFieldKey) {
+        // Feeds the SAME manualInputs mechanism the existing missing-fields
+        // resubmit flow already uses — the next /api/simulate call
+        // (whichever question is asked) includes this automatically. No new
+        // parsing logic, no new endpoint.
+        manualInputs[dcManualFieldKey] = value;
+      }
+      setDcScreen('summary');
     });
   }
 
@@ -2692,7 +2813,9 @@
   }
 
   function updateQuestionState() {
-    simulateBtn.classList.toggle('ready', questionInput.value.trim().length > 0);
+    const hasText = questionInput.value.trim().length > 0;
+    simulateBtn.classList.toggle('ready', hasText);
+    simulateBtn.disabled = !hasText;
   }
 
   function updateNavScrollState() {
