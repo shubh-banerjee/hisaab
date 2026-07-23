@@ -551,6 +551,11 @@
     sheetSlot.classList.toggle('open', isReal);
     const bootstrapSlot = document.getElementById('bootstrap-slot');
     if (bootstrapSlot) bootstrapSlot.classList.toggle('open', isBootstrap);
+    // Reveal the question composer/chips once a path has been chosen — the
+    // landing view is just the two cards + link until then, matching the
+    // reference design exactly.
+    const askBlock = document.getElementById('ask-block');
+    if (askBlock) askBlock.hidden = false;
     renderChipVisibility();
     if (isBootstrap) {
       // Entering bootstrap: refresh the progress display. Keep the active

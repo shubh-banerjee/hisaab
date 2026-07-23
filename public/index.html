@@ -137,34 +137,36 @@
       <div class="dd-details" id="detected-details"></div>
     </section>
 
-    <div class="composer" id="composer">
-      <textarea id="question-input" placeholder="e.g. If I raise my delivery fee by ₹20, what happens to repeat orders?" rows="1" aria-label="Ask a what-if question" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
-      <button class="icon-btn mic" id="mic-btn" title="Tap to speak your question — in any language" type="button">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-      </button>
-      <button class="icon-btn send" id="simulate-btn" title="Calculate" type="button">
-        <span class="btn-text" aria-hidden="true">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.4 1.4 5.6 5.6H4v2h12.2l-5.6 5.6L12 20l8-8-8-8z"/></svg>
-        </span>
-        <span class="btn-loader" hidden><span class="spinner"></span></span>
-      </button>
-    </div>
-    <div class="loading-status" id="loading-status" hidden aria-live="polite">Running the numbers...</div>
+    <div class="ask-block" id="ask-block" hidden>
+      <div class="composer" id="composer">
+        <textarea id="question-input" placeholder="e.g. If I raise my delivery fee by ₹20, what happens to repeat orders?" rows="1" aria-label="Ask a what-if question" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
+        <button class="icon-btn mic" id="mic-btn" title="Tap to speak your question — in any language" type="button">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+        <button class="icon-btn send" id="simulate-btn" title="Calculate" type="button">
+          <span class="btn-text" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.4 1.4 5.6 5.6H4v2h12.2l-5.6 5.6L12 20l8-8-8-8z"/></svg>
+          </span>
+          <span class="btn-loader" hidden><span class="spinner"></span></span>
+        </button>
+      </div>
+      <div class="loading-status" id="loading-status" hidden aria-live="polite">Running the numbers...</div>
 
-    <div class="suggestions" id="sample-suggestions">
-      <button class="chip" data-q="If I raise my delivery fee by ₹20, what happens to repeat orders?" type="button">Raise delivery fee</button>
-      <button class="chip" data-q="If I run a promotional discount next month, what lift can I expect?" type="button">Run a promo</button>
-      <button class="chip" data-q="If I increase product prices by 5%, how does it affect total orders?" type="button">Change my price</button>
-      <button class="chip" data-q="If I stop offering cash on delivery, what happens to total orders?" type="button">Stop cash on delivery</button>
-    </div>
-    <div class="suggestions" id="real-suggestions" hidden>
-      <button class="chip" data-q="What's driving the change in my repeat customer rate recently?" type="button">What's dragging my repeat rate?</button>
-      <button class="chip" data-q="Where in my order history could I safely raise prices without losing volume?" type="button">Where can I safely raise prices?</button>
-      <button class="chip" data-q="What if my worst month had been an average month — what did it cost me?" type="button">What did my worst month cost me?</button>
-      <button class="chip" data-q="Which lever in my data has the strongest effect on total orders?" type="button">What actually moves my orders?</button>
-    </div>
+      <div class="suggestions" id="sample-suggestions">
+        <button class="chip" data-q="If I raise my delivery fee by ₹20, what happens to repeat orders?" type="button">Raise delivery fee</button>
+        <button class="chip" data-q="If I run a promotional discount next month, what lift can I expect?" type="button">Run a promo</button>
+        <button class="chip" data-q="If I increase product prices by 5%, how does it affect total orders?" type="button">Change my price</button>
+        <button class="chip" data-q="If I stop offering cash on delivery, what happens to total orders?" type="button">Stop cash on delivery</button>
+      </div>
+      <div class="suggestions" id="real-suggestions" hidden>
+        <button class="chip" data-q="What's driving the change in my repeat customer rate recently?" type="button">What's dragging my repeat rate?</button>
+        <button class="chip" data-q="Where in my order history could I safely raise prices without losing volume?" type="button">Where can I safely raise prices?</button>
+        <button class="chip" data-q="What if my worst month had been an average month — what did it cost me?" type="button">What did my worst month cost me?</button>
+        <button class="chip" data-q="Which lever in my data has the strongest effect on total orders?" type="button">What actually moves my orders?</button>
+      </div>
 
-    <div class="lang-note">Speak in <b>English, हिन्दी, বাংলা,</b> or <b>தமிழ்</b> — I'll figure it out</div>
+      <div class="lang-note">Speak in <b>English, हिन्दी, বাংলা,</b> or <b>தமிழ்</b> — I'll figure it out</div>
+    </div>
 
     <section class="nudge" id="validation-nudge" hidden>
       <b>That's a bit too open for a calculation.</b>
