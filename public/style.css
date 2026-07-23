@@ -2309,3 +2309,232 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
     grid-template-columns:1fr;
   }
 }
+
+/* ── Demo lesson: guided 4-step walkthrough ─────────────────────────── */
+body.demo-lesson-active .brand,
+body.demo-lesson-active .top-actions{
+  display:none;
+}
+
+.demo-lesson{
+  position:fixed;
+  inset:0;
+  z-index:200;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:40px 24px;
+  background:linear-gradient(160deg, #EAF0FF 0%, #F7FAFF 55%, #F0F0FF 100%);
+  overflow-y:auto;
+}
+
+.demo-lesson-frame{
+  width:100%;
+  max-width:1120px;
+  min-height:660px;
+  max-height:calc(100vh - 80px);
+  display:flex;
+  flex-direction:column;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:24px;
+  box-shadow:0 24px 64px rgba(15,24,48,0.10);
+  overflow:hidden;
+}
+
+.demo-lesson-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:28px 32px 0;
+}
+
+.demo-step-label{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.08em;
+  color:var(--ink-mute);
+  text-transform:uppercase;
+  min-width:90px;
+}
+
+.demo-progress-dots{
+  display:flex;
+  gap:8px;
+  flex:1;
+  justify-content:center;
+  max-width:220px;
+}
+
+.demo-dot{
+  height:4px;
+  flex:1;
+  border-radius:99px;
+  background:var(--line-strong);
+}
+
+.demo-dot.filled{ background:var(--accent); }
+
+.demo-close{
+  width:36px;
+  height:36px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  border:none;
+  background:transparent;
+  color:var(--ink-mute);
+  cursor:pointer;
+  transition:background-color .15s ease, color .15s ease;
+}
+
+.demo-close:hover{ background:var(--surface-2); color:var(--ink); }
+
+.demo-lesson-body{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:32px 70px 40px;
+  overflow-y:auto;
+}
+
+.demo-step{
+  animation:slideIn .18s ease;
+}
+
+.demo-eyebrow{
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.06em;
+  color:var(--accent);
+  text-transform:uppercase;
+  margin-bottom:14px;
+}
+
+.demo-title{
+  font-size:38px;
+  font-weight:700;
+  line-height:1.2;
+  color:var(--ink);
+  margin:0 0 18px;
+  letter-spacing:-0.01em;
+}
+
+.demo-desc{
+  font-size:16px;
+  color:var(--ink-soft);
+  line-height:1.55;
+  margin:0 0 32px;
+  max-width:760px;
+}
+
+.demo-chip-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.demo-chip{
+  padding:9px 18px;
+  border-radius:999px;
+  border:1px solid var(--line-strong);
+  background:var(--surface);
+  color:var(--ink-soft);
+  font-size:14px;
+  font-weight:500;
+}
+
+.demo-card-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:20px;
+}
+
+.demo-info-card{
+  padding:22px 24px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--surface);
+  text-align:left;
+}
+
+.demo-question-card{
+  font-family:var(--sans);
+  cursor:pointer;
+  transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.demo-question-card:hover{
+  border-color:var(--accent);
+  box-shadow:0 8px 24px rgba(59,111,230,0.08);
+  transform:translateY(-1px);
+}
+
+.demo-info-title{
+  font-size:16.5px;
+  font-weight:700;
+  color:var(--ink);
+  margin-bottom:6px;
+}
+
+.demo-info-body{
+  font-size:14.5px;
+  color:var(--ink-soft);
+  line-height:1.5;
+}
+
+.demo-footnote{
+  font-size:13.5px;
+  color:var(--ink-mute);
+  margin:0;
+}
+
+.demo-lesson-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:22px 32px;
+  border-top:1px solid var(--line);
+}
+
+.demo-btn-outline,
+.demo-btn-filled{
+  font-family:var(--sans);
+  font-size:14.5px;
+  font-weight:600;
+  padding:13px 28px;
+  border-radius:12px;
+  cursor:pointer;
+  transition:background-color .15s ease, border-color .15s ease;
+}
+
+.demo-btn-outline{
+  border:1.5px solid var(--line-strong);
+  background:var(--surface);
+  color:var(--ink-soft);
+}
+
+.demo-btn-outline:hover{ background:var(--surface-2); }
+
+.demo-btn-filled{
+  border:1.5px solid var(--accent);
+  background:var(--accent);
+  color:#fff;
+  margin-left:auto;
+}
+
+.demo-btn-filled:hover{ background:var(--accent-strong); }
+
+@media (max-width: 720px){
+  .demo-lesson{ padding:16px; }
+  .demo-lesson-frame{ min-height:0; max-height:calc(100vh - 32px); }
+  .demo-lesson-header{ padding:20px 20px 0; }
+  .demo-lesson-body{ padding:20px 20px 28px; }
+  .demo-title{ font-size:26px; }
+  .demo-card-grid{ grid-template-columns:1fr; }
+  .demo-lesson-footer{ padding:16px 20px; }
+}

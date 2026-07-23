@@ -31,6 +31,128 @@
     </button>
   </div>
 
+  <!-- Demo lesson: a self-contained 4-step guided walkthrough with static,
+       canned example content (not a real /api/simulate call) — a Duolingo-
+       style explainer of how Hisaab thinks, shown when "Try demo" is
+       clicked. Independent of the real sample-data Q&A flow below; closing
+       it (X) just returns to the landing screen. Body gets
+       .demo-lesson-active while this is open, which hides the brand/
+       top-actions header via CSS so this renders as a clean full-page
+       moment with nothing else visible. -->
+  <section class="demo-lesson" id="demo-lesson" hidden aria-label="Guided demo">
+    <div class="demo-lesson-frame">
+      <div class="demo-lesson-header">
+        <div class="demo-step-label" id="demo-step-label">STEP 1 OF 4</div>
+        <div class="demo-progress-dots" id="demo-progress-dots">
+          <span class="demo-dot" data-step="1"></span>
+          <span class="demo-dot" data-step="2"></span>
+          <span class="demo-dot" data-step="3"></span>
+          <span class="demo-dot" data-step="4"></span>
+        </div>
+        <button class="demo-close" id="demo-close" type="button" aria-label="Close demo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="demo-lesson-body">
+        <!-- Step 1: intro -->
+        <div class="demo-step" id="demo-step-1" data-step="1">
+          <div class="demo-eyebrow">DEMO SHOP</div>
+          <h2 class="demo-title">Meet a small food stall</h2>
+          <p class="demo-desc">This example shows how Hisaab reads everyday sales data and explains one useful next step in plain language.</p>
+          <div class="demo-chip-row">
+            <span class="demo-chip">Orders</span>
+            <span class="demo-chip">Sales</span>
+            <span class="demo-chip">Delivery fee</span>
+            <span class="demo-chip">Discounts</span>
+            <span class="demo-chip">Repeat customers</span>
+          </div>
+        </div>
+
+        <!-- Step 2: what Hisaab checks -->
+        <div class="demo-step" id="demo-step-2" data-step="2" hidden>
+          <div class="demo-eyebrow">WHAT HISAAB CHECKS</div>
+          <h2 class="demo-title">First, Hisaab checks what data can be trusted</h2>
+          <p class="demo-desc">Before answering, Hisaab looks for the basic signals a shop owner can understand and act on.</p>
+          <div class="demo-card-grid">
+            <div class="demo-info-card">
+              <div class="demo-info-title">Orders</div>
+              <div class="demo-info-body">How many orders came in over time.</div>
+            </div>
+            <div class="demo-info-card">
+              <div class="demo-info-title">Sales</div>
+              <div class="demo-info-body">Whether orders are creating more or less money.</div>
+            </div>
+            <div class="demo-info-card">
+              <div class="demo-info-title">Delivery fee</div>
+              <div class="demo-info-body">Whether fee changes moved with order changes.</div>
+            </div>
+            <div class="demo-info-card">
+              <div class="demo-info-title">Customers</div>
+              <div class="demo-info-body">Whether people are coming back again.</div>
+            </div>
+          </div>
+          <p class="demo-footnote">This is example data only. With your data, Hisaab will only answer what your file or Sheet can support.</p>
+        </div>
+
+        <!-- Step 3: choose a question -->
+        <div class="demo-step" id="demo-step-3" data-step="3" hidden>
+          <div class="demo-eyebrow">CHOOSE A QUESTION</div>
+          <h2 class="demo-title">Pick what the shop owner wants to understand</h2>
+          <p class="demo-desc">These are real questions a small business owner might ask.</p>
+          <div class="demo-card-grid">
+            <button class="demo-question-card" type="button" data-demo-q="orders_trend">
+              <div class="demo-info-title">Are orders going up or down?</div>
+              <div class="demo-info-body">Check whether the shop is growing, slowing, or having a normal month.</div>
+            </button>
+            <button class="demo-question-card" type="button" data-demo-q="delivery_fee">
+              <div class="demo-info-title">Should this shop increase delivery fee?</div>
+              <div class="demo-info-body">See whether a higher delivery fee may reduce orders.</div>
+            </button>
+            <button class="demo-question-card" type="button" data-demo-q="discounts">
+              <div class="demo-info-title">Did discounts actually help?</div>
+              <div class="demo-info-body">Compare offer days with normal days before repeating the offer.</div>
+            </button>
+            <button class="demo-question-card" type="button" data-demo-q="repeat_customers">
+              <div class="demo-info-title">Are customers coming back?</div>
+              <div class="demo-info-body">Understand whether the shop is getting repeat orders.</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 4: demo result (content populated by JS based on chosen question) -->
+        <div class="demo-step" id="demo-step-4" data-step="4" hidden>
+          <div class="demo-eyebrow">DEMO ANSWER</div>
+          <h2 class="demo-title">Demo result</h2>
+          <div class="demo-card-grid">
+            <div class="demo-info-card">
+              <div class="demo-info-title">Answer</div>
+              <div class="demo-info-body" id="demo-result-answer"></div>
+            </div>
+            <div class="demo-info-card">
+              <div class="demo-info-title">Why?</div>
+              <div class="demo-info-body" id="demo-result-why"></div>
+            </div>
+            <div class="demo-info-card">
+              <div class="demo-info-title">Try this</div>
+              <div class="demo-info-body" id="demo-result-try"></div>
+            </div>
+            <div class="demo-info-card">
+              <div class="demo-info-title">How sure is this?</div>
+              <div class="demo-info-body">Demo only — example data, not your business.</div>
+            </div>
+          </div>
+          <p class="demo-footnote">Demo example · Not your business data</p>
+        </div>
+      </div>
+
+      <div class="demo-lesson-footer">
+        <button class="demo-btn-outline" id="demo-go-back" type="button" hidden>Go back</button>
+        <button class="demo-btn-filled" id="demo-primary-btn" type="button">Start demo</button>
+      </div>
+    </div>
+  </section>
+
   <main class="stage" id="stage">
     <div class="greet-block">
       <h1 class="greet" id="greet">What would you like to do?</h1>

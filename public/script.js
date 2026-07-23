@@ -326,7 +326,7 @@
     });
   });
 
-  pathSample.addEventListener('click', () => setPath('sample'));
+  pathSample.addEventListener('click', () => openDemoLesson());
   pathReal.addEventListener('click', () => setPath('real'));
   const pathBootstrapBtn = document.getElementById('path-bootstrap');
   if (pathBootstrapBtn) pathBootstrapBtn.addEventListener('click', () => setPath('bootstrap'));
@@ -442,6 +442,7 @@
   fetchDecisionsCount();
   wireCheckBack();
   wireBootstrap();
+  wireDemoLesson();
   checkForPendingCheckBack();
   protectComposerChrome();
   window.addEventListener('resize', alignDataPanelToSheetSlot);
@@ -1662,6 +1663,118 @@
     } catch (_err) {
       card.hidden = true;
     }
+  }
+
+  // ── Demo lesson: guided 4-step walkthrough ──────────────────────────────
+  // Purely static, canned educational content — never calls /api/simulate.
+  // Independent of the real sample-data Q&A flow (setPath('sample')); this
+  // is a separate explainer shown when "Try demo" is clicked, matching a
+  // Duolingo-style guided-lesson pattern. Closing it (X) always returns
+  // cleanly to the landing screen with no side effects on real app state.
+  const DEMO_RESULTS = {
+    orders_trend: {
+      answer: 'For this demo shop, orders have been slowly rising over the last few months.',
+      why: 'Recent months show more orders than the months before them — a mild, steady upward trend.',
+      try_this: 'Keep an eye on the next 2–3 months to see if the rise continues.',
+    },
+    delivery_fee: {
+      answer: 'For this demo shop, a small delivery fee increase looks safe to try.',
+      why: 'Past fee changes did not noticeably reduce how many orders came in.',
+      try_this: 'Raise the fee by a small amount and watch orders for two weeks.',
+    },
+    discounts: {
+      answer: 'For this demo shop, discounts helped a little, but not every time.',
+      why: 'Some discount months had more orders, but the pattern was not strong every month.',
+      try_this: 'Run a small offer for 3–5 days and compare orders.',
+    },
+    repeat_customers: {
+      answer: 'For this demo shop, a good share of customers are repeat buyers.',
+      why: 'Several months show the same customers ordering more than once.',
+      try_this: 'Try a small thank-you offer for repeat customers and see if it grows.',
+    },
+  };
+
+  let demoStep = 1;
+  let demoChosenQuestion = null;
+
+  function openDemoLesson() {
+    demoStep = 1;
+    demoChosenQuestion = null;
+    document.body.classList.add('demo-lesson-active');
+    const overlay = document.getElementById('demo-lesson');
+    if (overlay) overlay.hidden = false;
+    renderDemoStep();
+  }
+
+  function closeDemoLesson() {
+    document.body.classList.remove('demo-lesson-active');
+    const overlay = document.getElementById('demo-lesson');
+    if (overlay) overlay.hidden = true;
+  }
+
+  function renderDemoStep() {
+    document.querySelectorAll('.demo-step').forEach((el) => {
+      el.hidden = Number(el.dataset.step) !== demoStep;
+    });
+    const label = document.getElementById('demo-step-label');
+    if (label) label.textContent = `STEP ${demoStep} OF 4`;
+    document.querySelectorAll('.demo-dot').forEach((dot) => {
+      dot.classList.toggle('filled', Number(dot.dataset.step) <= demoStep);
+    });
+
+    const goBack = document.getElementById('demo-go-back');
+    const primary = document.getElementById('demo-primary-btn');
+    if (goBack) goBack.hidden = demoStep === 1;
+
+    if (primary) {
+      if (demoStep === 1) {
+        primary.hidden = false;
+        primary.textContent = 'Start demo';
+      } else if (demoStep === 2) {
+        primary.hidden = false;
+        primary.textContent = 'Continue';
+      } else {
+        // Steps 3 and 4 advance by picking a card / have no forward action —
+        // only "Go back" is shown, matching the reference design.
+        primary.hidden = true;
+      }
+    }
+
+    if (demoStep === 4 && demoChosenQuestion) {
+      const result = DEMO_RESULTS[demoChosenQuestion];
+      const answerEl = document.getElementById('demo-result-answer');
+      const whyEl = document.getElementById('demo-result-why');
+      const tryEl = document.getElementById('demo-result-try');
+      if (answerEl) answerEl.textContent = result.answer;
+      if (whyEl) whyEl.textContent = result.why;
+      if (tryEl) tryEl.textContent = result.try_this;
+    }
+  }
+
+  function wireDemoLesson() {
+    const closeBtn = document.getElementById('demo-close');
+    const goBack = document.getElementById('demo-go-back');
+    const primary = document.getElementById('demo-primary-btn');
+    if (closeBtn) closeBtn.addEventListener('click', closeDemoLesson);
+    if (goBack) goBack.addEventListener('click', () => {
+      if (demoStep > 1) { demoStep -= 1; renderDemoStep(); }
+    });
+    if (primary) primary.addEventListener('click', () => {
+      if (demoStep < 2) { demoStep += 1; renderDemoStep(); }
+      else if (demoStep === 2) { demoStep = 3; renderDemoStep(); }
+    });
+    document.querySelectorAll('.demo-question-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        demoChosenQuestion = card.getAttribute('data-demo-q');
+        demoStep = 4;
+        renderDemoStep();
+      });
+    });
+    // Escape key closes the demo, matching standard modal expectations.
+    document.addEventListener('keydown', (e) => {
+      const overlay = document.getElementById('demo-lesson');
+      if (e.key === 'Escape' && overlay && !overlay.hidden) closeDemoLesson();
+    });
   }
 
   function wireCheckBack() {
