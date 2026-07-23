@@ -8,14 +8,14 @@ const scriptPath = path.join(root, 'public', 'script.js');
 
 const demoMarkup = `    <section class="demo-intro demo-lesson" id="demo-intro" hidden aria-live="polite">
       <div class="demo-lesson-frame" aria-label="Hisaab demo lesson">
+        <button class="demo-close" id="demo-intro-home" type="button" aria-label="Exit demo">×</button>
         <div class="demo-frame-progress" aria-label="Demo progress">
-          <span id="demo-progress-label" class="demo-progress-label">Step 1 of 4</span>
+          <span id="demo-progress-label">Step 1 of 4</span>
           <span class="demo-progress-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <button class="demo-close" id="demo-intro-home" type="button" aria-label="Exit demo">×</button>
         </div>
 
         <section class="demo-step demo-step-intro" id="demo-step-intro">
-          <div class="demo-step-content demo-step-content-intro">
+          <div class="demo-step-content demo-step-content-narrow">
             <div class="demo-eyebrow">Demo shop</div>
             <h2>Meet a small food stall</h2>
             <p>This example shows how Hisaab reads everyday sales data and explains one useful next step in plain language.</p>
@@ -32,14 +32,14 @@ const demoMarkup = `    <section class="demo-intro demo-lesson" id="demo-intro" 
           <div class="demo-step-content">
             <div class="demo-eyebrow">What Hisaab checks</div>
             <h2>First, Hisaab checks what data can be trusted</h2>
-            <p>Before answering, Hisaab looks for basic signals a shop owner can understand and act on.</p>
+            <p>Before answering, Hisaab looks for the basic signals a shop owner can understand and act on.</p>
             <div class="demo-found-list">
               <div><strong>Orders</strong><span>How many orders came in over time.</span></div>
               <div><strong>Sales</strong><span>Whether orders are creating more or less money.</span></div>
               <div><strong>Delivery fee</strong><span>Whether fee changes moved with order changes.</span></div>
               <div><strong>Customers</strong><span>Whether people are coming back again.</span></div>
             </div>
-            <p class="demo-example-note">This is example data only. With your data, Hisaab only answers what your file or Sheet can support.</p>
+            <p class="demo-example-note">This is example data only. With your data, Hisaab will only answer what your file or Sheet can support.</p>
           </div>
           <div class="demo-step-footer">
             <button class="demo-nav-secondary" id="demo-found-home" type="button">Go back</button>
@@ -88,34 +88,431 @@ const demoMarkup = `    <section class="demo-intro demo-lesson" id="demo-intro" 
     </section>`;
 
 const css = `
-/* Hisaab demo lesson v5 */
-body.view-demo-intro .brand,body.view-demo-found-data .brand,body.view-demo-questions .brand,body.view-demo-result .brand,body.view-demo-intro .top-actions,body.view-demo-found-data .top-actions,body.view-demo-questions .top-actions,body.view-demo-result .top-actions{display:none!important;}
-body.view-demo-intro .stage,body.view-demo-found-data .stage,body.view-demo-questions .stage,body.view-demo-result .stage{min-height:100svh;justify-content:center;align-items:center;padding:46px 24px;}
-body.view-demo-intro .landing-intro,body.view-demo-found-data .landing-intro,body.view-demo-questions .landing-intro,body.view-demo-result .landing-intro{display:none!important;}
-.demo-intro.demo-lesson{position:relative;width:100%;max-width:980px;margin:0 auto;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;text-align:left;animation:slideIn .16s ease;}
-.demo-lesson-frame{width:min(980px,calc(100vw - 64px));height:640px;display:flex;flex-direction:column;overflow:hidden;border:1.5px solid rgba(13,24,51,.16);border-radius:24px;background:rgba(255,255,255,.14);box-shadow:none;}
-.demo-frame-progress{height:72px;flex:0 0 72px;display:grid;grid-template-columns:max-content 1fr 42px;align-items:center;gap:18px;padding:0 30px 0 44px;border-bottom:1px solid rgba(13,24,51,.10);color:var(--ink-mute);font-size:11px;font-weight:780;letter-spacing:.08em;text-transform:uppercase;}
-.demo-progress-label{display:inline-block;min-width:86px;white-space:nowrap;line-height:1;}
-.demo-close{justify-self:end;width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--ink-mute);font-size:31px;line-height:1;cursor:pointer;transition:color .16s ease,background .16s ease;}
-.demo-close:hover,.demo-close:focus-visible{color:var(--ink);background:rgba(13,24,51,.06);outline:none;}
-.demo-progress-dots{justify-self:center;display:flex;gap:8px;}.demo-progress-dots i{width:30px;height:4px;border-radius:999px;background:rgba(13,24,51,.10);}.demo-progress-dots i.active{background:var(--accent);}
-.demo-lesson-frame .demo-step{flex:1;min-height:0;display:flex;flex-direction:column;}.demo-lesson-frame .demo-step[hidden]{display:none!important;}
-.demo-step-content{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:42px 62px 24px;overflow:hidden;}.demo-step-content-intro{padding-top:86px;}.demo-step-content-questions,.demo-step-content-result{padding-top:34px;padding-bottom:22px;}
-.demo-lesson .demo-eyebrow{margin-bottom:10px;color:var(--accent);font-size:11px;font-weight:820;letter-spacing:.10em;text-transform:uppercase;}
-.demo-lesson .demo-step h2{max-width:760px;margin:0;color:var(--ink);font-size:clamp(31px,3.2vw,40px);font-weight:760;letter-spacing:-.045em;line-height:1.08;}
-.demo-lesson .demo-step p{max-width:650px;margin:13px 0 0;color:var(--ink-soft);font-size:15.5px;line-height:1.48;}
-.demo-simple-points{display:flex;flex-wrap:wrap;gap:8px;margin-top:23px;}.demo-simple-points span{padding:7px 11px;border:1px solid rgba(13,24,51,.14);border-radius:999px;color:var(--ink-soft);background:transparent;font-size:12.5px;line-height:1.2;}
-.demo-found-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:22px 0 0;padding:0;list-style:none;}.demo-found-list div,.demo-result-section{border:1px solid rgba(13,24,51,.13);border-radius:15px;background:transparent;}.demo-found-list div{min-height:78px;padding:14px 15px;}.demo-found-list strong{display:block;color:var(--ink);font-size:14px;line-height:1.25;}.demo-found-list span{display:block;margin-top:5px;color:var(--ink-soft);font-size:12.2px;line-height:1.34;}
-.demo-example-note{color:var(--ink-mute)!important;font-size:12.3px!important;font-style:normal!important;}
-.demo-question-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:22px;}.demo-question{min-height:96px;padding:15px 16px;border:1.5px solid rgba(13,24,51,.15);border-radius:15px;background:transparent;color:var(--ink);text-align:left;box-shadow:none;transition:border-color .16s ease,background .16s ease,transform .16s ease;}.demo-question:hover,.demo-question:focus-visible{border-color:var(--accent);background:rgba(53,109,255,.05);transform:translateY(-1px);outline:none;}.demo-question strong,.demo-question span{display:block;}.demo-question strong{color:var(--ink);font-size:14px;font-weight:720;line-height:1.28;}.demo-question span{margin-top:6px;color:var(--ink-soft);font-size:12.2px;line-height:1.34;}
-.demo-result-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:20px;}.demo-result-section{min-height:104px;margin:0;padding:14px 15px;}.demo-result-section h3{margin:0 0 6px;color:var(--ink);font-size:12.5px;font-weight:780;}.demo-result-section p{margin:0;color:var(--ink-soft);font-size:12.6px;line-height:1.38;}.demo-answer-block{grid-column:auto;}
-.demo-step-footer{height:82px;flex:0 0 82px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:17px 44px;border-top:1px solid rgba(13,24,51,.10);}.demo-step-footer-end{justify-content:flex-end;}.demo-result-actions-row{display:flex;align-items:center;gap:10px;}
-.demo-nav-primary,.demo-lesson .cta-primary{min-width:148px;min-height:48px;padding:0 22px;border:1px solid var(--accent)!important;border-radius:16px;background:var(--accent)!important;color:#fff!important;box-shadow:none!important;font-weight:740;}.demo-nav-primary:hover,.demo-lesson .cta-primary:hover{background:var(--accent-strong)!important;border-color:var(--accent-strong)!important;}
-.demo-nav-secondary,.demo-lesson .cta-secondary{min-width:118px;min-height:46px;padding:0 18px;border:1px solid rgba(13,24,51,.14);border-radius:16px;background:transparent;color:var(--ink-soft);font:inherit;font-weight:680;cursor:pointer;}.demo-nav-secondary:hover,.demo-lesson .cta-secondary:hover{border-color:var(--accent);color:var(--accent);background:rgba(53,109,255,.05);}
-.demo-text-link,.demo-shop-icon,.demo-lesson-visual{display:none!important;}
-@media(max-height:790px) and (min-width:761px){body.view-demo-intro .stage,body.view-demo-found-data .stage,body.view-demo-questions .stage,body.view-demo-result .stage{padding:28px 24px;}.demo-lesson-frame{height:590px;}.demo-frame-progress{height:66px;flex-basis:66px;}.demo-step-footer{height:76px;flex-basis:76px;}.demo-step-content{padding-top:30px;padding-bottom:18px;}.demo-step-content-intro{padding-top:72px;}.demo-lesson .demo-step h2{font-size:33px;}.demo-question{min-height:86px;}.demo-found-list div{min-height:70px;}.demo-result-section{min-height:92px;}}
-@media(max-width:760px){body.view-demo-intro .stage,body.view-demo-found-data .stage,body.view-demo-questions .stage,body.view-demo-result .stage{padding:24px 14px;}.demo-lesson-frame{width:calc(100vw - 28px);height:min(680px,calc(100svh - 48px));min-height:600px;border-radius:22px;}.demo-frame-progress{height:66px;flex-basis:66px;grid-template-columns:max-content 1fr 40px;padding:0 14px 0 18px;gap:10px;}.demo-progress-dots i{width:18px;}.demo-step-content,.demo-step-content-intro{padding:30px 22px 24px;}.demo-lesson .demo-step h2{font-size:30px;}.demo-lesson .demo-step p{font-size:15px;}.demo-found-list,.demo-question-list,.demo-result-grid{grid-template-columns:1fr;}.demo-question{min-height:72px;}.demo-step-footer,.demo-result-actions-row{height:auto;min-height:86px;flex-basis:auto;flex-direction:column-reverse;align-items:stretch;padding:14px 18px;}.demo-nav-primary,.demo-nav-secondary,.demo-lesson .cta-primary,.demo-lesson .cta-secondary{width:100%;}}
-/* End Hisaab demo lesson v5 */`;
+/* Hisaab demo lesson v6 */
+body.view-demo-intro .brand,
+body.view-demo-found-data .brand,
+body.view-demo-questions .brand,
+body.view-demo-result .brand,
+body.view-demo-intro .top-actions,
+body.view-demo-found-data .top-actions,
+body.view-demo-questions .top-actions,
+body.view-demo-result .top-actions{
+  display:none!important;
+}
+
+body.view-demo-intro .stage,
+body.view-demo-found-data .stage,
+body.view-demo-questions .stage,
+body.view-demo-result .stage{
+  min-height:100svh;
+  justify-content:center;
+  align-items:center;
+  padding:48px 24px;
+}
+
+body.view-demo-intro .landing-intro,
+body.view-demo-found-data .landing-intro,
+body.view-demo-questions .landing-intro,
+body.view-demo-result .landing-intro{
+  display:none!important;
+}
+
+.demo-intro.demo-lesson{
+  position:relative;
+  width:100%;
+  max-width:980px;
+  margin:0 auto;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  text-align:left;
+  animation:slideIn .16s ease;
+}
+
+.demo-lesson-frame{
+  position:relative;
+  width:min(980px,calc(100vw - 64px));
+  height:640px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:1.5px solid rgba(13,24,51,.16);
+  border-radius:24px;
+  background:rgba(255,255,255,.14);
+  box-shadow:none;
+}
+
+.demo-frame-progress{
+  height:72px;
+  flex:0 0 72px;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:18px;
+  padding:0 84px 0 42px;
+  border-bottom:1px solid rgba(13,24,51,.10);
+  color:var(--ink-mute);
+  font-size:11px;
+  font-weight:780;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+#demo-progress-label{
+  justify-self:start;
+  white-space:nowrap;
+  min-width:max-content;
+}
+
+.demo-progress-dots{
+  grid-column:2;
+  justify-self:center;
+  display:flex;
+  gap:8px;
+}
+
+.demo-progress-dots i{
+  width:30px;
+  height:4px;
+  border-radius:999px;
+  background:rgba(13,24,51,.10);
+}
+
+.demo-progress-dots i.active{
+  background:var(--accent);
+}
+
+.demo-close{
+  position:absolute;
+  top:16px;
+  right:22px;
+  z-index:20;
+  width:40px;
+  height:40px;
+  display:grid!important;
+  place-items:center;
+  border:1px solid rgba(13,24,51,.12);
+  border-radius:50%;
+  background:rgba(255,255,255,.42);
+  color:var(--ink-mute);
+  font-size:28px;
+  line-height:1;
+  cursor:pointer;
+  opacity:1!important;
+  visibility:visible!important;
+  transition:color .16s ease,background .16s ease,border-color .16s ease;
+}
+
+.demo-close:hover,
+.demo-close:focus-visible{
+  color:var(--ink);
+  border-color:rgba(53,109,255,.40);
+  background:rgba(53,109,255,.08);
+  outline:none;
+}
+
+.demo-lesson-frame .demo-step{
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+
+.demo-lesson-frame .demo-step[hidden]{
+  display:none!important;
+}
+
+.demo-step-content{
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:40px 70px 32px;
+  overflow:hidden;
+}
+
+.demo-step-content-narrow{
+  max-width:640px;
+  align-self:center;
+  width:100%;
+}
+
+.demo-step-content-questions{
+  padding-top:34px;
+  padding-bottom:26px;
+}
+
+.demo-step-content-result{
+  padding-top:34px;
+  padding-bottom:24px;
+}
+
+.demo-lesson .demo-eyebrow{
+  margin-bottom:10px;
+  color:var(--accent);
+  font-size:11px;
+  font-weight:820;
+  letter-spacing:.10em;
+  text-transform:uppercase;
+}
+
+.demo-lesson .demo-step h2{
+  max-width:760px;
+  margin:0;
+  color:var(--ink);
+  font-size:clamp(32px,3.4vw,42px);
+  font-weight:760;
+  letter-spacing:-.045em;
+  line-height:1.08;
+}
+
+.demo-lesson .demo-step p{
+  max-width:650px;
+  margin:14px 0 0;
+  color:var(--ink-soft);
+  font-size:16px;
+  line-height:1.5;
+}
+
+.demo-simple-points{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:24px;
+}
+
+.demo-simple-points span{
+  padding:7px 11px;
+  border:1px solid rgba(13,24,51,.14);
+  border-radius:999px;
+  color:var(--ink-soft);
+  background:transparent;
+  font-size:12.5px;
+  line-height:1.2;
+}
+
+.demo-found-list{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  margin:24px 0 0;
+  padding:0;
+  list-style:none;
+}
+
+.demo-found-list div,
+.demo-result-section{
+  border:1px solid rgba(13,24,51,.13);
+  border-radius:16px;
+  background:transparent;
+}
+
+.demo-found-list div{
+  min-height:82px;
+  padding:15px 16px;
+}
+
+.demo-found-list strong{
+  display:block;
+  color:var(--ink);
+  font-size:14px;
+  line-height:1.3;
+}
+
+.demo-found-list span{
+  display:block;
+  margin-top:6px;
+  color:var(--ink-soft);
+  font-size:12.5px;
+  line-height:1.38;
+}
+
+.demo-example-note{
+  color:var(--ink-mute)!important;
+  font-size:12.5px!important;
+  font-style:normal!important;
+}
+
+.demo-question-list{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin-top:22px;
+}
+
+.demo-question{
+  min-height:92px;
+  padding:14px 16px;
+  border:1.5px solid rgba(13,24,51,.15);
+  border-radius:15px;
+  background:transparent;
+  color:var(--ink);
+  text-align:left;
+  box-shadow:none;
+  transition:border-color .16s ease,background .16s ease,transform .16s ease;
+}
+
+.demo-question:hover,
+.demo-question:focus-visible{
+  border-color:var(--accent);
+  background:rgba(53,109,255,.05);
+  transform:translateY(-1px);
+  outline:none;
+}
+
+.demo-question strong,
+.demo-question span{
+  display:block;
+}
+
+.demo-question strong{
+  color:var(--ink);
+  font-size:14px;
+  font-weight:720;
+  line-height:1.3;
+}
+
+.demo-question span{
+  margin-top:4px;
+  color:var(--ink-soft);
+  font-size:12px;
+  line-height:1.34;
+}
+
+.demo-result-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin-top:20px;
+}
+
+.demo-result-section{
+  margin:0;
+  padding:14px 15px;
+  min-height:112px;
+}
+
+.demo-result-section h3{
+  margin:0 0 5px;
+  color:var(--ink);
+  font-size:12.5px;
+  font-weight:780;
+}
+
+.demo-result-section p{
+  margin:0;
+  color:var(--ink-soft);
+  font-size:12.5px;
+  line-height:1.42;
+}
+
+.demo-answer-block{
+  grid-column:auto;
+}
+
+.demo-step-footer{
+  height:82px;
+  flex:0 0 82px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:17px 44px;
+  border-top:1px solid rgba(13,24,51,.10);
+}
+
+.demo-step-footer-end{
+  justify-content:flex-end;
+}
+
+.demo-result-actions-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.demo-nav-primary,
+.demo-lesson .cta-primary{
+  min-width:148px;
+  min-height:48px;
+  padding:0 22px;
+  border:1px solid var(--accent)!important;
+  border-radius:16px;
+  background:var(--accent)!important;
+  color:#fff!important;
+  box-shadow:none!important;
+  font-weight:740;
+}
+
+.demo-nav-primary:hover,
+.demo-lesson .cta-primary:hover{
+  background:var(--accent-strong)!important;
+  border-color:var(--accent-strong)!important;
+}
+
+.demo-nav-secondary,
+.demo-lesson .cta-secondary{
+  min-width:118px;
+  min-height:46px;
+  padding:0 18px;
+  border:1px solid rgba(13,24,51,.14);
+  border-radius:16px;
+  background:transparent;
+  color:var(--ink-soft);
+  font:inherit;
+  font-weight:680;
+  cursor:pointer;
+}
+
+.demo-nav-secondary:hover,
+.demo-lesson .cta-secondary:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:rgba(53,109,255,.05);
+}
+
+.demo-text-link,
+.demo-shop-icon,
+.demo-lesson-visual{
+  display:none!important;
+}
+
+@media(max-height:790px) and (min-width:761px){
+  body.view-demo-intro .stage,
+  body.view-demo-found-data .stage,
+  body.view-demo-questions .stage,
+  body.view-demo-result .stage{padding:30px 24px;}
+  .demo-lesson-frame{height:590px;}
+  .demo-frame-progress{height:66px;flex-basis:66px;}
+  .demo-close{top:13px;right:20px;}
+  .demo-step-footer{height:76px;flex-basis:76px;}
+  .demo-step-content{padding-top:28px;padding-bottom:22px;}
+  .demo-lesson .demo-step h2{font-size:34px;}
+  .demo-question{min-height:78px;}
+  .demo-found-list div{min-height:76px;}
+  .demo-result-section{min-height:96px;}
+}
+
+@media(max-width:760px){
+  body.view-demo-intro .stage,
+  body.view-demo-found-data .stage,
+  body.view-demo-questions .stage,
+  body.view-demo-result .stage{padding:24px 14px;}
+  .demo-lesson-frame{width:calc(100vw - 28px);height:min(680px,calc(100svh - 48px));min-height:600px;border-radius:22px;}
+  .demo-frame-progress{height:66px;flex-basis:66px;grid-template-columns:1fr auto 1fr;padding:0 64px 0 18px;gap:10px;}
+  .demo-close{top:13px;right:14px;width:38px;height:38px;}
+  .demo-progress-dots i{width:18px;}
+  .demo-step-content{padding:30px 22px 24px;}
+  .demo-lesson .demo-step h2{font-size:30px;}
+  .demo-lesson .demo-step p{font-size:15px;}
+  .demo-found-list,.demo-question-list,.demo-result-grid{grid-template-columns:1fr;}
+  .demo-step-footer,.demo-result-actions-row{height:auto;min-height:86px;flex-basis:auto;flex-direction:column-reverse;align-items:stretch;padding:14px 18px;}
+  .demo-nav-primary,.demo-nav-secondary,.demo-lesson .cta-primary,.demo-lesson .cta-secondary{width:100%;}
+}
+/* End Hisaab demo lesson v6 */`;
 
 function stripBlock(input, start, end) {
   const s = input.indexOf(start);
@@ -129,6 +526,7 @@ function patchIndex(html) {
 }
 
 function patchStyle(style) {
+  style = stripBlock(style, '/* Hisaab demo lesson v6 */', '/* End Hisaab demo lesson v6 */');
   style = stripBlock(style, '/* Hisaab demo lesson v5 */', '/* End Hisaab demo lesson v5 */');
   style = stripBlock(style, '/* Hisaab demo lesson v4 */', '/* End Hisaab demo lesson v4 */');
   style = stripBlock(style, '/* Hisaab demo lesson v3 */', '/* End Hisaab demo lesson v3 */');
