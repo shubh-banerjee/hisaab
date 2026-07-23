@@ -1,18 +1,6 @@
 name: Apply product UI fixes
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - scripts/rebuild-splash-implementation.js
-      - scripts/rebuild-home-screen.js
-      - scripts/rebuild-demo-flow.js
-      - scripts/polish-demo-lesson-shell.js
-      - scripts/finalize-demo-close-icon.js
-      - scripts/rebuild-upload-data-flow.js
-      - scripts/implement-small-test-flow.js
-      - .github/workflows/apply-small-test-flow.yml
   workflow_dispatch:
 
 permissions:
@@ -26,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
-      - name: Apply product changes
+      - name: Apply stable product changes
         run: |
           node scripts/rebuild-splash-implementation.js
           node scripts/rebuild-home-screen.js
@@ -34,7 +22,6 @@ jobs:
           node scripts/polish-demo-lesson-shell.js
           node scripts/finalize-demo-close-icon.js
           node scripts/implement-small-test-flow.js
-          node scripts/rebuild-upload-data-flow.js
       - name: Validate JavaScript
         run: |
           node --check public/script.js
@@ -45,7 +32,6 @@ jobs:
           node --check scripts/polish-demo-lesson-shell.js
           node --check scripts/finalize-demo-close-icon.js
           node --check scripts/implement-small-test-flow.js
-          node --check scripts/rebuild-upload-data-flow.js
       - name: Commit generated changes
         run: |
           if git diff --quiet; then
