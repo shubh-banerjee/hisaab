@@ -34,9 +34,10 @@ const homeMarkup = String.raw`    <div class="path-chooser" id="path-chooser">
 const homeCss = String.raw`
 /* Hisaab home screen redesign */
 .home-landing .stage{
-  justify-content:flex-start;
+  min-height:100svh;
+  justify-content:center;
   align-items:center;
-  padding:clamp(150px, 18vh, 188px) 24px 88px;
+  padding:96px 24px 88px;
 }
 
 .home-landing .landing-intro{
@@ -255,7 +256,7 @@ ${responsiveMarker}
 @media (max-width:680px){
   .home-landing .stage{
     align-items:center;
-    padding:104px 16px 56px;
+    padding:96px 16px 56px;
   }
 
   .home-landing .landing-intro{
