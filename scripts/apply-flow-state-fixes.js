@@ -22,10 +22,7 @@ function insertAfterOnce(label, marker, code, uniqueMarker) {
   source = source.replace(marker, `${marker}\n${code}`);
 }
 
-insertAfterOnce(
-  'shared flow helpers',
-  `  const DC_FOUND_CHIP_CAP = 4;`,
-  `
+const helperCode = `
 
   // ── Data-connect state helpers ───────────────────────────────────────────
   // Keep upload -> reading -> missing data -> summary -> ask inside the same
@@ -88,23 +85,17 @@ insertAfterOnce(
     subEl.textContent = body.partial_data_summary || 'Hisaab could read your file, but a few columns are missing or unclear.';
 
     inputRow.innerHTML = fields.length ? fields.map((item, index) => {
-      const safeField = escapeHtml(item.field || `field_${index}`);
+      const safeField = escapeHtml(item.field || ('field_' + index));
       const inputType = item.input_type === 'number' ? 'number' : 'text';
       const headerChips = item.input_type === 'text' && headers.length
-        ? `<div class="dc-header-chip-row">${headers.map((h) => `<button class="dc-header-chip" type="button" data-target="${safeField}" data-value="${escapeHtml(h)}">${escapeHtml(h)}</button>`).join('')}</div>`
+        ? '<div class="dc-header-chip-row">' + headers.map((h) => '<button class="dc-header-chip" type="button" data-target="' + safeField + '" data-value="' + escapeHtml(h) + '">' + escapeHtml(h) + '</button>').join('') + '</div>'
         : '';
-      return `
-        <label class="dc-missing-field">
-          <span>${escapeHtml(item.prompt || 'Add this detail')}</span>
-          <input class="dc-required-input" data-field="${safeField}" type="${inputType}" ${inputType === 'number' ? 'step="0.01"' : ''}>
-          ${headerChips}
-        </label>
-      `;
+      return '<label class="dc-missing-field"><span>' + escapeHtml(item.prompt || 'Add this detail') + '</span><input class="dc-required-input" data-field="' + safeField + '" type="' + inputType + '" ' + (inputType === 'number' ? 'step="0.01"' : '') + '>' + headerChips + '</label>';
     }).join('') : '<p class="dc-gentle-note">Some answers may be directional because key details are missing, but Hisaab can still guide you with what is available.</p>';
 
     inputRow.querySelectorAll('.dc-header-chip').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const target = inputRow.querySelector(`.dc-required-input[data-field="${CSS.escape(btn.dataset.target)}"]`);
+        const target = inputRow.querySelector('.dc-required-input[data-field="' + CSS.escape(btn.dataset.target) + '"]');
         if (target) {
           target.value = btn.dataset.value || '';
           target.focus();
@@ -154,9 +145,9 @@ insertAfterOnce(
     setDcScreen('manual');
     inputRow.querySelector('input')?.focus();
     return true;
-  }`,
-  'function defaultDcQuestions('
-);
+  }`;
+
+insertAfterOnce('shared flow helpers', `  const DC_FOUND_CHIP_CAP = 4;`, helperCode, 'function defaultDcQuestions(');
 
 requiredReplace(
   'parse success missing-state routing',
@@ -347,76 +338,75 @@ requiredReplace(
   }`
 );
 
-insertAfterOnce(
-  'ask submit stability styles',
-  `(function () {`,
-  `
+const flowStyleCss = `
+  #simulate-btn.dc-ask-cta{
+    min-width:132px !important;
+    width:auto !important;
+    min-height:44px !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    white-space:nowrap !important;
+  }
+  #simulate-btn.dc-ask-cta .btn-text{
+    display:inline-flex !important;
+    width:auto !important;
+    height:auto !important;
+    line-height:1 !important;
+  }
+  #simulate-btn.dc-ask-cta.is-loading{
+    opacity:.92;
+    cursor:progress;
+  }
+  .dc-missing-field{
+    display:block;
+    margin:0 0 16px;
+    color:#17213a;
+    font-weight:650;
+  }
+  .dc-missing-field input{
+    width:100%;
+    margin-top:10px;
+    min-height:44px;
+    border:1px solid rgba(15,23,42,.18);
+    border-radius:14px;
+    padding:0 14px;
+    font:inherit;
+    background:white;
+  }
+  .dc-header-chip-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:10px;
+  }
+  .dc-header-chip{
+    border:1px solid rgba(15,23,42,.12);
+    border-radius:999px;
+    background:#fff;
+    padding:7px 10px;
+    font:inherit;
+    font-size:12px;
+    color:#526179;
+    cursor:pointer;
+  }
+  .dc-header-chip:hover{
+    border-color:#2f6df6;
+    color:#2f6df6;
+  }
+`;
+
+const styleCode = `
   // Build-applied UI guardrails for the data-connect ask/missing flow.
   (function injectFlowStateStyles() {
     if (typeof document === 'undefined' || document.getElementById('flow-state-fix-style')) return;
     const style = document.createElement('style');
     style.id = 'flow-state-fix-style';
-    style.textContent = ${JSON.stringify(`
-      #simulate-btn.dc-ask-cta{
-        min-width:132px !important;
-        width:auto !important;
-        min-height:44px !important;
-        display:inline-flex !important;
-        align-items:center !important;
-        justify-content:center !important;
-        white-space:nowrap !important;
-      }
-      #simulate-btn.dc-ask-cta .btn-text{
-        display:inline-flex !important;
-        width:auto !important;
-        height:auto !important;
-        line-height:1 !important;
-      }
-      #simulate-btn.dc-ask-cta.is-loading{
-        opacity:.92;
-        cursor:progress;
-      }
-      .dc-missing-field{
-        display:block;
-        margin:0 0 16px;
-        color:#17213a;
-        font-weight:650;
-      }
-      .dc-missing-field input{
-        width:100%;
-        margin-top:10px;
-        min-height:44px;
-        border:1px solid rgba(15,23,42,.18);
-        border-radius:14px;
-        padding:0 14px;
-        font:inherit;
-        background:white;
-      }
-      .dc-header-chip-row{
-        display:flex;
-        flex-wrap:wrap;
-        gap:8px;
-        margin-top:10px;
-      }
-      .dc-header-chip{
-        border:1px solid rgba(15,23,42,.12);
-        border-radius:999px;
-        background:#fff;
-        padding:7px 10px;
-        font:inherit;
-        font-size:12px;
-        color:#526179;
-        cursor:pointer;
-      }
-      .dc-header-chip:hover{
-        border-color:#2f6df6;
-        color:#2f6df6;
-      }
-    `)};
+    style.textContent = ${JSON.stringify(flowStyleCss)};
     document.head.appendChild(style);
-  })();`,
-  'injectFlowStateStyles'
-);
+  })();`;
+
+insertAfterOnce('ask submit stability styles', `(function () {`, styleCode, 'injectFlowStateStyles');
 
 fs.writeFileSync(scriptPath, source, 'utf8');
 console.log('[flow-state-fix] applied data-connect flow fixes');
