@@ -154,25 +154,9 @@ body.upload-view-active .stage{
   text-transform:uppercase;
 }
 
-.upload-step-label{
-  white-space:nowrap;
-  min-width:max-content;
-}
-
-.upload-progress-dots{
-  grid-column:2;
-  display:flex;
-  justify-content:center;
-  gap:8px;
-}
-
-.upload-progress-dots i{
-  width:30px;
-  height:4px;
-  border-radius:999px;
-  background:rgba(13,24,51,.10);
-}
-
+.upload-step-label{ white-space:nowrap; min-width:max-content; }
+.upload-progress-dots{ grid-column:2; display:flex; justify-content:center; gap:8px; }
+.upload-progress-dots i{ width:30px; height:4px; border-radius:999px; background:rgba(13,24,51,.10); }
 .upload-progress-dots i.is-active{ background:var(--accent); }
 
 .upload-lesson-step{
@@ -185,15 +169,8 @@ body.upload-view-active .stage{
   overflow:hidden;
 }
 
-.upload-lesson-heading{
-  margin:0 0 26px !important;
-  max-width:720px !important;
-}
-
-.upload-eyebrow{
-  margin-bottom:10px;
-}
-
+.upload-lesson-heading{ margin:0 0 26px !important; max-width:720px !important; }
+.upload-eyebrow{ margin-bottom:10px; }
 .upload-lesson-heading h2{
   margin:0 !important;
   color:var(--ink) !important;
@@ -202,7 +179,6 @@ body.upload-view-active .stage{
   letter-spacing:-.045em !important;
   line-height:1.08 !important;
 }
-
 .upload-lesson-heading p{
   margin:14px 0 0 !important;
   max-width:680px;
@@ -229,7 +205,6 @@ body.upload-view-active .stage{
   text-align:left !important;
   transition:border-color .16s ease, background .16s ease;
 }
-
 .upload-direct-card:hover,
 .upload-direct-card.selected,
 .upload-direct-card:focus-within{
@@ -243,7 +218,6 @@ body.upload-view-active .stage{
   align-items:flex-start;
   margin-bottom:16px;
 }
-
 .upload-direct-top .source-icon{
   width:44px;
   height:44px;
@@ -255,22 +229,8 @@ body.upload-view-active .stage{
   color:var(--accent);
   background:rgba(53,109,255,.07);
 }
-
-.upload-direct-top strong{
-  display:block;
-  color:var(--ink);
-  font-size:17px;
-  font-weight:760;
-  line-height:1.28;
-}
-
-.upload-direct-top span:not(.source-icon){
-  display:block;
-  margin-top:5px;
-  color:var(--ink-soft);
-  font-size:13px;
-  line-height:1.42;
-}
+.upload-direct-top strong{ display:block; color:var(--ink); font-size:17px; font-weight:760; line-height:1.28; }
+.upload-direct-top span:not(.source-icon){ display:block; margin-top:5px; color:var(--ink-soft); font-size:13px; line-height:1.42; }
 
 .compact-upload-area{
   flex:1;
@@ -283,33 +243,14 @@ body.upload-view-active .stage{
   background:rgba(255,255,255,.22) !important;
   cursor:pointer;
 }
-
 .compact-upload-area:hover,
-.compact-upload-area.is-dragging{
-  border-color:var(--accent) !important;
-  background:rgba(53,109,255,.05) !important;
-}
-
+.compact-upload-area.is-dragging{ border-color:var(--accent) !important; background:rgba(53,109,255,.05) !important; }
 .compact-upload-area .file-upload-empty,
-.compact-upload-area .file-upload-selected{
-  display:grid;
-  justify-items:center;
-  gap:6px;
-  text-align:center;
-}
-
+.compact-upload-area .file-upload-selected{ display:grid; justify-items:center; gap:6px; text-align:center; }
 .compact-upload-area .file-upload-empty strong,
-.compact-upload-area .file-upload-selected strong{
-  color:var(--ink);
-  font-size:14px;
-}
-
+.compact-upload-area .file-upload-selected strong{ color:var(--ink); font-size:14px; }
 .compact-upload-area .file-upload-empty span,
-.compact-upload-area .file-upload-selected span{
-  color:var(--ink-soft);
-  font-size:12.5px;
-}
-
+.compact-upload-area .file-upload-selected span{ color:var(--ink-soft); font-size:12.5px; }
 .compact-upload-area .file-upload-browse{
   min-height:36px;
   margin-top:6px;
@@ -321,72 +262,19 @@ body.upload-view-active .stage{
   font-weight:700;
   cursor:pointer;
 }
-
-.file-upload-status{
-  min-height:20px;
-  margin:10px 0 0 !important;
-  color:var(--ink-mute) !important;
-  font-size:12.5px !important;
-}
-
+.file-upload-status{ min-height:20px; margin:10px 0 0 !important; color:var(--ink-mute) !important; font-size:12.5px !important; }
 .file-upload-status.is-error{ color:#b42318 !important; }
 .file-upload-status.is-success{ color:#166534 !important; }
+.file-upload-actions{ display:flex; gap:10px; margin-top:8px; }
+.file-upload-actions button{ padding:0; border:0; background:transparent; color:var(--accent); font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; }
 
-.file-upload-actions{
-  display:flex;
-  gap:10px;
-  margin-top:8px;
-}
-
-.file-upload-actions button{
-  padding:0;
-  border:0;
-  background:transparent;
-  color:var(--accent);
-  font:inherit;
-  font-size:12.5px;
-  font-weight:700;
-  cursor:pointer;
-}
-
-.compact-sheet-field{
-  display:grid !important;
-  gap:9px !important;
-  margin-top:6px;
-}
-
-.compact-sheet-field > span:first-child{
-  color:var(--ink);
-  font-size:13px;
-  font-weight:760;
-}
-
-.compact-sheet-field .data-source-sheet-input-wrap{
-  min-height:52px;
-  border:1.5px solid rgba(13,24,51,.14);
-  border-radius:16px;
-  background:rgba(255,255,255,.22);
-}
-
-.compact-sheet-field .data-source-sheet-input-wrap:focus-within{
-  border-color:var(--accent);
-  background:rgba(53,109,255,.04);
-}
-
-.compact-sheet-field input{
-  height:50px !important;
-  font-size:14px !important;
-}
-
-.compact-sheet-field small{
-  color:var(--ink-mute);
-  font-size:12.5px;
-}
-
-.upload-sheet-card .data-source-sheet-status{
-  margin:12px 0 0 !important;
-  font-size:12.5px !important;
-}
+.compact-sheet-field{ display:grid !important; gap:9px !important; margin-top:6px; }
+.compact-sheet-field > span:first-child{ color:var(--ink); font-size:13px; font-weight:760; }
+.compact-sheet-field .data-source-sheet-input-wrap{ min-height:52px; border:1.5px solid rgba(13,24,51,.14); border-radius:16px; background:rgba(255,255,255,.22); }
+.compact-sheet-field .data-source-sheet-input-wrap:focus-within{ border-color:var(--accent); background:rgba(53,109,255,.04); }
+.compact-sheet-field input{ height:50px !important; font-size:14px !important; }
+.compact-sheet-field small{ color:var(--ink-mute); font-size:12.5px; }
+.upload-sheet-card .data-source-sheet-status{ margin:12px 0 0 !important; font-size:12.5px !important; }
 
 .upload-direct-manual{
   align-self:center;
@@ -399,11 +287,7 @@ body.upload-view-active .stage{
   font-weight:650 !important;
   text-decoration:none !important;
 }
-
-.upload-direct-manual:hover{
-  text-decoration:underline !important;
-  text-underline-offset:3px;
-}
+.upload-direct-manual:hover{ text-decoration:underline !important; text-underline-offset:3px; }
 
 .upload-lesson-footer{
   height:82px !important;
@@ -414,11 +298,7 @@ body.upload-view-active .stage{
   padding:17px 56px !important;
   border-top:1px solid rgba(13,24,51,.10) !important;
 }
-
-.upload-lesson-footer .data-source-previous{
-  display:none !important;
-}
-
+.upload-lesson-footer .data-source-previous{ display:none !important; }
 .upload-lesson-footer .data-source-continue{
   min-width:148px !important;
   min-height:48px !important;
@@ -430,34 +310,22 @@ body.upload-view-active .stage{
   box-shadow:none !important;
   font-weight:740 !important;
 }
-
 .upload-lesson-footer .data-source-continue:disabled{
   border-color:rgba(13,24,51,.10) !important;
   background:rgba(13,24,51,.06) !important;
   color:var(--ink-mute) !important;
 }
-
-.upload-lesson-footer .data-source-continue:not(:disabled):hover{
-  background:var(--accent-strong) !important;
-  border-color:var(--accent-strong) !important;
-}
+.upload-lesson-footer .data-source-continue:not(:disabled):hover{ background:var(--accent-strong) !important; border-color:var(--accent-strong) !important; }
 
 @media(max-height:820px) and (min-width:761px){
-  .upload-lesson-flow{
-    height:min(660px, calc(100svh - 48px)) !important;
-    min-height:620px !important;
-  }
-  .upload-lesson-step{ padding-top:28px; padding-bottom:22px; }
+  .upload-lesson-flow{ height:min(660px, calc(100svh - 48px)) !important; min-height:620px !important; }
+  .upload-lesson-step{ padding-top:28px !important; padding-bottom:22px !important; }
   .upload-direct-card{ min-height:238px !important; }
 }
 
 @media(max-width:760px){
   body.upload-view-active .stage{ padding:24px 14px; }
-  .upload-lesson-flow{
-    width:calc(100vw - 28px) !important;
-    height:min(720px, calc(100svh - 48px)) !important;
-    min-height:640px !important;
-  }
+  .upload-lesson-flow{ width:calc(100vw - 28px) !important; height:min(720px, calc(100svh - 48px)) !important; min-height:640px !important; }
   .upload-lesson-close{ top:18px !important; right:18px !important; }
   .upload-lesson-progress{ padding-left:18px; padding-right:64px; }
   .upload-lesson-step{ padding:30px 22px 24px; justify-content:flex-start; overflow:auto; }
@@ -475,6 +343,23 @@ function stripBlock(input, start, end) {
   return e === -1 ? input.slice(0, s).trimEnd() + '\n' : (input.slice(0, s) + input.slice(e + end.length)).trimEnd() + '\n';
 }
 
+function replaceFunction(source, name, replacement) {
+  const start = source.indexOf(`function ${name}(`);
+  if (start === -1) return source;
+  let brace = source.indexOf('{', start);
+  if (brace === -1) return source;
+  let depth = 0;
+  for (let i = brace; i < source.length; i += 1) {
+    const ch = source[i];
+    if (ch === '{') depth += 1;
+    if (ch === '}') depth -= 1;
+    if (depth === 0) {
+      return source.slice(0, start) + replacement + source.slice(i + 1);
+    }
+  }
+  return source;
+}
+
 function patchIndex(html) {
   return html.replace(/    <section class="data-options[\s\S]*?    <section class="reading-view"/, `${uploadMarkup}\n\n    <section class="reading-view"`);
 }
@@ -486,6 +371,7 @@ function patchStyle(css) {
 
 function patchScript(script) {
   let out = script;
+
   out = out.replace(
     "if (dataSourceContinue && currentView === 'sheetConnect') {",
     "if (dataSourceContinue && ['dataSource', 'sheetConnect'].includes(currentView)) {",
@@ -498,18 +384,47 @@ function patchScript(script) {
     "selectedSalesFile = { file, text: result.text };\n    renderSelectedSalesFile();",
     "selectedSalesFile = { file, text: result.text };\n    selectDataSource('file');\n    renderDataSourceStep('source');\n    renderSelectedSalesFile();",
   );
-  out = out.replace(
-    "function renderDataSourceStep(step) {\n    const sourceStep = step === 'source';\n    const fileStep = step === 'file';\n    dataSourceChoiceStep.hidden = !sourceStep;\n    dataSourceFileStep.hidden = !fileStep;\n    dataSourceSheetStep.hidden = sourceStep || fileStep;\n    const stepNumber = sourceStep ? 1 : 2;\n    if (dataSourceStepLabel) dataSourceStepLabel.textContent = `Step ${stepNumber} of 3`;\n    if (dataSourceProgress) {\n      dataSourceProgress.setAttribute('aria-label', `Progress: step ${stepNumber} of 3`);\n      dataSourceProgress.querySelectorAll('span').forEach((dot, index) => dot.classList.toggle('is-active', index < stepNumber));\n    }\n    if (dataSourcePrevious) dataSourcePrevious.textContent = sourceStep ? 'Previous' : 'Back';\n    if (dataSourceContinue) {\n      dataSourceContinue.textContent = sourceStep ? 'Continue' : 'Continue';\n      dataSourceContinue.disabled = sourceStep\n        ? !selectedDataSource\n        : fileStep\n          ? !selectedSalesFile || fileReadInFlight\n          : sheetConnection.status !== 'valid' || sheetReadInFlight;\n    }\n    if (fileStep) renderSelectedSalesFile();\n    if (!sourceStep && !fileStep) setSheetConnectionState(sheetConnection.status, sheetConnection.message);\n  }",
-    "function renderDataSourceStep(_step) {\n    if (dataSourceChoiceStep) dataSourceChoiceStep.hidden = false;\n    if (dataSourceFileStep) dataSourceFileStep.hidden = true;\n    if (dataSourceSheetStep) dataSourceSheetStep.hidden = true;\n    if (dataSourceStepLabel) dataSourceStepLabel.textContent = 'Add data';\n    if (dataSourceProgress) {\n      dataSourceProgress.setAttribute('aria-label', 'Add your sales data');\n      dataSourceProgress.querySelectorAll('span').forEach((dot, index) => dot.classList.toggle('is-active', index === 0));\n    }\n    if (dataSourcePrevious) dataSourcePrevious.hidden = true;\n    if (dataSourceContinue) {\n      const hasFile = Boolean(selectedSalesFile) && !fileReadInFlight;\n      const hasSheet = sheetConnection.status === 'valid' && !sheetReadInFlight;\n      dataSourceContinue.textContent = fileReadInFlight || sheetReadInFlight ? 'Reading…' : 'Read data';\n      dataSourceContinue.disabled = !(hasFile || hasSheet);\n    }\n    renderSelectedSalesFile();\n    setSheetConnectionState(sheetConnection.status, sheetConnection.message);\n  }",
-  );
-  out = out.replace(
-    "function previousDataSourceStep() {\n    if (currentView === 'dataSource') {\n      clearDataSourceSelection();\n      resetToLanding();\n      return;\n    }\n    setCurrentView('dataSource');\n    renderDataSourceStep('source');\n  }",
-    "function previousDataSourceStep() {\n    clearDataSourceSelection();\n    resetToLanding();\n  }",
-  );
-  out = out.replace(
-    "function continueDataSourceFlow() {\n    if (currentView === 'dataSource') {\n      if (!selectedDataSource) return;\n      if (selectedDataSource === 'file') {\n        setCurrentView('fileUpload');\n        renderDataSourceStep('file');\n      } else {\n        setCurrentView('sheetConnect');\n        renderDataSourceStep('sheet');\n        window.setTimeout(() => uploadSheetUrlInput?.focus(), 0);\n      }\n      return;\n    }\n\n    if (currentView === 'fileUpload') {\n      startSelectedSalesFileRead();\n      return;\n    }\n\n    if (currentView === 'sheetConnect') {\n      if (sheetConnection.status !== 'valid' || sheetReadInFlight) {\n        validateSheetLink();\n        uploadSheetUrlInput?.focus();\n        return;\n      }\n      startSheetConnectionRead();\n    }\n  }",
-    "function continueDataSourceFlow() {\n    if (selectedSalesFile) {\n      selectDataSource('file');\n      startSelectedSalesFileRead();\n      return;\n    }\n    if (sheetConnection.status === 'valid') {\n      selectDataSource('googleSheet');\n      startSheetConnectionRead();\n      return;\n    }\n    validateSheetLink();\n    uploadSheetUrlInput?.focus();\n  }",
-  );
+
+  out = replaceFunction(out, 'renderDataSourceStep', `function renderDataSourceStep(_step) {
+    if (dataSourceChoiceStep) dataSourceChoiceStep.hidden = false;
+    if (dataSourceFileStep) dataSourceFileStep.hidden = true;
+    if (dataSourceSheetStep) dataSourceSheetStep.hidden = true;
+    if (dataSourceStepLabel) dataSourceStepLabel.textContent = 'Add data';
+    if (dataSourceProgress) {
+      dataSourceProgress.setAttribute('aria-label', 'Add your sales data');
+      dataSourceProgress.querySelectorAll('span').forEach((dot, index) => dot.classList.toggle('is-active', index === 0));
+    }
+    if (dataSourcePrevious) dataSourcePrevious.hidden = true;
+    if (dataSourceContinue) {
+      const hasFile = Boolean(selectedSalesFile) && !fileReadInFlight;
+      const hasSheet = sheetConnection.status === 'valid' && !sheetReadInFlight;
+      dataSourceContinue.textContent = fileReadInFlight || sheetReadInFlight ? 'Reading…' : 'Read data';
+      dataSourceContinue.disabled = !(hasFile || hasSheet);
+    }
+    renderSelectedSalesFile();
+    setSheetConnectionState(sheetConnection.status, sheetConnection.message);
+  }`);
+
+  out = replaceFunction(out, 'previousDataSourceStep', `function previousDataSourceStep() {
+    clearDataSourceSelection();
+    resetToLanding();
+  }`);
+
+  out = replaceFunction(out, 'continueDataSourceFlow', `function continueDataSourceFlow() {
+    if (selectedSalesFile) {
+      selectDataSource('file');
+      startSelectedSalesFileRead();
+      return;
+    }
+    if (sheetConnection.status === 'valid') {
+      selectDataSource('googleSheet');
+      startSheetConnectionRead();
+      return;
+    }
+    validateSheetLink();
+    uploadSheetUrlInput?.focus();
+  }`);
+
   out = out.replace(
     "if (uploadSheetUrlInput) {\n    uploadSheetUrlInput.addEventListener('input', () => scheduleSheetLinkValidation());",
     "if (uploadSheetUrlInput) {\n    uploadSheetUrlInput.addEventListener('input', () => { selectDataSource('googleSheet'); clearSelectedSalesFile(); scheduleSheetLinkValidation(); renderDataSourceStep('source'); });",
