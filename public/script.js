@@ -3064,6 +3064,14 @@
   }
 
   function showMissingInputs(body) {
+    // The missing-fields form lives in the main stage, hidden behind the
+    // data-connect-page overlay if that's still open. Rather than
+    // duplicate this whole dynamic form inside the modal too, close the
+    // overlay so the user actually sees it — same root cause as the
+    // validation-nudge fix, proportionate fix for a rarer path.
+    const dataConnectOverlay = document.getElementById('data-connect-page');
+    if (dataConnectOverlay && !dataConnectOverlay.hidden) closeDataConnectPage();
+
     missingSummary.textContent = body.partial_data_summary || 'We need a little more information before calculating this.';
     missingFields.innerHTML = '';
     (body.missing_fields || []).forEach(item => {
@@ -3086,12 +3094,22 @@
   function showValidationNudge() {
     validationNudge.hidden = false;
     validationNudge.classList.add('show');
+    // The main #validation-nudge lives in <main id="stage">, which is
+    // hidden behind the data-connect-page overlay (z-index 200) whenever
+    // that's open. Without this, a rejected question from the Ask Hisaab
+    // screen would silently refocus the textarea with zero visible
+    // explanation — a real bug caught via user testing. Sync a second,
+    // in-context nudge that's actually visible from inside that overlay.
+    const dcNudge = document.getElementById('dc-validation-nudge');
+    if (dcNudge) dcNudge.hidden = false;
     updateAwayFromLandingState();
   }
 
   function hideValidationNudge() {
     validationNudge.hidden = true;
     validationNudge.classList.remove('show');
+    const dcNudge = document.getElementById('dc-validation-nudge');
+    if (dcNudge) dcNudge.hidden = true;
     updateAwayFromLandingState();
   }
 
@@ -3102,6 +3120,12 @@
   }
 
   function showError(msg) {
+    // Same root cause as the validation-nudge and missing-fields fixes: the
+    // main error banner is hidden behind the data-connect-page overlay if
+    // that's still open. An invisible error is worse than a visible one
+    // that closes the modal, so close it here too.
+    const dataConnectOverlay = document.getElementById('data-connect-page');
+    if (dataConnectOverlay && !dataConnectOverlay.hidden) closeDataConnectPage();
     errorMsg.textContent = msg;
     errorBanner.hidden = false;
     errorBanner.classList.add('show');
