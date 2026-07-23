@@ -23,6 +23,16 @@ function patchStyle(css) {
   return css.trimEnd() + `
 
 /* Demo close icon final placement */
+body.view-demo-intro #data-options,
+body.view-demo-found-data #data-options,
+body.view-demo-questions #data-options,
+body.view-demo-result #data-options,
+.data-options.upload-runtime-flow[hidden]{
+  display:none !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
+
 .demo-intro.demo-lesson{
   max-width:1120px !important;
 }
@@ -71,8 +81,17 @@ function patchStyle(css) {
 }
 
 .demo-frame-progress{
-  padding-left:52px !important;
-  padding-right:96px !important;
+  position:absolute !important;
+  top:28px !important;
+  left:52px !important;
+  right:96px !important;
+  z-index:30 !important;
+  height:auto !important;
+  min-height:0 !important;
+  flex:0 0 auto !important;
+  padding:0 !important;
+  border-bottom:0 !important;
+  background:transparent !important;
 }
 
 #demo-progress-label{
@@ -83,6 +102,7 @@ function patchStyle(css) {
 .demo-step-content{
   padding-left:86px !important;
   padding-right:86px !important;
+  padding-top:84px !important;
 }
 
 .demo-step-content-narrow{
@@ -130,8 +150,11 @@ function patchStyle(css) {
     height:min(660px, calc(100svh - 48px)) !important;
     min-height:620px !important;
   }
+  .demo-frame-progress{
+    top:22px !important;
+  }
   .demo-step-content{
-    padding-top:28px !important;
+    padding-top:74px !important;
     padding-bottom:22px !important;
   }
   .demo-question{
@@ -156,12 +179,14 @@ function patchStyle(css) {
     right:18px !important;
   }
   .demo-frame-progress{
-    padding-left:18px !important;
-    padding-right:64px !important;
+    top:24px !important;
+    left:18px !important;
+    right:64px !important;
   }
   .demo-step-content{
     padding-left:22px !important;
     padding-right:22px !important;
+    padding-top:82px !important;
   }
   .demo-found-list,
   .demo-question-list,
