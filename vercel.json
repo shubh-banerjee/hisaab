@@ -1,1 +1,3 @@
-{}
+{
+  "buildCommand": "node scripts/inject-upload-runtime.js"
+}
