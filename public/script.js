@@ -1397,6 +1397,28 @@
       });
     });
 
+    // Plain-language summary shown at the TOP of the technical details
+    // disclosure — even a user who opens "show the numbers" gets one clear
+    // sentence before any percentage/chart jargon. Built from the same
+    // real computed values the technical stats below use, not a generic
+    // placeholder.
+    const plainSummaryEl = document.getElementById('scenarios-plain-summary');
+    if (plainSummaryEl) {
+      const computedForSummary = data.computed || data;
+      const monthsCount = Number(data.summary?.months) || 0;
+      const confPct = Number.isFinite(computedForSummary.confidence) ? Math.round(computedForSummary.confidence * 100) : null;
+      const isHi = currentUILang === 'hi';
+      if (confPct !== null && confPct >= 45) {
+        plainSummaryEl.textContent = isHi
+          ? `सीधे शब्दों में: आपके पिछले ${monthsCount} महीनों के आधार पर, यह अनुमान भरोसेमंद है।`
+          : `In plain terms: based on your last ${monthsCount} months, this estimate is fairly reliable.`;
+      } else {
+        plainSummaryEl.textContent = isHi
+          ? `सीधे शब्दों में: आपके पिछले ${monthsCount} महीनों के डेटा में साफ पैटर्न नहीं दिख रहा, इसलिए यह सिर्फ एक मोटा अंदाज़ा है, पक्का जवाब नहीं।`
+          : `In plain terms: your last ${monthsCount} months don't show a clear pattern yet, so this is a rough guess, not a firm answer.`;
+      }
+    }
+
     // Threshold line — only rendered when the backend provides one AND it
     // has a real lever_change value.
     if (thresholdBlock) {
@@ -2075,7 +2097,16 @@
     }
   }
 
-  function openDataConnectPage() {
+  // When true, openDataConnectPage() was triggered from "Add your real data"
+  // on an existing low-confidence RESULT (not a fresh landing-page open).
+  // In that mode, the summary screen's "Ask Hisaab" CTA re-runs the
+  // CURRENT question against the newly-read data instead of taking the
+  // user to a blank Ask screen — this is the unification that replaces the
+  // old separate inline sheet-slot upgrade experience entirely.
+  let dataConnectRefreshMode = false;
+
+  function openDataConnectPage(options = {}) {
+    dataConnectRefreshMode = Boolean(options.refreshMode);
     document.body.classList.add('data-connect-active');
     const overlay = document.getElementById('data-connect-page');
     if (overlay) overlay.hidden = false;
@@ -2150,6 +2181,22 @@
 
     const askCtaBtn = document.getElementById('dc-ask-cta-btn');
     if (askCtaBtn) askCtaBtn.addEventListener('click', () => {
+      if (dataConnectRefreshMode && currentResult?.question) {
+        // Refresh mode: re-run the SAME question the user already asked,
+        // now against the newly-connected data. Reuses runSimulation()
+        // completely unchanged — it already reads the now-active dataset
+        // via getActiveDatasetPayload(), and renderResults() already closes
+        // this modal the moment a real result is ready (fixed earlier this
+        // session). No parallel recompute logic needed.
+        askCtaBtn.disabled = true;
+        askCtaBtn.textContent = t('lowconf.updating');
+        runSimulation({ questionOverride: currentResult.question, skipValidation: true })
+          .finally(() => {
+            askCtaBtn.disabled = false;
+            askCtaBtn.textContent = 'Ask Hisaab';
+          });
+        return;
+      }
       renderDcSuggestedPrompts(lastSheetSummary?.suggested_questions || []);
       renderDcAskMissingNote(lastSheetSummary);
       setDcScreen('ask');
@@ -2883,17 +2930,14 @@
       sheetUrlInput.focus();
       return;
     }
+    // Unified with the main "Add my data" experience: this used to move
+    // sheetSlot/dataDetected inline directly onto the results page (a
+    // second, more cluttered upload UI, duplicating the clean modal built
+    // for the fresh-connect flow). Now it opens that SAME modal in refresh
+    // mode — read data -> honest summary -> Ask Hisaab re-runs the current
+    // question and closes automatically once the updated result is ready.
     hideError();
-    stage.classList.add('connecting-data');
-    inlineDataMount.append(sheetSlot, dataDetected);
-    setPath('real');
-    window.requestAnimationFrame(alignDataPanelToSheetSlot);
-    window.setTimeout(() => {
-      sheetUrlInput.focus();
-      alignDataPanelToSheetSlot();
-    }, 0);
-    inlineDataMount.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    updateAwayFromLandingState();
+    openDataConnectPage({ refreshMode: true });
   }
 
   async function refreshAnalysisWithConnectedData() {

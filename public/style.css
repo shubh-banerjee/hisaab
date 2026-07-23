@@ -1527,6 +1527,16 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   content:' ↓';
 }
 
+.scenarios-plain-summary{
+  font-size:13.5px;
+  color:var(--ink);
+  line-height:1.55;
+  padding:10px 12px;
+  margin-bottom:12px;
+  border-radius:10px;
+  background:var(--surface-2);
+}
+
 /* When scenarios are shown, the existing evidence + confidence blocks
    render inside the details disclosure with a small top margin. When
    scenarios are absent, they render at their normal position (as today). */
