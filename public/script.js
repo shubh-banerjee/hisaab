@@ -168,7 +168,8 @@
   const stage = document.getElementById('stage');
   const introLoader = document.getElementById('intro-loader');
   const introLogo = document.getElementById('intro-logo');
-  const introLetters = introLogo ? [...introLogo.querySelectorAll('[data-letter]')] : [];
+  const introWord = document.getElementById('intro-word');
+  const introLetters = [];
   const introPeriod = document.getElementById('intro-period');
   const brandReset = document.getElementById('brand-reset');
   const greet = document.getElementById('greet');
@@ -408,6 +409,19 @@
   const closeDecisions = document.getElementById('close-decisions');
   const decisionCount = document.getElementById('decision-count');
   const decisionLog = document.getElementById('decision-log');
+  const testSetupView = document.getElementById('test-setup-view');
+  const testSetupExit = document.getElementById('test-setup-exit');
+  const testSetupBack = document.getElementById('test-setup-back');
+  const testSetupSave = document.getElementById('test-setup-save');
+  const testSetupSubtitle = document.getElementById('test-setup-subtitle');
+  const testChangeCopy = document.getElementById('test-change-copy');
+  const testWatchCopy = document.getElementById('test-watch-copy');
+  const testEvidenceCopy = document.getElementById('test-evidence-copy');
+  const testStartDate = document.getElementById('test-start-date');
+  const testDurationDays = document.getElementById('test-duration-days');
+  const testWatchMetric = document.getElementById('test-watch-metric');
+  const testHonestyNote = document.getElementById('test-honesty-note');
+  const testSaveStatus = document.getElementById('test-save-status');
   const decisionList = document.getElementById('decision-list');
   const decisionLogSub = document.getElementById('decision-log-sub');
   const trackRecord = document.getElementById('track-record');
@@ -449,6 +463,7 @@
     trajectory,
     refineInline,
     resultsSection,
+    testSetupView,
     decisionLog,
   ].filter(Boolean);
 
@@ -473,6 +488,7 @@
     'dataReady',
     'ask',
     'result',
+    'testSetup',
     'demoIntro',
     'demoFoundData',
     'demoQuestions',
@@ -593,11 +609,11 @@
   if (demoStart) demoStart.addEventListener('click', () => setDemoStep('foundData'));
   if (demoIntroHome) demoIntroHome.addEventListener('click', resetToLanding);
   if (demoToQuestions) demoToQuestions.addEventListener('click', () => setDemoStep('chooseQuestion'));
-  if (demoFoundHome) demoFoundHome.addEventListener('click', resetToLanding);
-  if (demoQuestionsHome) demoQuestionsHome.addEventListener('click', resetToLanding);
+  if (demoFoundHome) demoFoundHome.addEventListener('click', () => setDemoStep('intro'));
+  if (demoQuestionsHome) demoQuestionsHome.addEventListener('click', () => setDemoStep('foundData'));
   if (demoResultAnother) demoResultAnother.addEventListener('click', () => setDemoStep('chooseQuestion'));
   if (demoResultUpload) demoResultUpload.addEventListener('click', openUploadOptions);
-  if (demoResultHome) demoResultHome.addEventListener('click', resetToLanding);
+  if (demoResultHome) demoResultHome.addEventListener('click', () => setDemoStep('chooseQuestion'));
   if (pathUseData) pathUseData.addEventListener('click', () => {
     openUploadOptions();
   });
@@ -625,6 +641,15 @@
     questionInput.focus();
   });
   if (askBackDataReady) askBackDataReady.addEventListener('click', backToDataReady);
+  if (testSetupExit) testSetupExit.addEventListener('click', resetToLanding);
+  if (testSetupBack) testSetupBack.addEventListener('click', () => {
+    setCurrentView('result');
+    if (resultsSection) {
+      resultsSection.hidden = false;
+      resultsSection.classList.add('show');
+    }
+  });
+  if (testSetupSave) testSetupSave.addEventListener('click', saveSmallTestPlan);
   document.querySelectorAll('[data-speech-lang]').forEach(button => button.addEventListener('click', () => {
     if (window.SpeechRecognition || window.webkitSpeechRecognition) {
       speechLanguage = button.dataset.speechLang || 'en-IN';
@@ -734,9 +759,9 @@
     csvFileInput.click();
   });
   if (fileUploadReplace) fileUploadReplace.addEventListener('click', () => csvFileInput.click());
-  if (fileUploadRemove) fileUploadRemove.addEventListener('click', clearSelectedSalesFile);
+  if (fileUploadRemove) fileUploadRemove.addEventListener('click', () => { clearSelectedSalesFile(); renderDataSourceStep('source'); });
   if (uploadSheetUrlInput) {
-    uploadSheetUrlInput.addEventListener('input', () => scheduleSheetLinkValidation());
+    uploadSheetUrlInput.addEventListener('input', () => { selectDataSource('googleSheet'); clearSelectedSalesFile(); scheduleSheetLinkValidation(); renderDataSourceStep('source'); });
     uploadSheetUrlInput.addEventListener('paste', () => window.setTimeout(scheduleSheetLinkValidation, 0));
     uploadSheetUrlInput.addEventListener('blur', () => {
       uploadSheetUrlInput.value = uploadSheetUrlInput.value.trim();
@@ -936,8 +961,20 @@
     window.setTimeout(() => introLoader.remove(), 380);
   }
 
+  function revealSplashWordmark() {
+    if (introLogo) introLogo.classList.add('is-visible');
+    if (introWord) introWord.classList.add('is-visible');
+    introPeriod?.classList.add('show');
+  }
+
+  function resetSplashWordmark() {
+    introLogo?.classList.remove('is-visible');
+    introWord?.classList.remove('is-visible');
+    introPeriod?.classList.remove('show');
+  }
+
   function playIntroLoader() {
-    if (!introLoader || !introLogo || !introLetters.length) {
+    if (!introLoader || !introLogo) {
       completeIntro();
       return;
     }
@@ -945,8 +982,7 @@
     splashCompleted = false;
 
     if (!SPLASH_FORCE_REPLAY && splashWasSeen()) {
-      introLetters.forEach(letter => letter.classList.add('is-typed'));
-      introPeriod?.classList.add('show');
+      revealSplashWordmark();
       completeIntro();
       return;
     }
@@ -956,25 +992,23 @@
     document.body.classList.add('intro-loading');
     document.body.classList.remove('intro-done');
     introLoader.hidden = false;
-    introLoader.classList.remove('hide');
-    introLoader.classList.remove('exit');
-    introLetters.forEach(letter => letter.classList.remove('is-typed'));
-    introPeriod?.classList.remove('show');
+    introLoader.classList.remove('hide', 'exit');
+    resetSplashWordmark();
 
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) {
-      introLetters.forEach(letter => letter.classList.add('is-typed'));
-      introPeriod?.classList.add('show');
+      revealSplashWordmark();
       introTimers.push(window.setTimeout(completeIntro, 520));
       return;
     }
 
-    introLetters.forEach((letter, index) => {
-      introTimers.push(window.setTimeout(() => letter.classList.add('is-typed'), index * SPLASH_LETTER_DELAY));
-    });
-    const wordCompleteAt = introLetters.length * SPLASH_LETTER_DELAY + 80;
-    introTimers.push(window.setTimeout(() => introPeriod?.classList.add('show'), wordCompleteAt));
-    const exitAt = wordCompleteAt + 590;
+    introTimers.push(window.setTimeout(() => {
+      introLogo.classList.add('is-visible');
+      introWord?.classList.add('is-visible');
+    }, 90));
+    introTimers.push(window.setTimeout(() => introPeriod?.classList.add('show'), 430));
+
+    const exitAt = 1040;
     introTimers.push(window.setTimeout(() => introLoader.classList.add('exit'), exitAt));
     introTimers.push(window.setTimeout(completeIntro, Math.min(SPLASH_MAX_DURATION, exitAt + SPLASH_EXIT_DURATION)));
     introTimers.push(window.setTimeout(completeIntro, SPLASH_MAX_DURATION));
@@ -983,8 +1017,7 @@
   function stopIntro() {
     clearSplashTimers();
     if (!introLoader) return;
-    introLetters.forEach(letter => letter.classList.add('is-typed'));
-    introPeriod?.classList.add('show');
+    revealSplashWordmark();
     completeIntro();
     greet.style.opacity = '1';
     greet.textContent = pageGreetingPhrases[0];
@@ -1042,6 +1075,8 @@
       reveal(document.getElementById('bootstrap-slot'));
     } else if (currentView === 'error') {
       reveal(dataErrorView);
+    } else if (currentView === 'testSetup') {
+      reveal(testSetupView);
     } else if (currentView === 'decisionLog') {
       reveal(decisionLog);
     } else if (currentView.startsWith('demo')) {
@@ -1073,16 +1108,17 @@
     if (fixDataView) fixDataView.hidden = view !== 'fixData';
     if (dataErrorView) dataErrorView.hidden = view !== 'error';
     if (askView) askView.hidden = view !== 'ask';
+    if (testSetupView) testSetupView.hidden = view !== 'testSetup';
     if (view !== 'ask') stopAskExampleRotation();
 
-    const transitionView = view === 'reading' || view === 'dataReady' || view === 'error';
-    if (transitionView || view === 'ask' || view === 'home' || view === 'demo' || view === 'fixData') {
+    const transitionView = view === 'reading' || view === 'dataReady' || view === 'error' || view === 'testSetup';
+    if (transitionView || view === 'ask' || view === 'home' || view === 'demo' || view === 'fixData' || view === 'testSetup') {
       dataOptions.hidden = true;
       dataOptions.classList.remove('open');
       document.body.classList.remove('upload-view-active');
     }
 
-    if (transitionView || view === 'ask' || view === 'fixData') {
+    if (transitionView || view === 'ask' || view === 'fixData' || view === 'testSetup') {
       sheetSlot.classList.remove('open');
       dataDetected.classList.remove('show');
       demoIntro.hidden = true;
@@ -1890,7 +1926,7 @@
     if (sheetLinkStatusText) sheetLinkStatusText.textContent = message;
     if (sheetLinkStatusIcon) sheetLinkStatusIcon.textContent = status === 'valid' ? '✓' : status === 'invalid' ? '!' : '…';
     if (uploadSheetUrlInput) uploadSheetUrlInput.setAttribute('aria-invalid', String(status === 'invalid'));
-    if (dataSourceContinue && currentView === 'sheetConnect') {
+    if (dataSourceContinue && ['dataSource', 'sheetConnect'].includes(currentView)) {
       dataSourceContinue.disabled = status !== 'valid' || sheetReadInFlight;
       dataSourceContinue.textContent = sheetReadInFlight ? 'Reading…' : 'Continue';
     }
@@ -1957,68 +1993,44 @@
     return true;
   }
 
-  function renderDataSourceStep(step) {
-    const sourceStep = step === 'source';
-    const fileStep = step === 'file';
-    dataSourceChoiceStep.hidden = !sourceStep;
-    dataSourceFileStep.hidden = !fileStep;
-    dataSourceSheetStep.hidden = sourceStep || fileStep;
-    const stepNumber = sourceStep ? 1 : 2;
-    if (dataSourceStepLabel) dataSourceStepLabel.textContent = `Step ${stepNumber} of 3`;
+  function renderDataSourceStep(_step) {
+    if (dataSourceChoiceStep) dataSourceChoiceStep.hidden = false;
+    if (dataSourceFileStep) dataSourceFileStep.hidden = true;
+    if (dataSourceSheetStep) dataSourceSheetStep.hidden = true;
+    if (dataSourceStepLabel) dataSourceStepLabel.textContent = 'Add data';
     if (dataSourceProgress) {
-      dataSourceProgress.setAttribute('aria-label', `Progress: step ${stepNumber} of 3`);
-      dataSourceProgress.querySelectorAll('span').forEach((dot, index) => dot.classList.toggle('is-active', index < stepNumber));
+      dataSourceProgress.setAttribute('aria-label', 'Add your sales data');
+      dataSourceProgress.querySelectorAll('span').forEach((dot, index) => dot.classList.toggle('is-active', index === 0));
     }
-    if (dataSourcePrevious) dataSourcePrevious.textContent = sourceStep ? 'Previous' : 'Back';
+    if (dataSourcePrevious) dataSourcePrevious.hidden = true;
     if (dataSourceContinue) {
-      dataSourceContinue.textContent = sourceStep ? 'Continue' : 'Continue';
-      dataSourceContinue.disabled = sourceStep
-        ? !selectedDataSource
-        : fileStep
-          ? !selectedSalesFile || fileReadInFlight
-          : sheetConnection.status !== 'valid' || sheetReadInFlight;
+      const hasFile = Boolean(selectedSalesFile) && !fileReadInFlight;
+      const hasSheet = sheetConnection.status === 'valid' && !sheetReadInFlight;
+      dataSourceContinue.textContent = fileReadInFlight || sheetReadInFlight ? 'Reading…' : 'Read data';
+      dataSourceContinue.disabled = !(hasFile || hasSheet);
     }
-    if (fileStep) renderSelectedSalesFile();
-    if (!sourceStep && !fileStep) setSheetConnectionState(sheetConnection.status, sheetConnection.message);
+    renderSelectedSalesFile();
+    setSheetConnectionState(sheetConnection.status, sheetConnection.message);
   }
 
   function previousDataSourceStep() {
-    if (currentView === 'dataSource') {
-      clearDataSourceSelection();
-      resetToLanding();
-      return;
-    }
-    setCurrentView('dataSource');
-    renderDataSourceStep('source');
+    clearDataSourceSelection();
+    resetToLanding();
   }
 
   function continueDataSourceFlow() {
-    if (currentView === 'dataSource') {
-      if (!selectedDataSource) return;
-      if (selectedDataSource === 'file') {
-        setCurrentView('fileUpload');
-        renderDataSourceStep('file');
-      } else {
-        setCurrentView('sheetConnect');
-        renderDataSourceStep('sheet');
-        window.setTimeout(() => uploadSheetUrlInput?.focus(), 0);
-      }
-      return;
-    }
-
-    if (currentView === 'fileUpload') {
+    if (selectedSalesFile) {
+      selectDataSource('file');
       startSelectedSalesFileRead();
       return;
     }
-
-    if (currentView === 'sheetConnect') {
-      if (sheetConnection.status !== 'valid' || sheetReadInFlight) {
-        validateSheetLink();
-        uploadSheetUrlInput?.focus();
-        return;
-      }
+    if (sheetConnection.status === 'valid') {
+      selectDataSource('googleSheet');
       startSheetConnectionRead();
+      return;
     }
+    validateSheetLink();
+    uploadSheetUrlInput?.focus();
   }
 
   async function startSheetConnectionRead() {
@@ -2253,7 +2265,7 @@
       if (fileUploadMeta) fileUploadMeta.textContent = `${formatFileSize(selectedSalesFile.file.size)} · CSV file`;
       setSelectedFileMessage('Your file is ready. Choose Continue when you are ready for Hisaab to read it.', 'success');
     }
-    if (dataSourceContinue && currentView === 'fileUpload') {
+    if (dataSourceContinue && ['dataSource', 'fileUpload'].includes(currentView)) {
       dataSourceContinue.disabled = !hasFile || fileReadInFlight;
       dataSourceContinue.textContent = fileReadInFlight ? 'Reading…' : 'Continue';
     }
@@ -2296,6 +2308,8 @@
       return;
     }
     selectedSalesFile = { file, text: result.text };
+    selectDataSource('file');
+    renderDataSourceStep('source');
     renderSelectedSalesFile();
   }
 
@@ -3173,7 +3187,7 @@
       strength: isDemo ? 'Demo only' : evidence,
       category: isDemo ? 'demo_only' : (data.evidence_category || data.evidence?.category || 'clear_enough'),
       dataUsed: [['Source', source.sourceLabel], ['History used', source.history], ['Measure', metric === 'sales value' ? 'Total bill amount' : 'Orders']],
-      primary: isDemo ? null : { label: 'Track this decision', handler: showTrackPrompt },
+      primary: isDemo ? null : { label: 'Set up this test', handler: openSmallTestSetup },
       details: trendDetailsCopy.textContent,
       showDetails: true,
     });
@@ -3229,6 +3243,158 @@
       return;
     }
     openUploadOptions();
+  }
+
+  function metricLabelForTest(metric) {
+    const normalized = String(metric || '').toLowerCase();
+    if (normalized.includes('repeat')) return 'Repeat customers';
+    if (normalized.includes('sales') || normalized.includes('revenue') || normalized.includes('value')) return 'Daily sales';
+    return 'Daily orders';
+  }
+
+  function leverLabelForTest(lever) {
+    const normalized = String(lever || '').toLowerCase();
+    if (normalized.includes('delivery')) return 'delivery fee';
+    if (normalized.includes('price') || normalized.includes('avg_order_value')) return 'average bill';
+    if (normalized.includes('promo') || normalized.includes('discount')) return 'discount or offer';
+    if (normalized.includes('cod')) return 'cash-on-delivery setting';
+    return 'the change';
+  }
+
+  function buildSmallTestPlan(snapshot = currentResult) {
+    const computed = snapshot?.computed || {};
+    const data = snapshot?.data || {};
+    const evidence = snapshot?.evidenceStrength || evidenceStrength(snapshot?.resultCategory, snapshot?.confidence);
+    const lever = computed.lever || data.lever || '';
+    const change = finiteNumber(computed.assumed_change ?? computed.lever_change);
+    const currentValue = finiteNumber(computed.current_value ?? computed.current_lever_value ?? data.scenarios_bundle?.current_value);
+    const leverLabel = leverLabelForTest(lever);
+    const metricLabel = metricLabelForTest(snapshot?.predictedMetric || computed.outcome_metric || data.outcome_metric);
+    let changeCopy = data.evidence?.next_action || snapshot?.suggestedAction || 'Try the recommended change with a small group first.';
+
+    if (Number.isFinite(currentValue) && Number.isFinite(change)) {
+      const next = Math.round((currentValue + change) * 100) / 100;
+      const sign = change > 0 ? '+' : change < 0 ? '−' : '';
+      changeCopy = leverLabel + ': ₹' + currentValue + ' → ₹' + next + ' (' + sign + '₹' + Math.abs(change) + ')';
+    } else if (Number.isFinite(change)) {
+      const sign = change > 0 ? '+' : change < 0 ? '−' : '';
+      changeCopy = leverLabel + ': ' + sign + Math.abs(change) + ' change';
+    }
+
+    return {
+      changeCopy,
+      metricLabel,
+      evidence,
+      lever,
+      predictedMetric: snapshot?.predictedMetric || computed.outcome_metric || '',
+      predictedValue: snapshot?.predictedValue ?? computed.outcome_value ?? null,
+      predictedRange: snapshot?.predictedRange || { low: computed.range_low ?? null, high: computed.range_high ?? null },
+    };
+  }
+
+  function setTodayIfEmpty(input) {
+    if (!input || input.value) return;
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    input.value = yyyy + '-' + mm + '-' + dd;
+  }
+
+  function openSmallTestSetup() {
+    if (!currentResult) {
+      showTrackPrompt();
+      return;
+    }
+    const plan = buildSmallTestPlan(currentResult);
+    if (testChangeCopy) testChangeCopy.textContent = plan.changeCopy;
+    if (testWatchCopy) testWatchCopy.textContent = plan.metricLabel || 'Daily orders';
+    if (testEvidenceCopy) testEvidenceCopy.textContent = plan.evidence || 'Useful direction — test first';
+    if (testWatchMetric) {
+      const metric = String(plan.predictedMetric || '').toLowerCase();
+      testWatchMetric.value = metric.includes('repeat') ? 'repeat_customers' : metric.includes('sales') || metric.includes('revenue') ? 'sales' : 'orders';
+    }
+    setTodayIfEmpty(testStartDate);
+    if (testSaveStatus) {
+      testSaveStatus.hidden = true;
+      testSaveStatus.textContent = '';
+      testSaveStatus.classList.remove('error', 'success');
+    }
+    if (testSetupSave) {
+      testSetupSave.disabled = currentResult.dataSourceKind === 'sample';
+      testSetupSave.textContent = currentResult.dataSourceKind === 'sample' ? 'Use real data first' : 'Save test';
+    }
+    if (testHonestyNote) {
+      testHonestyNote.textContent = currentResult.dataSourceKind === 'sheet'
+        ? 'Because this is a connected Sheet, Hisaab can re-check later when newer rows are available.'
+        : currentResult.dataSourceKind === 'bootstrap'
+          ? 'Hisaab will use your future daily entries to compare this test later.'
+          : 'Demo tests are not saved. Use real data when you want to track an actual change.';
+    }
+    if (testSetupSubtitle) testSetupSubtitle.textContent = 'Try the change for a short time, then compare what happened.';
+    setCurrentView('testSetup');
+  }
+
+  function buildSmallTestPayload() {
+    const plan = buildSmallTestPlan(currentResult);
+    return {
+      change: plan.changeCopy,
+      durationDays: Number(testDurationDays?.value) || 7,
+      watchMetric: testWatchMetric?.value || 'orders',
+      watchLabel: testWatchCopy?.textContent || plan.metricLabel || 'Daily orders',
+      evidence: testEvidenceCopy?.textContent || plan.evidence || '',
+      note: 'Created from Hisaab result action: Set up this test.',
+    };
+  }
+
+  async function saveSmallTestPlan() {
+    if (!currentResult || !testSetupSave) return;
+    if (currentResult.dataSourceKind === 'sample') {
+      if (testSaveStatus) {
+        testSaveStatus.hidden = false;
+        testSaveStatus.classList.add('error');
+        testSaveStatus.textContent = 'Demo tests are not saved. Use your own data first.';
+      }
+      return;
+    }
+    testSetupSave.disabled = true;
+    testSetupSave.textContent = 'Saving…';
+    if (testSaveStatus) {
+      testSaveStatus.hidden = false;
+      testSaveStatus.classList.remove('error', 'success');
+      testSaveStatus.textContent = 'Saving this test…';
+    }
+    try {
+      const payload = decisionPayload(currentResult, 'applied', {
+        startedAt: testStartDate?.value || new Date().toISOString(),
+        testPlan: buildSmallTestPayload(),
+      });
+      const res = await fetch('/api/decisions', {
+        method: 'POST',
+        headers: apiHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload),
+      });
+      const saved = await readJsonResponse(res);
+      if (!res.ok) throw new Error(saved.error || 'Server error (HTTP ' + res.status + ')');
+      lastSavedDecisionId = saved.id;
+      const wasKnown = savedDecisions.some(item => item.id === saved.id);
+      savedDecisions = [saved, ...savedDecisions.filter(item => item.id !== saved.id)];
+      decisionsCountValue = wasKnown ? decisionsCountValue : decisionsCountValue + 1;
+      renderDecisionCount(decisionsCountValue || 1);
+      if (testSaveStatus) {
+        testSaveStatus.classList.add('success');
+        testSaveStatus.textContent = 'Saved. Hisaab will help compare this test when newer data is available.';
+      }
+      testSetupSave.textContent = 'Saved';
+      if (viewInLog) viewInLog.hidden = false;
+    } catch (err) {
+      if (testSaveStatus) {
+        testSaveStatus.classList.add('error');
+        testSaveStatus.textContent = err.message || 'Could not save this test. Try again.';
+      }
+      testSetupSave.disabled = false;
+      testSetupSave.textContent = 'Save test';
+    }
   }
 
   function showTrackPrompt() {
@@ -3350,7 +3516,7 @@
         ['Data quality', quality],
         ...(usesAverageBill ? [['Note', 'Sales estimate uses your average bill amount, not exact bill values.']] : []),
       ],
-      primary: { label: 'Track this decision', handler: showTrackPrompt },
+      primary: { label: 'Set up this test', handler: openSmallTestSetup },
       showDetails: true,
       details: 'The details below show the calculation method, sample size, mapped columns, range, chart, and other supporting metrics.',
     });
@@ -3978,7 +4144,7 @@
     }
   }
 
-  function decisionPayload(snapshot, intent) {
+  function decisionPayload(snapshot, intent, extras = {}) {
     return {
       sessionId: getSessionId(),
       simulationId: snapshot.persistence?.simulationId || null,
@@ -4005,6 +4171,7 @@
       askedAt: snapshot.askedAt,
       intentSetAt: new Date().toISOString(),
       actualValue: null,
+      ...extras,
     };
   }
 

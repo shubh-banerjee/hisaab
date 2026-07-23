@@ -2276,6 +2276,7 @@ function serializeDecision(doc, isDemo = false) {
     dataSource: data.dataSource,
     sourceType: isDemoDecision(data) ? 'demo' : (data.sourceType || 'real'),
     sheetUrl: data.sheetUrl || '',
+    testPlan: data.testPlan || null,
     status: data.status,
     appliedAt: serializeTimestamp(data.appliedAt),
     intentSetAt: serializeTimestamp(data.intentSetAt),
@@ -2308,6 +2309,20 @@ function sourceLabelForDecision(data = {}) {
   return 'Connected data';
 }
 
+function normalizeTestPlanPayload(raw = {}) {
+  if (!raw || typeof raw !== 'object') return null;
+  const durationDays = Number(raw.durationDays);
+  return {
+    change: String(raw.change || '').trim().slice(0, 240),
+    durationDays: Number.isFinite(durationDays) && durationDays > 0 ? durationDays : 7,
+    watchMetric: String(raw.watchMetric || 'orders').trim().slice(0, 80),
+    watchLabel: String(raw.watchLabel || 'Daily orders').trim().slice(0, 120),
+    evidence: String(raw.evidence || '').trim().slice(0, 160),
+    note: String(raw.note || '').trim().slice(0, 240),
+  };
+}
+
+
 function normalizeDecisionPayload(body) {
   const predictedRange = body.predictedRange || {};
   const status = body.status === 'applied' || body.status === 'skipped' ? body.status : 'pending';
@@ -2333,6 +2348,7 @@ function normalizeDecisionPayload(body) {
     startedAt: toFirestoreTimestamp(body.startedAt),
     bootstrapEntries: Number(body.bootstrapEntries),
     sheetUrl: String(body.sheetUrl || '').trim(),
+    testPlan: normalizeTestPlanPayload(body.testPlan),
     status,
     askedAt: toFirestoreTimestamp(body.askedAt) || firestoreService.now(),
     intentSetAt: toFirestoreTimestamp(body.intentSetAt) || firestoreService.now(),
@@ -2469,6 +2485,7 @@ app.post('/api/decisions', async (req, res) => {
       dataSource: payload.dataSource,
       sourceType: payload.sourceType,
       sheetUrl: payload.dataSource === 'sheet' ? payload.sheetUrl : '',
+      testPlan: payload.testPlan,
       status: payload.status,
       appliedAt: payload.status === 'applied' ? payload.intentSetAt : null,
       intentSetAt: payload.intentSetAt,
