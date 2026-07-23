@@ -704,9 +704,13 @@
   // "Try with sample data" path is untouched: its chips show immediately,
   // since that path is explicitly the demo experience.
   function renderChipVisibility() {
-    const isReal = activePath === 'real';
-    sampleSuggestions.hidden = isReal;
-    realSuggestions.hidden = !(isReal && activeDataset.kind !== 'sample');
+    // The old static sample/real suggestion chip sets are superseded by the
+    // new dynamic #dc-suggested-questions (real, contextual questions from
+    // the actual connected data). Keeping this function only for backward
+    // compatibility with any code that still calls it — both legacy sets
+    // now stay permanently hidden rather than being toggled on.
+    sampleSuggestions.hidden = true;
+    realSuggestions.hidden = true;
   }
 
   // Call after any pending-input change (parse success/failure, path switch,
@@ -1077,6 +1081,18 @@
   }
 
   function renderResults(data, elapsed, options = {}) {
+    // A real result is about to show. If either full-page overlay
+    // (demo-lesson or data-connect-page) is still open, close it now —
+    // otherwise the result renders correctly in #stage but stays
+    // completely invisible behind the still-open, higher-z-index overlay.
+    // This was a real bug: submitting a question from inside the
+    // Add-my-data flow computed a real result, but nothing appeared to the
+    // user because the modal never closed to reveal it.
+    const demoOverlay = document.getElementById('demo-lesson');
+    if (demoOverlay && !demoOverlay.hidden) closeDemoLesson();
+    const dataConnectOverlay = document.getElementById('data-connect-page');
+    if (dataConnectOverlay && !dataConnectOverlay.hidden) closeDataConnectPage();
+
     const computed = data.computed || data;
     const generated = data.generated || data;
     // The UI chrome always mirrors the CURRENT question's detected language —

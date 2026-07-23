@@ -1147,7 +1147,7 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   max-width:720px;
   display:flex;
   flex-wrap:wrap;
-  justify-content:center;
+  justify-content:flex-start;
   gap:8px;
   margin-top:16px;
 }
@@ -2571,7 +2571,7 @@ body.data-connect-active .top-actions{
 .data-connect-frame{
   position:relative;
   width:100%;
-  max-width:640px;
+  max-width:720px;
   max-height:calc(100vh - 80px);
   display:flex;
   flex-direction:column;
@@ -2798,10 +2798,10 @@ body.data-connect-active .top-actions{
 
 /* ── Screen 4: Ask Hisaab ── */
 .dc-ask-title{
-  font-size:20px;
+  font-size:22px;
   font-weight:700;
   color:var(--ink);
-  margin:0 0 18px;
+  margin:0 0 20px;
 }
 
 .mic-listening-note{
