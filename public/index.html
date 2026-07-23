@@ -166,7 +166,7 @@
       </button>
 
       <!-- Screen 1: upload box -->
-      <div class="dc-screen" id="dc-screen-upload" data-dc-screen="upload">
+      <div class="dc-screen dc-upload-screen" id="dc-screen-upload" data-dc-screen="upload">
         <div class="data-connect-title">Use my sales data</div>
         <section class="sheet-slot" id="sheet-slot" aria-label="Connect order data">
           <div class="lbl">Paste a public Google Sheets link. Hisaab reads whatever columns exist.</div>
@@ -176,6 +176,7 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
+          <div class="dc-link-status" id="dc-link-status" hidden></div>
           <div class="or">or <button id="csv-upload-link" type="button">upload a CSV file</button></div>
           <div class="sheet-actions">
             <div class="pending-data-note" id="pending-data-note" hidden>
@@ -184,7 +185,9 @@
             </div>
           </div>
           <input id="csv-file-input" type="file" accept=".csv,text/csv" hidden>
-          <button class="dc-read-btn" id="dc-read-data-btn" type="button" disabled>Read data</button>
+          <div class="dc-cta-row">
+            <button class="dc-read-btn" id="dc-read-data-btn" type="button" disabled>Read data</button>
+          </div>
         </section>
 
         <!-- These two elements are NOT part of the new fresh-connect design —

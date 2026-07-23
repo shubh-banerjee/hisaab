@@ -741,6 +741,7 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 .sheet-slot input[type="url"]:focus{
   border-color:var(--accent);
   background:#fff;
+  box-shadow:0 0 0 3px rgba(53,109,255,0.12);
 }
 
 .clear-link-btn{
@@ -2576,9 +2577,9 @@ body.data-connect-active .top-actions{
   display:flex;
   flex-direction:column;
   background:var(--surface);
-  border:1px solid var(--line);
-  border-radius:24px;
-  box-shadow:0 24px 64px rgba(15,24,48,0.10);
+  border:1.5px solid var(--line-strong);
+  border-radius:20px;
+  box-shadow:0 2px 16px rgba(15,24,48,0.05);
   overflow:hidden;
 }
 
@@ -2607,8 +2608,18 @@ body.data-connect-active .top-actions{
    shared page chrome between them, matching a clean single-purpose
    moment per screen rather than a multi-step wizard shell. */
 .dc-screen{
-  padding:32px 32px 28px;
+  padding:36px 40px 32px;
   overflow-y:auto;
+}
+
+/* The upload screen specifically gets a deliberate, decent-sized
+   rectangle (matching the demo shell's "intentional, not floating" feel)
+   with the CTA pinned to the bottom-right regardless of how much content
+   sits above it. */
+.dc-upload-screen{
+  display:flex;
+  flex-direction:column;
+  min-height:420px;
 }
 
 .data-connect-title{
@@ -2616,11 +2627,13 @@ body.data-connect-active .top-actions{
   font-weight:700;
   letter-spacing:0.02em;
   color:var(--ink-mute);
-  margin-bottom:18px;
+  margin-bottom:22px;
 }
 
 .data-connect-page .sheet-slot{
-  display:block;
+  display:flex;
+  flex-direction:column;
+  flex:1;
   max-width:none;
   margin-bottom:0;
   border:none;
@@ -2628,14 +2641,41 @@ body.data-connect-active .top-actions{
   padding:0;
 }
 
+.data-connect-page .sheet-slot .lbl{
+  margin-bottom:14px;
+}
+
+.data-connect-page .sheet-slot .or{
+  margin-top:14px;
+}
+
+/* Real-time link validation feedback — subtle, sits directly below the
+   input. Three states: checking (brief, muted), valid (soft green),
+   invalid (soft amber/red). Never blocks the "Read data" button by
+   itself — it's advisory, not a hard gate beyond basic format checking. */
+.dc-link-status{
+  margin-top:8px;
+  font-size:12.5px;
+  line-height:1.4;
+}
+
+.dc-link-status.checking{ color:var(--ink-mute); }
+.dc-link-status.valid{ color:var(--good); }
+.dc-link-status.invalid{ color:var(--warn); }
+
+.dc-cta-row{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:auto;
+  padding-top:24px;
+}
+
 .dc-read-btn{
-  width:100%;
-  margin-top:16px;
   font-family:var(--sans);
-  font-size:14.5px;
+  font-size:13.5px;
   font-weight:600;
-  padding:13px 20px;
-  border-radius:12px;
+  padding:10px 22px;
+  border-radius:10px;
   border:1.5px solid var(--accent);
   background:var(--accent);
   color:#fff;
@@ -2646,9 +2686,10 @@ body.data-connect-active .top-actions{
 .dc-read-btn:hover{ background:var(--accent-strong); }
 
 .dc-read-btn:disabled{
-  background:var(--surface-2);
-  border-color:var(--line-strong);
+  background:transparent;
+  border-color:var(--line);
   color:var(--ink-mute);
+  opacity:0.6;
   cursor:not-allowed;
 }
 
@@ -2820,5 +2861,6 @@ body.data-connect-active .top-actions{
   .data-connect-page{ padding:16px; }
   .data-connect-frame{ max-height:calc(100vh - 32px); }
   .dc-screen{ padding:24px 20px 20px; }
+  .dc-upload-screen{ min-height:0; }
   .dc-loader-screen{ padding:56px 20px; min-height:280px; }
 }

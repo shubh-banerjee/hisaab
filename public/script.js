@@ -348,6 +348,7 @@
     renderSheetUrlState();
     hideApplyDataCta();
     scheduleSheetParse();
+    updateDcLinkStatus();
   });
   clearSheetUrl.addEventListener('click', () => {
     sheetUrlInput.value = '';
@@ -360,6 +361,8 @@
     reconcilePendingDataset();
     sheetUrlInput.focus();
     updateAwayFromLandingState();
+    updateDcLinkStatus();
+    updateDcReadButtonState();
   });
   applyDataBtn.addEventListener('click', refreshAnalysisWithConnectedData);
   dataPanelClose.addEventListener('click', () => {
@@ -596,6 +599,7 @@
     connectedDataLabel = uploadedFileName;
     renderCsvUploadState();
     renderSheetUrlState();
+    updateDcLinkStatus();
     // Fresh connect: selecting a file just enables "Read data" — parsing is
     // explicit now, not automatic. The inline refresh-from-a-result flow
     // keeps its existing auto-parse-on-select behavior, unchanged.
@@ -1888,6 +1892,36 @@
     btn.disabled = !hasValidInput;
   }
 
+  let dcLinkStatusTimer = null;
+  function updateDcLinkStatus() {
+    const statusEl = document.getElementById('dc-link-status');
+    if (!statusEl) return;
+    window.clearTimeout(dcLinkStatusTimer);
+    const value = sheetUrlInput.value.trim();
+    if (!value) {
+      statusEl.hidden = true;
+      statusEl.className = 'dc-link-status';
+      return;
+    }
+    // Brief "checking" moment before settling into a verdict — purely a
+    // client-side format check (no network call here; the actual read
+    // only happens on the explicit "Read data" click), but gives the
+    // input a moment of visible feedback rather than snapping instantly.
+    statusEl.hidden = false;
+    statusEl.className = 'dc-link-status checking';
+    statusEl.textContent = 'Checking this Sheet link…';
+    dcLinkStatusTimer = window.setTimeout(() => {
+      const looksLikeSheetsUrl = /^https?:\/\/(docs\.google\.com\/spreadsheets|drive\.google\.com)/i.test(value);
+      if (looksLikeSheetsUrl) {
+        statusEl.className = 'dc-link-status valid';
+        statusEl.textContent = 'Sheet link looks good. Ready to read.';
+      } else {
+        statusEl.className = 'dc-link-status invalid';
+        statusEl.textContent = "This doesn't look like a Google Sheets link — check and paste again.";
+      }
+    }, 350);
+  }
+
   function startReadingMessages() {
     stopReadingMessages();
     const msgEl = document.getElementById('reading-loader-msg');
@@ -1990,6 +2024,7 @@
     setDcScreen('upload');
     dcHideError();
     updateDcReadButtonState();
+    updateDcLinkStatus();
   }
 
   function closeDataConnectPage() {
