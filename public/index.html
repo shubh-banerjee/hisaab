@@ -33,8 +33,8 @@
 
   <main class="stage" id="stage">
     <div class="greet-block">
-      <h1 class="greet" id="greet">What would you like to change?</h1>
-      <p class="subtitle" id="subtitle">An honest answer to your business's next what-if — reckoned from your own numbers.</p>
+      <h1 class="greet" id="greet">What would you like to do?</h1>
+      <p class="subtitle" id="subtitle">See how Hisaab works, or use your own sales data to understand your business.</p>
     </div>
 
     <!-- Check-back card: appears on session start when the user has an applied
@@ -63,30 +63,25 @@
     </section>
 
     <div class="path-chooser" id="path-chooser">
-      <button class="path active" id="path-sample" type="button">
-        <span class="path-icon" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg>
+      <button class="path-card active" id="path-sample" type="button">
+        <span class="path-card-icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7"/><path d="M9 22V12h6v10"/><path d="M4 10v11a1 1 0 0 0 1 1h4"/><path d="M20 10v11a1 1 0 0 1-1 1h-4"/></svg>
         </span>
-        <span class="path-body">
-          <span class="path-title">Try with sample data</span>
-        </span>
+        <span class="path-card-title">See a demo shop</span>
+        <span class="path-card-sub">Explore a sample shop and see how Hisaab turns sales data into clear guidance.</span>
+        <span class="path-card-cta path-card-cta-outline">Try demo</span>
       </button>
-      <button class="path" id="path-real" type="button">
-        <span class="path-icon" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <button class="path-card" id="path-real" type="button">
+        <span class="path-card-icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6"/><path d="M9 11h6"/></svg>
         </span>
-        <span class="path-body">
-          <span class="path-title">Connect my order data</span>
-        </span>
+        <span class="path-card-title">Use my sales data</span>
+        <span class="path-card-sub">Upload a sales file or connect a Google Sheet to understand your own numbers.</span>
+        <span class="path-card-cta path-card-cta-filled">Add my data</span>
       </button>
-      <button class="path" id="path-bootstrap" type="button">
-        <span class="path-icon" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6"/><path d="M12 8V4"/><circle cx="12" cy="11" r="3"/><path d="M5 21h14"/></svg>
-        </span>
-        <span class="path-body">
-          <span class="path-title" data-i18n="path.bootstrap">No data yet — start fresh</span>
-        </span>
-      </button>
+    </div>
+    <div class="path-bootstrap-link">
+      <span>No sales file yet? </span><button id="path-bootstrap" type="button" data-i18n="path.bootstrap_link">Start with a simple daily sales log</button>
     </div>
 
     <section class="sheet-slot" id="sheet-slot" aria-label="Connect order data">
