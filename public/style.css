@@ -2989,6 +2989,25 @@ body.data-connect-active .top-actions{
   background:var(--warn-soft);
 }
 
+.dc-guidance-card{
+  margin-top:14px;
+  padding:16px 18px;
+  border-radius:14px;
+  background:var(--accent-soft);
+  border:1px solid rgba(53,109,255,0.14);
+}
+
+.dc-guidance-message{
+  font-size:13.5px;
+  color:var(--ink);
+  line-height:1.55;
+  margin-bottom:12px;
+}
+
+.dc-guidance-card .suggestions{
+  margin-top:0;
+}
+
 .dc-try-asking-label{
   font-size:11.5px;
   font-weight:700;

@@ -56,6 +56,80 @@ const simulationResponseSchema = {
   ],
 };
 
+// Used only when detectScenario() finds no real lever keyword in the
+// question (hasLeverSignal === false) — e.g. "what will happen in my
+// business?" has nothing for a regex to grab onto. Rather than silently
+// defaulting to delivery_fee (a fabricated mapping dressed up as a real
+// answer), this asks Gemini to either (a) recognize the intent behind
+// more natural phrasing the regex missed, mapped to one of the four
+// levers this app can actually compute, or (b) honestly say the question
+// is too broad and suggest concrete alternatives grounded in what THIS
+// dataset can actually support.
+const intentClassificationSchema = {
+  type: Type.OBJECT,
+  properties: {
+    can_compute: { type: Type.BOOLEAN },
+    lever: { type: Type.STRING },
+    direction: { type: Type.STRING },
+    magnitude_pct: { type: Type.NUMBER },
+    guidance_message: { type: Type.STRING },
+    suggested_questions: { type: Type.ARRAY, items: { type: Type.STRING } },
+    detected_language: { type: Type.STRING },
+  },
+  required: ['can_compute', 'guidance_message', 'detected_language'],
+};
+
+async function classifyQuestionIntentWithGemini(question, capabilityMap) {
+  const readyLabels = (capabilityMap?.capabilities || []).filter(c => c.status === 'ready').map(c => c.label);
+  const limitedLabels = (capabilityMap?.capabilities || []).filter(c => c.status === 'limited').map(c => c.label);
+
+  const prompt = `A small shop owner asked Hisaab, a business what-if calculator, this question:
+"${question}"
+
+Hisaab can only compute a real, honest numeric answer for questions about ONE of these four specific levers, each mapped to a real column in the owner's own sales data:
+- delivery_fee (raising/lowering the delivery or shipping fee)
+- avg_order_value (changing product prices)
+- promo_active (running a discount or promotion)
+- cash_on_delivery (stopping/starting cash-on-delivery)
+
+Based on the owner's ACTUAL connected data, these are currently answerable with real confidence: ${readyLabels.length ? readyLabels.join(', ') : 'none yet'}.
+These are answerable but with weaker/limited confidence: ${limitedLabels.length ? limitedLabels.join(', ') : 'none'}.
+
+Decide:
+1. Does the question clearly map to one of the four levers above, even if phrased naturally (e.g. "make deliveries cost more" means delivery_fee)? If yes, set can_compute=true, name the lever, and infer direction (increase/decrease) and a magnitude_pct if one is implied (a reasonable default like 10 if no number is given).
+2. If the question is genuinely too broad, generic, or about something Hisaab cannot compute at all (e.g. "how is my business doing", "what should I do", "help me grow") — set can_compute=false. Write a warm, honest, SHORT (2 sentences max) guidance_message in the same language as the question, explaining Hisaab answers specific what-if questions about price, delivery fee, promotions, or cash-on-delivery, grounded in what's ACTUALLY supported for this data (mention only from the ready/limited lists above — never mention something not listed). Then suggest 2-3 concrete, specific example questions the owner could ask instead, phrased naturally, that use only the actually-supported capabilities.
+
+Never invent a capability that isn't in the ready or limited lists. Respond with ONLY a raw JSON object, no markdown, no code fences:
+{
+  "can_compute": <boolean>,
+  "lever": "<delivery_fee|avg_order_value|promo_active|cash_on_delivery, or empty string if can_compute is false>",
+  "direction": "<increase|decrease, or empty string>",
+  "magnitude_pct": <number, or 0 if not applicable>,
+  "guidance_message": "<empty string if can_compute is true>",
+  "suggested_questions": [<2-3 strings, empty array if can_compute is true>],
+  "detected_language": "<ISO 639-1 code like en or hi>"
+}`;
+
+  const client = createGeminiClient();
+  logJson('Intent classification prompt sent to Gemini', { model: config.geminiModel, prompt });
+
+  const response = await client.models.generateContent({
+    model: config.geminiModel,
+    contents: prompt,
+    config: {
+      maxOutputTokens: 1024,
+      responseMimeType: 'application/json',
+      responseSchema: intentClassificationSchema,
+      thinkingConfig: { thinkingBudget: 0 },
+      systemInstruction: 'You are a retail analytics intent classifier. Always respond with valid JSON only — no markdown, no text outside the JSON object. Never claim a data capability that was not explicitly listed as ready or limited.',
+    },
+  });
+  const text = getGeminiResponseText(response);
+  logJson('Raw intent classification response', { text });
+  const parsed = JSON.parse(text);
+  return parsed;
+}
+
 function createGeminiClient() {
   return new GoogleGenAI({ apiKey: config.geminiApiKey });
 }
@@ -1156,6 +1230,15 @@ function detectScenario(question, data) {
   const isCod = /\bcod\b|cash\s+on\s+delivery/.test(text);
   const isPromo = /promo|promotion|discount|sale/.test(text);
   const isPrice = /price|product|aov|average order|avg order/.test(text);
+  const isDeliveryFee = /delivery|shipping|\bfee\b/.test(text);
+  // Was the lever actually named in the question, or did we just fall
+  // through to the delivery_fee default because nothing else matched?
+  // This distinction matters: a question with zero real lever signal
+  // (e.g. "what will happen in my business") should never be silently
+  // treated as a delivery-fee question — that's a fabricated mapping
+  // dressed up as a real answer. Callers use this flag to route such
+  // questions to a proper LLM-based intent classification instead.
+  const hasLeverSignal = isCod || isPromo || isPrice || isDeliveryFee;
   const lever = isCod ? 'cash_on_delivery' : isPromo ? 'promo_active' : isPrice ? 'avg_order_value' : 'delivery_fee';
   const outcomeMetric = /repeat|returning|loyal/.test(text) ? 'repeat_orders' : 'orders';
 
@@ -1189,7 +1272,7 @@ function detectScenario(question, data) {
     }
   }
 
-  return { lever, outcomeMetric, delta, discountDepthPct, promoScale };
+  return { lever, outcomeMetric, delta, discountDepthPct, promoScale, hasLeverSignal };
 }
 
 function missingCriticalFields(question, dataSource) {
@@ -1385,8 +1468,8 @@ function computePromoLift(data, outcomeMetric, scenario = {}) {
   };
 }
 
-function computeRegressionResult(question, data, summary) {
-  const scenario = detectScenario(question, data);
+function computeRegressionResult(question, data, summary, scenarioOverride = null) {
+  const scenario = scenarioOverride || detectScenario(question, data);
   const lang = detectFallbackLanguage(question);
   let outcome;
 
@@ -2409,7 +2492,86 @@ async function handleSimulate(req, res) {
   }
 
   const summary = summarizeData(data);
-  const computed = computeRegressionResult(question.trim(), data, summary);
+
+  // If the question has zero real lever signal (no regex keyword match at
+  // all), don't silently default to delivery_fee — that's a fabricated
+  // mapping dressed up as a real answer. Ask Gemini to either recognize
+  // the intent behind more natural phrasing the regex missed, or honestly
+  // say the question is too broad and suggest concrete alternatives
+  // grounded in what THIS dataset can actually support.
+  const regexScenario = detectScenario(question.trim(), data);
+  let scenarioOverride = null;
+  if (!regexScenario.hasLeverSignal) {
+    try {
+      const intent = await classifyQuestionIntentWithGemini(question.trim(), sheetSummary?.capability_map);
+      if (!intent.can_compute) {
+        const questionPersistence = await firestoreService.saveQuestion({
+          sessionId,
+          uploadId: uploadId || null,
+          question: question.trim(),
+          answer: intent.guidance_message,
+        });
+        await firestoreService.saveEvent({
+          type: 'ask',
+          sessionId,
+          uploadId: uploadId || null,
+          questionId: questionPersistence.id,
+          metadata: { status: 'guidance' },
+        });
+        return res.json({
+          session_id: sessionId,
+          status: 'guidance',
+          guidance_message: intent.guidance_message,
+          suggested_questions: (intent.suggested_questions || []).slice(0, 3),
+          detected_language: intent.detected_language || 'en',
+          data_source: dataSource,
+          sheet_summary: sheetSummary,
+          persistence: { question: questionPersistence },
+        });
+      }
+      // Gemini recognized a lever the regex missed — build an override
+      // scenario using the SAME shape detectScenario() produces, so the
+      // real regression math downstream is completely unchanged. Only the
+      // lever/delta INPUT to that math is smarter now, not the math itself.
+      const lever = ['delivery_fee', 'avg_order_value', 'promo_active', 'cash_on_delivery'].includes(intent.lever)
+        ? intent.lever
+        : 'delivery_fee';
+      const last = data[data.length - 1] || {};
+      const magnitudePct = Number.isFinite(intent.magnitude_pct) && intent.magnitude_pct > 0 ? intent.magnitude_pct : 10;
+      const sign = intent.direction === 'decrease' ? -1 : 1;
+      let delta = 0;
+      let discountDepthPct = null;
+      let promoScale = 1;
+      if (lever === 'promo_active') {
+        delta = 1;
+        discountDepthPct = magnitudePct;
+        const baselineDepth = Number.isFinite(config.defaultPromoDiscountPct) && config.defaultPromoDiscountPct > 0 ? config.defaultPromoDiscountPct : 10;
+        promoScale = clamp(magnitudePct / baselineDepth, 0.1, 2);
+      } else if (lever === 'cash_on_delivery') {
+        delta = 0;
+      } else {
+        const current = Number(lever === 'avg_order_value' ? last.avg_order_value : last.delivery_fee) || 0;
+        delta = sign * current * (magnitudePct / 100);
+      }
+      scenarioOverride = {
+        lever,
+        outcomeMetric: regexScenario.outcomeMetric,
+        delta,
+        discountDepthPct,
+        promoScale,
+        hasLeverSignal: true,
+      };
+    } catch (err) {
+      // Classification failed (network/parse error) — fall through to the
+      // existing regex-based scenario rather than blocking the question
+      // entirely. This keeps the app working even if Gemini has a bad
+      // moment; the user just gets the old default-lever behavior instead
+      // of the smarter one.
+      console.error('[classifyQuestionIntentWithGemini] failed, falling back to regex scenario:', err?.message || err);
+    }
+  }
+
+  const computed = computeRegressionResult(question.trim(), data, summary, scenarioOverride);
   const fallbackLanguage = detectFallbackLanguage(question);
 
   const userPrompt = `The business owner asks: "${question.trim()}"

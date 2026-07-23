@@ -1014,7 +1014,15 @@
     // second request, and does not render a second result.
     if (requestInFlight) return;
     const question = String(options.questionOverride || questionInput.value).trim();
-    if (!options.skipValidation && !isSpecificQuestion(question)) {
+    // Only a bare minimum client-side check now (not literally empty) —
+    // genuinely open/broad questions ("what will happen in my business?")
+    // used to be hard-rejected here based on keyword matching, before the
+    // server ever saw them. The server now handles this properly: it
+    // classifies intent via Gemini and either finds a real lever or
+    // returns an honest, capability-grounded guidance message — a much
+    // better answer than a client-side refusal for something we don't
+    // actually know is unanswerable.
+    if (!options.skipValidation && question.length < 3) {
       hideResults();
       hideMissingInputs();
       hideError();
@@ -1040,6 +1048,7 @@
     hideMissingInputs();
     hideError();
     hideValidationNudge();
+    hideGuidanceMessage();
 
     try {
       detectedHeadline.textContent = 'Updating this analysis with your data...';
@@ -1071,12 +1080,27 @@
         updateAwayFromLandingState();
         return;
       }
+      if (body.status === 'guidance') {
+        // The question was genuinely too broad/unrelated for a specific
+        // calculation — Gemini classified intent and wrote an honest,
+        // capability-grounded redirect instead of either fabricating an
+        // answer or hard-rejecting the question. Shown in-context so it's
+        // actually visible from inside the Ask Hisaab modal.
+        if (body.session_id) localStorage.setItem('hisaabSessionId', body.session_id);
+        showGuidanceMessage(body);
+        (options.isRefine ? refineQuestion : questionInput).focus();
+        updateAwayFromLandingState();
+        return;
+      }
 
       renderResults(body, Date.now() - startTime, { append: options.isRefine });
     } catch (err) {
-      dataDetected.classList.add('show');
-      detectedHeadline.textContent = 'I could not update this analysis yet.';
-      detectedBody.textContent = err.message;
+      // Same visibility fix as showError()/showMissingInputs() elsewhere:
+      // writing directly to the main-stage dataDetected panel is invisible
+      // if the data-connect-page overlay is still open. Route through
+      // showError() instead, which already handles closing the overlay
+      // when needed.
+      showError(err.message);
     } finally {
       setLoading(false, options.isRefine);
       updateAwayFromLandingState();
@@ -1085,6 +1109,36 @@
 
   function isSpecificQuestion(question) {
     return question.length >= 12 && (decisionVocabulary.test(question) || subjectVocabulary.test(question));
+  }
+
+  // Shows the LLM-generated guidance message + real suggested questions
+  // when the server determines a question is too broad to compute
+  // directly. Chips fill the textarea, never auto-submit — consistent
+  // with every other suggested-question chip in the app.
+  function showGuidanceMessage(body) {
+    const card = document.getElementById('dc-guidance-card');
+    const msgEl = document.getElementById('dc-guidance-message');
+    const questionsEl = document.getElementById('dc-guidance-questions');
+    if (!card || !msgEl || !questionsEl) return;
+    msgEl.textContent = body.guidance_message || '';
+    const questions = (body.suggested_questions || []).slice(0, 3);
+    questionsEl.innerHTML = questions.map((q) => `<button class="chip" type="button" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('');
+    questionsEl.querySelectorAll('.chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        questionInput.value = btn.dataset.q;
+        resizeQuestion();
+        updateQuestionState();
+        hideGuidanceMessage();
+        questionInput.focus();
+        updateAwayFromLandingState();
+      });
+    });
+    card.hidden = false;
+  }
+
+  function hideGuidanceMessage() {
+    const card = document.getElementById('dc-guidance-card');
+    if (card) card.hidden = true;
   }
 
   function renderResults(data, elapsed, options = {}) {
@@ -2844,6 +2898,7 @@
     hideResults();
     hideMissingInputs();
     hideValidationNudge();
+    hideGuidanceMessage();
     hideError();
     stopIntro();
     stage.scrollIntoView({ behavior: 'smooth', block: 'start' });
