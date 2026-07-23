@@ -1,0 +1,5 @@
+{
+  "purpose": "Force Vercel production to deploy the current GitHub main state after build-command cleanup.",
+  "updated_at": "2026-07-23T07:55:00Z",
+  "expected_build_command": "node scripts/finalize-demo-close-icon.js && node scripts/inject-upload-runtime.js"
+}
