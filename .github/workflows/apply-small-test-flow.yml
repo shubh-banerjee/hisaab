@@ -7,6 +7,10 @@ on:
     paths:
       - scripts/rebuild-splash-implementation.js
       - scripts/rebuild-home-screen.js
+      - scripts/rebuild-demo-flow.js
+      - scripts/polish-demo-lesson-shell.js
+      - scripts/finalize-demo-close-icon.js
+      - scripts/rebuild-upload-data-flow.js
       - scripts/implement-small-test-flow.js
       - .github/workflows/apply-small-test-flow.yml
   workflow_dispatch:
@@ -26,6 +30,10 @@ jobs:
         run: |
           node scripts/rebuild-splash-implementation.js
           node scripts/rebuild-home-screen.js
+          node scripts/rebuild-demo-flow.js
+          node scripts/polish-demo-lesson-shell.js
+          node scripts/finalize-demo-close-icon.js
+          node scripts/rebuild-upload-data-flow.js
           node scripts/implement-small-test-flow.js
       - name: Validate JavaScript
         run: |
@@ -33,6 +41,10 @@ jobs:
           node --check server.js
           node --check scripts/rebuild-splash-implementation.js
           node --check scripts/rebuild-home-screen.js
+          node --check scripts/rebuild-demo-flow.js
+          node --check scripts/polish-demo-lesson-shell.js
+          node --check scripts/finalize-demo-close-icon.js
+          node --check scripts/rebuild-upload-data-flow.js
           node --check scripts/implement-small-test-flow.js
       - name: Run tests
         run: npm test
