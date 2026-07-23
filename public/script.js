@@ -960,7 +960,10 @@
     // On the analysis screen the visible column is the results card; on the
     // home screen it's the composer. Both are centered, max-width:720px
     // elements — whichever is actually on screen defines "the column".
-    const columnEl = isInline ? resultsSection : composer;
+    // #composer no longer exists in the redesigned Ask Hisaab screen — fall
+    // back to #ask-block (its real current container) or the stage itself
+    // so this never throws on a null element.
+    const columnEl = isInline ? resultsSection : (composer || document.getElementById('ask-block') || stage);
     const columnRect = columnEl.getBoundingClientRect();
     const slotRect = sheetSlot.getBoundingClientRect();
 
@@ -2848,8 +2851,28 @@
   }
 
   function restoreDataConnectorToHome() {
-    if (dataDetected.parentElement !== stage) stage.insertBefore(dataDetected, composer);
-    if (sheetSlot.parentElement !== stage) stage.insertBefore(sheetSlot, dataDetected);
+    // sheetSlot/dataDetected's real permanent home is inside the Add-my-data
+    // modal's upload screen (#dc-screen-upload) — that's where they live for
+    // the fresh-connect flow. openInlineDataConnector() temporarily borrows
+    // them into #inline-data-mount while the user upgrades to real data
+    // from directly within an existing result; this puts them back.
+    //
+    // The previous version of this function assumed their home was directly
+    // inside <main id="stage"> (true in the pre-redesign architecture) and
+    // moved them there unconditionally whenever parentElement !== stage —
+    // which is ALWAYS true now, since their real home was moved into the
+    // modal. That meant every "New question" reset was forcibly relocating
+    // them out of the modal onto the plain landing page, visibly breaking
+    // it — the exact bug reported via screenshot.
+    const homeContainer = document.getElementById('dc-screen-upload');
+    const dcErrorBanner = document.getElementById('dc-error-banner');
+    if (homeContainer) {
+      if (sheetSlot.parentElement !== homeContainer) homeContainer.insertBefore(sheetSlot, dcErrorBanner || null);
+      if (dataDetected.parentElement !== homeContainer) homeContainer.insertBefore(dataDetected, dcErrorBanner || null);
+    }
+    // missingSection has always lived directly in <main id="stage"> (it was
+    // never moved into the modal by openInlineDataConnector), so this part
+    // is unrelated to the modal redesign and stays as-is.
     if (missingSection.parentElement !== stage) stage.insertBefore(missingSection, errorBanner);
   }
 
@@ -3017,7 +3040,16 @@
     const loader = isRefine ? refineBtnLoader : btnLoader;
     text.hidden = isLoading;
     loader.hidden = !isLoading;
-    (isRefine ? refineInline : composer).classList.toggle('loading', isLoading);
+    // #composer no longer exists as a standalone element in the redesigned
+    // Ask Hisaab screen (replaced by .dc-ask-input-wrap + a separate
+    // .dc-cta-row) — `composer` is null there. This previously threw a
+    // TypeError on every single non-refine submission (composer.classList
+    // on null), silently killing runSimulation() before it ever reached
+    // the actual /api/simulate call. #ask-block is the real, current
+    // container for that screen and is always present when a question is
+    // being submitted from it.
+    const loadingShell = isRefine ? refineInline : (composer || document.getElementById('ask-block'));
+    if (loadingShell) loadingShell.classList.toggle('loading', isLoading);
     (isRefine ? refineLoadingStatus : loadingStatus).hidden = !isLoading;
     // Every trigger is locked together, not just the one that started the
     // request — this is what prevents a second click/chip/refine-submit
