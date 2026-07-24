@@ -1281,7 +1281,7 @@ function missingCriticalFields(question, dataSource) {
   const missing = [];
 
   function isAvailable(field) {
-    return ['derived', 'derived_manual', 'fallback'].includes(sources[field]?.status);
+    return ['derived', 'derived_manual', 'derived_low_confidence', 'fallback'].includes(sources[field]?.status);
   }
 
   if (!isAvailable('orders')) {
