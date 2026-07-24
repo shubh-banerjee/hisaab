@@ -2364,10 +2364,9 @@ body.demo-lesson-active .top-actions{
   max-height:calc(100vh - 80px);
   display:flex;
   flex-direction:column;
-  background:var(--surface);
+  background:transparent;
   border:1px solid var(--line);
   border-radius:24px;
-  box-shadow:0 24px 64px rgba(15,24,48,0.10);
   overflow:hidden;
 }
 
@@ -2470,7 +2469,7 @@ body.demo-lesson-active .top-actions{
   padding:9px 18px;
   border-radius:999px;
   border:1px solid var(--line-strong);
-  background:var(--surface);
+  background:transparent;
   color:var(--ink-soft);
   font-size:14px;
   font-weight:500;
@@ -2487,7 +2486,7 @@ body.demo-lesson-active .top-actions{
   padding:22px 24px;
   border:1px solid var(--line);
   border-radius:16px;
-  background:var(--surface);
+  background:transparent;
   text-align:left;
   width:100%;
   font-family:var(--sans);
@@ -2504,7 +2503,6 @@ body.demo-lesson-active .top-actions{
 
 .demo-question-card:hover{
   border-color:var(--accent);
-  box-shadow:0 8px 24px rgba(59,111,230,0.08);
   transform:translateY(-1px);
 }
 
