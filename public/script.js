@@ -1982,24 +1982,57 @@
     }, 350);
   }
 
+  const READING_CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
   function startReadingMessages() {
     stopReadingMessages();
-    const msgEl = document.getElementById('reading-loader-msg');
+    const listEl = document.getElementById('reading-checklist');
+    if (!listEl) return;
+    listEl.innerHTML = READING_MESSAGES.map((msg, i) => `
+      <div class="reading-check-item${i === 0 ? ' active' : ''}" data-idx="${i}">
+        <span class="reading-check-icon"></span>
+        <span>${escapeHtml(msg)}</span>
+      </div>
+    `).join('');
+
     let idx = 0;
-    if (msgEl) msgEl.textContent = READING_MESSAGES[0];
     readingMessageTimer = window.setInterval(() => {
-      idx = (idx + 1) % READING_MESSAGES.length;
-      if (!msgEl) return;
-      msgEl.textContent = READING_MESSAGES[idx];
-      // Restart the fade-in animation on each message change.
-      msgEl.style.animation = 'none';
-      void msgEl.offsetWidth; // eslint-disable-line no-void -- force reflow to restart animation
-      msgEl.style.animation = '';
-    }, 1100);
+      const items = listEl.querySelectorAll('.reading-check-item');
+      const current = items[idx];
+      if (current) {
+        current.classList.remove('active');
+        current.classList.add('done');
+        const icon = current.querySelector('.reading-check-icon');
+        if (icon) icon.innerHTML = READING_CHECK_SVG;
+      }
+      idx += 1;
+      if (idx < items.length) {
+        items[idx].classList.add('active');
+      } else {
+        // Every step has played out but the real fetch is still running —
+        // stop advancing and just wait with everything marked done.
+        window.clearInterval(readingMessageTimer);
+        readingMessageTimer = null;
+      }
+    }, 900);
   }
 
   function stopReadingMessages() {
     if (readingMessageTimer) { window.clearInterval(readingMessageTimer); readingMessageTimer = null; }
+    // If parsing finished before the checklist animation naturally
+    // completed, snap every remaining item straight to done rather than
+    // cutting the animation off mid-spin right as the screen changes away.
+    const listEl = document.getElementById('reading-checklist');
+    if (listEl) {
+      listEl.querySelectorAll('.reading-check-item').forEach((item) => {
+        if (!item.classList.contains('done')) {
+          item.classList.remove('active');
+          item.classList.add('done');
+          const icon = item.querySelector('.reading-check-icon');
+          if (icon) icon.innerHTML = READING_CHECK_SVG;
+        }
+      });
+    }
   }
 
   function dcShowError(message) {
