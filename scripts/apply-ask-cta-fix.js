@@ -4,13 +4,27 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const scriptPath = path.join(root, 'public', 'script.js');
 const cssPath = path.join(root, 'public', 'style.css');
+const htmlPath = path.join(root, 'public', 'index.html');
 
-function patchScript() {
-  if (!fs.existsSync(scriptPath)) return;
-  let source = fs.readFileSync(scriptPath, 'utf8');
+function replaceRequired(source, label, find, replacement) {
+  if (source.includes(replacement)) return source;
+  if (!source.includes(find)) {
+    throw new Error(`[apply-ask-cta-fix] ${label}: expected source block not found`);
+  }
+  return source.replace(find, replacement);
+}
 
+function insertAfterOnce(source, label, marker, code, uniqueMarker) {
+  if (source.includes(uniqueMarker)) return source;
+  if (!source.includes(marker)) {
+    throw new Error(`[apply-ask-cta-fix] ${label}: insert marker not found`);
+  }
+  return source.replace(marker, `${marker}\n${code}`);
+}
+
+function patchAskCta(source) {
   const marker = 'const isDcAskSubmit = !isRefine && simulateBtn.classList.contains';
-  if (source.includes(marker)) return;
+  if (source.includes(marker)) return source;
 
   const current = `  function setLoading(isLoading, isRefine = false) {
     requestInFlight = isLoading;
@@ -65,13 +79,148 @@ function patchScript() {
     setSubmissionLocked(isLoading);
   }`;
 
-  if (!source.includes(current)) {
-    throw new Error('[apply-ask-cta-fix] setLoading source block not found; refusing to guess.');
+  return replaceRequired(source, 'setLoading CTA fix', current, replacement);
+}
+
+function patchCsvLimit(source) {
+  source = insertAfterOnce(
+    source,
+    'CSV max constants',
+    `  const subjectVocabulary = /\\b(fee|fees|price|prices|promo|promotion|discount|cod|cash on delivery|delivery|shipping|orders?|repeat|customer|customers|revenue|aov|month|months)\\b/i;`,
+    `
+  const CSV_MAX_BYTES = 4 * 1024 * 1024;
+  const CSV_MAX_MB = 4;
+  const CSV_TOO_LARGE_MESSAGE = 'This CSV is too large for quick upload. Use a CSV under 4 MB, or connect the data through Google Sheets.';`,
+    'CSV_TOO_LARGE_MESSAGE'
+  );
+
+  source = insertAfterOnce(
+    source,
+    'uploaded CSV size state',
+    `  let uploadedCsv = null;`,
+    `  let uploadedCsvSize = 0;`,
+    'uploadedCsvSize'
+  );
+
+  const currentHandleCsv = `  async function handleCsvFile() {
+    const file = csvFileInput.files?.[0];
+    if (!file) return;
+    setPath('real');
+    sheetUrlInput.value = '';
+    uploadedFileName = file.name;
+    uploadedCsv = await file.text();
+    connectedDataLabel = uploadedFileName;
+    renderCsvUploadState();
+    renderSheetUrlState();
+    updateDcLinkStatus();
+    // Fresh connect: selecting a file just enables "Read data" — parsing is
+    // explicit now, not automatic. The inline refresh-from-a-result flow
+    // keeps its existing auto-parse-on-select behavior, unchanged.
+    const isInlineRefresh = stage.classList.contains('connecting-data') && Boolean(currentResult);
+    if (isInlineRefresh) {
+      await parseConnectedData();
+    } else {
+      updateDcReadButtonState();
+      const noteText = document.getElementById('pending-data-note-text');
+      const note = document.getElementById('pending-data-note');
+      if (noteText) noteText.textContent = \`${uploadedFileName} selected — click Read data.\`;
+      if (note) note.hidden = false;
+    }
+  }`;
+
+  const replacementHandleCsv = `  async function handleCsvFile() {
+    const file = csvFileInput.files?.[0];
+    if (!file) return;
+    setPath('real');
+    dcHideError();
+    if (file.size > CSV_MAX_BYTES) {
+      uploadedCsv = null;
+      uploadedCsvSize = 0;
+      uploadedFileName = '';
+      csvFileInput.value = '';
+      renderCsvUploadState();
+      renderSheetUrlState();
+      updateDcReadButtonState();
+      dcShowError(CSV_TOO_LARGE_MESSAGE);
+      return;
+    }
+    sheetUrlInput.value = '';
+    uploadedFileName = file.name;
+    uploadedCsvSize = file.size;
+    uploadedCsv = await file.text();
+    connectedDataLabel = uploadedFileName;
+    renderCsvUploadState();
+    renderSheetUrlState();
+    updateDcLinkStatus();
+    // Fresh connect: selecting a file just enables "Read data" — parsing is
+    // explicit now, not automatic. The inline refresh-from-a-result flow
+    // keeps its existing auto-parse-on-select behavior, unchanged.
+    const isInlineRefresh = stage.classList.contains('connecting-data') && Boolean(currentResult);
+    if (isInlineRefresh) {
+      await parseConnectedData();
+    } else {
+      updateDcReadButtonState();
+      const noteText = document.getElementById('pending-data-note-text');
+      const note = document.getElementById('pending-data-note');
+      if (noteText) noteText.textContent = \`${uploadedFileName} selected — click Read data.\`;
+      if (note) note.hidden = false;
+    }
+  }`;
+
+  source = replaceRequired(source, 'CSV file size guard', currentHandleCsv, replacementHandleCsv);
+
+  source = replaceRequired(
+    source,
+    'clear CSV size state',
+    `  function clearCsvUpload() {
+    uploadedCsv = null;
+    uploadedFileName = '';
+    csvFileInput.value = '';`,
+    `  function clearCsvUpload() {
+    uploadedCsv = null;
+    uploadedCsvSize = 0;
+    uploadedFileName = '';
+    csvFileInput.value = '';`
+  );
+
+  source = insertAfterOnce(
+    source,
+    'parse CSV size guard',
+    `    if (!uploadedCsv && sheetUrl.length <= 20) return;`,
+    `
+    if (uploadedCsv && uploadedCsvSize > CSV_MAX_BYTES) {
+      setDcScreen('upload');
+      dcShowError(CSV_TOO_LARGE_MESSAGE);
+      updateDcReadButtonState();
+      return;
+    }`,
+    'uploadedCsvSize > CSV_MAX_BYTES'
+  );
+
+  const parseResponseMarker = `        });
+        const body = await readJsonResponse(res);
+        if (!res.ok) throw new Error(body.error || \`Server error (HTTP ${res.status})\`);`;
+  const parseResponseReplacement = `        });
+        if (res.status === 413) throw new Error(CSV_TOO_LARGE_MESSAGE);
+        const body = await readJsonResponse(res);
+        if (!res.ok) throw new Error(body.error || \`Server error (HTTP ${res.status})\`);`;
+  if (source.includes(parseResponseMarker)) {
+    source = source.split(parseResponseMarker).join(parseResponseReplacement);
   }
 
-  source = source.replace(current, replacement);
-  fs.writeFileSync(scriptPath, source, 'utf8');
-  console.log('[apply-ask-cta-fix] Patched public/script.js setLoading');
+  return source;
+}
+
+function patchScript() {
+  if (!fs.existsSync(scriptPath)) return;
+  let source = fs.readFileSync(scriptPath, 'utf8');
+  const before = source;
+  source = patchAskCta(source);
+  source = patchCsvLimit(source);
+  if (source !== before) {
+    fs.writeFileSync(scriptPath, source, 'utf8');
+    console.log('[apply-ask-cta-fix] Patched public/script.js');
+  }
 }
 
 function patchCss() {
@@ -141,5 +290,17 @@ function patchCss() {
   console.log('[apply-ask-cta-fix] Appended stable CTA CSS');
 }
 
+function patchHtml() {
+  if (!fs.existsSync(htmlPath)) return;
+  let source = fs.readFileSync(htmlPath, 'utf8');
+  const before = source;
+  source = source.replace('<span class="dc-dropzone-sub">CSV files only</span>', '<span class="dc-dropzone-sub">CSV files under 4 MB</span>');
+  if (source !== before) {
+    fs.writeFileSync(htmlPath, source, 'utf8');
+    console.log('[apply-ask-cta-fix] Added CSV size hint');
+  }
+}
+
 patchScript();
 patchCss();
+patchHtml();
