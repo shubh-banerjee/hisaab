@@ -428,8 +428,17 @@
   }
   closeDecisions.addEventListener('click', closeDecisionLog);
   newQuestion.addEventListener('click', () => {
-    resetToLanding();
     newQuestion.blur();
+    if (activeDataset.kind !== 'sample') {
+      // Real data is already connected — the user wants to ask ANOTHER
+      // question against the same data, not re-choose a path from
+      // scratch. Previously this always called resetToLanding(), which
+      // wiped the connected dataset and sent the user all the way back
+      // to the demo/add-my-data chooser — a real workflow break.
+      openAskScreenForNewQuestion();
+    } else {
+      resetToLanding();
+    }
   });
   brandReset.addEventListener('mousedown', e => e.preventDefault());
   newQuestion.addEventListener('mousedown', e => e.preventDefault());
@@ -1242,7 +1251,12 @@
     rangeLine.textContent = rangeText(low, high, value, isWeak);
     lowSignalWarning.textContent = computed.low_signal_warning || '';
     lowSignalWarning.hidden = !computed.low_signal_warning;
-    lowConfidenceActions.hidden = !isWeak;
+    // Removed entirely per explicit repeated instruction — "Try a different
+    // question" duplicated the top-right "New question" button, and
+    // "Update data" duplicated the "Add your real data" path that's
+    // available directly from the low-confidence card elsewhere. Always
+    // hidden now, regardless of confidence level.
+    lowConfidenceActions.hidden = true;
     // This is a SEPARATE, distinctly-styled notice from lowSignalWarning
     // above. lowSignalWarning means "the regression genuinely ran and the
     // relationship is weak" (a data-quality fact, computed server-side
@@ -2148,6 +2162,29 @@
     stopReadingMessages();
   }
 
+  // Used by the top-right "New question" button when real data is already
+  // connected: goes straight to a clean Ask Hisaab screen instead of
+  // resetting all the way back to the landing page's path-chooser (which
+  // used to wipe the connected dataset entirely — a real workflow break).
+  // Deliberately does NOT touch setPath()/sheetSlot/activeDataset — none
+  // of that needs to change, the data is already correctly connected.
+  function openAskScreenForNewQuestion() {
+    hideResults();
+    dataConnectRefreshMode = false;
+    document.body.classList.add('data-connect-active');
+    const overlay = document.getElementById('data-connect-page');
+    if (overlay) overlay.hidden = false;
+    renderDcSuggestedPrompts(lastSheetSummary?.suggested_questions || []);
+    renderDcAskMissingNote(lastSheetSummary);
+    questionInput.value = '';
+    resizeQuestion();
+    updateQuestionState();
+    hideValidationNudge();
+    hideGuidanceMessage();
+    setDcScreen('ask');
+    questionInput.focus();
+  }
+
   // Maps the user-facing missing-field labels (as sent by
   // summarizeSheetParse's OPTIONAL_FIELD_LABELS) back to the technical
   // field key manualInputs/the /api/simulate payload expects.
@@ -2223,6 +2260,11 @@
       }
       renderDcSuggestedPrompts(lastSheetSummary?.suggested_questions || []);
       renderDcAskMissingNote(lastSheetSummary);
+      questionInput.value = '';
+      resizeQuestion();
+      updateQuestionState();
+      hideValidationNudge();
+      hideGuidanceMessage();
       setDcScreen('ask');
       questionInput.focus();
     });

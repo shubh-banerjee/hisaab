@@ -630,7 +630,7 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   font-size:13.5px;
   font-weight:500;
   padding:11px 18px;
-  border-radius:10px;
+  border-radius:999px;
   background:var(--accent);
   color:#fff;
   border:none;
@@ -1409,7 +1409,7 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   font-size:13px;
   font-weight:500;
   padding:10px 14px;
-  border-radius:10px;
+  border-radius:999px;
   background:transparent;
   border:1.5px solid var(--line-strong);
   color:var(--ink-soft);
@@ -2539,7 +2539,7 @@ body.demo-lesson-active .top-actions{
   font-size:14.5px;
   font-weight:600;
   padding:13px 28px;
-  border-radius:12px;
+  border-radius:999px;
   cursor:pointer;
   transition:background-color .15s ease, border-color .15s ease;
 }
@@ -2708,7 +2708,7 @@ body.data-connect-active .top-actions{
   font-size:13.5px;
   font-weight:600;
   padding:10px 22px;
-  border-radius:10px;
+  border-radius:999px;
   border:1.5px solid var(--accent);
   background:var(--accent);
   color:#fff;
@@ -2909,7 +2909,7 @@ body.data-connect-active .top-actions{
   font-size:13.5px;
   font-weight:600;
   padding:10px 22px;
-  border-radius:10px;
+  border-radius:999px;
   border:1.5px solid var(--accent);
   background:var(--accent);
   color:#fff;
@@ -2932,7 +2932,7 @@ body.data-connect-active .top-actions{
   font-size:13.5px;
   font-weight:600;
   padding:10px 20px;
-  border-radius:10px;
+  border-radius:999px;
   border:1.5px solid var(--line-strong);
   background:transparent;
   color:var(--ink-soft);
