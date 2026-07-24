@@ -266,8 +266,8 @@
            invented. Grouped and capped so it never grows into a long
            vertical list, even with many detected fields. -->
       <div class="dc-screen dc-summary-screen" id="dc-screen-summary" data-dc-screen="summary" hidden>
-        <div class="dc-summary-title">Your sales data is ready</div>
-        <div class="dc-summary-sub">I found enough information to start answering simple business questions.</div>
+        <div class="dc-summary-title" id="dc-summary-title">Your sales data is ready</div>
+        <div class="dc-summary-sub" id="dc-summary-sub">I found enough information to start answering simple business questions.</div>
 
         <div class="dc-section">
           <div class="dc-section-label">I found</div>
@@ -287,8 +287,6 @@
           <div class="dc-chip-group dc-chip-group-accent" id="dc-capability-chips"></div>
           <p class="dc-directional-note" id="dc-directional-note" hidden>Some answers will be directional, not exact.</p>
         </div>
-
-        <button class="dc-manual-link" id="dc-manual-link" type="button">Need to add missing data manually?</button>
 
         <div class="dc-cta-row">
           <button class="dc-ask-cta" id="dc-ask-cta-btn" type="button">Ask Hisaab</button>
@@ -344,22 +342,6 @@
         </div>
       </div>
 
-      <!-- Screen 5: manual data entry — a lightweight secondary flow, offered
-           from both the summary and ask screens via dc-manual-link. Only
-           ever asks for the ONE missing field that would most help the
-           current data, never a long form. Lives in the same shell (toggled
-           via setDcScreen('manual')), not a separate popup. -->
-      <div class="dc-screen dc-manual-screen" id="dc-screen-manual" data-dc-screen="manual" hidden aria-label="Add missing data manually">
-        <div class="dc-manual-title" id="dc-manual-title">Add missing detail</div>
-        <p class="dc-manual-sub" id="dc-manual-sub">Just this one thing helps Hisaab give you a better answer.</p>
-        <div class="dc-manual-input-row">
-          <input id="dc-manual-value-input" type="text" placeholder="" aria-label="Missing field value">
-        </div>
-        <div class="dc-cta-row dc-manual-cta-row">
-          <button class="dc-btn-outline" id="dc-manual-cancel-btn" type="button">Cancel</button>
-          <button class="dc-ask-cta" id="dc-manual-save-btn" type="button">Save</button>
-        </div>
-      </div>
     </div>
   </section>
 

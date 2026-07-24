@@ -2159,7 +2159,29 @@
       capSection.hidden = true;
     }
 
-    updateDcManualLinkVisibility();
+    // The headline used to be static HTML ("Your sales data is ready" /
+    // "I found enough information...") regardless of what was actually
+    // found — a real bug: a sheet where almost everything except a raw
+    // row count came back missing would still claim to be "ready" with
+    // "enough information," directly contradicting the missing-fields
+    // list shown right below it. The headline is now computed from the
+    // same capLabels signal that drives "You can ask about" — if nothing
+    // is genuinely askable, the summary says so honestly instead of
+    // asserting confidence it hasn't earned.
+    const titleEl = document.getElementById('dc-summary-title');
+    const subEl = document.getElementById('dc-summary-sub');
+    if (titleEl && subEl) {
+      if (capLabels.length > 0) {
+        titleEl.textContent = 'Your sales data is ready';
+        subEl.textContent = 'I found enough information to start answering simple business questions.';
+      } else if (summary.orders_found) {
+        titleEl.textContent = 'Your sales data is very limited';
+        subEl.textContent = "I could only find your order counts — most detailed questions won't have strong answers yet, but I'll tell you honestly what I can and can't say.";
+      } else {
+        titleEl.textContent = "I couldn't find much to work with";
+        subEl.textContent = "This sheet doesn't have enough reliable data yet for me to answer real business questions.";
+      }
+    }
   }
 
   // Populates the Ask Hisaab screen's suggested prompts as real, clickable
@@ -2249,74 +2271,6 @@
     questionInput.focus();
   }
 
-  // Maps the user-facing missing-field labels (as sent by
-  // summarizeSheetParse's OPTIONAL_FIELD_LABELS) back to the technical
-  // field key manualInputs/the /api/simulate payload expects.
-  //
-  // Deliberately excludes 'Discounts / promos' -> promo_active. Manually
-  // answering "have you run any promos, yes or no" applies that single
-  // value to EVERY row in the whole history at once (see
-  // applyManualInputs() in server.js) -- which makes the promo/non-promo
-  // comparison this question depends on mathematically impossible: one
-  // side of the comparison is always forced to zero rows. The result was
-  // a fabricated, deterministic answer (~0% if "yes", ~-100% if "no") that
-  // had nothing to do with the actual data -- a real bug, not just a weak
-  // signal. The underlying math now returns an honest "cannot estimate"
-  // for a degenerate split (fixed in computePromoLift()), but that just
-  // means this prompt would ALWAYS resolve to "not enough data" no matter
-  // what's typed -- a pointless interaction, so it's removed rather than
-  // kept as a dead end that wastes the user's time.
-  const DC_LABEL_TO_FIELD_KEY = {
-    'Customer / repeat orders': 'repeat_orders_proxy',
-    'Order value': 'avg_order_value',
-    'Delivery fee': 'delivery_fee',
-  };
-  const DC_FIELD_PROMPT = {
-    repeat_orders_proxy: { title: 'Add customer info', sub: 'Do most of your orders come from repeat customers? Just answer yes or no.', placeholder: 'yes or no' },
-    avg_order_value: { title: 'Add order value', sub: 'Roughly what does a typical order come to?', placeholder: 'e.g. 350' },
-    delivery_fee: { title: 'Add delivery fee', sub: "What's your current delivery fee?", placeholder: 'e.g. 40' },
-  };
-  let dcManualFieldKey = null;
-
-  // Only shows the "Need to add missing data manually?" link when at
-  // least one missing field can actually be meaningfully filled in. If
-  // the only thing missing is discounts/promos (or anything else with no
-  // valid manual mapping), there is nothing this flow could honestly help
-  // with, so the link itself is hidden rather than leading to a dead end.
-  function firstActionableMissingLabel() {
-    const missingLabels = lastSheetSummary?.missing_optional_labels || [];
-    return missingLabels.find((label) => DC_LABEL_TO_FIELD_KEY[label]) || null;
-  }
-
-  function updateDcManualLinkVisibility() {
-    const link = document.getElementById('dc-manual-link');
-    if (!link) return;
-    link.hidden = !firstActionableMissingLabel();
-  }
-
-  function openDcManualEntry() {
-    const firstLabel = firstActionableMissingLabel();
-    const fieldKey = firstLabel ? DC_LABEL_TO_FIELD_KEY[firstLabel] : null;
-    const prompt = fieldKey ? DC_FIELD_PROMPT[fieldKey] : null;
-    dcManualFieldKey = fieldKey;
-
-    const titleEl = document.getElementById('dc-manual-title');
-    const subEl = document.getElementById('dc-manual-sub');
-    const input = document.getElementById('dc-manual-value-input');
-    if (prompt) {
-      titleEl.textContent = prompt.title;
-      subEl.textContent = prompt.sub;
-      input.placeholder = prompt.placeholder;
-    } else {
-      titleEl.textContent = 'Add missing detail';
-      subEl.textContent = 'Add anything that would help Hisaab understand your business better.';
-      input.placeholder = '';
-    }
-    input.value = '';
-    setDcScreen('manual');
-    input.focus();
-  }
-
   function wireDataConnectPage() {
     const closeBtn = document.getElementById('data-connect-close');
     if (closeBtn) closeBtn.addEventListener('click', closeDataConnectPage);
@@ -2375,28 +2329,6 @@
       hideGuidanceMessage();
       setDcScreen('ask');
       questionInput.focus();
-    });
-
-    const manualLink = document.getElementById('dc-manual-link');
-    if (manualLink) manualLink.addEventListener('click', openDcManualEntry);
-
-    const manualCancelBtn = document.getElementById('dc-manual-cancel-btn');
-    if (manualCancelBtn) manualCancelBtn.addEventListener('click', () => {
-      setDcScreen('summary');
-    });
-
-    const manualSaveBtn = document.getElementById('dc-manual-save-btn');
-    if (manualSaveBtn) manualSaveBtn.addEventListener('click', () => {
-      const input = document.getElementById('dc-manual-value-input');
-      const value = input?.value.trim();
-      if (value && dcManualFieldKey) {
-        // Feeds the SAME manualInputs mechanism the existing missing-fields
-        // resubmit flow already uses — the next /api/simulate call
-        // (whichever question is asked) includes this automatically. No new
-        // parsing logic, no new endpoint.
-        manualInputs[dcManualFieldKey] = value;
-      }
-      setDcScreen('summary');
     });
   }
 

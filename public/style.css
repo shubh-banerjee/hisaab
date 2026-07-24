@@ -2645,8 +2645,7 @@ body.data-connect-active .top-actions{
   min-height:420px;
 }
 
-.dc-summary-screen,
-.dc-manual-screen{
+.dc-summary-screen{
   display:flex;
   flex-direction:column;
   min-height:420px;
@@ -3030,23 +3029,6 @@ body.data-connect-active .top-actions{
   margin:10px 0 0;
 }
 
-.dc-manual-link{
-  display:block;
-  margin:4px 0 20px;
-  font-family:var(--sans);
-  font-size:12.5px;
-  font-weight:500;
-  color:var(--ink-mute);
-  text-decoration:underline;
-  text-underline-offset:2px;
-  background:none;
-  border:none;
-  cursor:pointer;
-  text-align:left;
-}
-
-.dc-manual-link:hover{ color:var(--ink-soft); }
-
 /* Shared compact CTA used across upload/summary/ask — consistent width,
    never full-bleed on desktop, stroke + solid-blue fill, no heavy shadow. */
 .dc-ask-cta{
@@ -3177,43 +3159,6 @@ body.data-connect-active .top-actions{
   color:var(--bad);
 }
 
-/* ── Screen 5: manual data entry ── */
-.dc-manual-title{
-  font-size:18px;
-  font-weight:700;
-  color:var(--ink);
-  margin:0 0 6px;
-}
-
-.dc-manual-sub{
-  font-size:13.5px;
-  color:var(--ink-soft);
-  line-height:1.5;
-  margin:0 0 20px;
-}
-
-.dc-manual-input-row input{
-  width:100%;
-  padding:12px 14px;
-  border:1.5px solid var(--line-strong);
-  border-radius:12px;
-  outline:none;
-  background:var(--surface);
-  color:var(--ink);
-  font-size:14.5px;
-  transition:border-color .15s ease, box-shadow .15s ease;
-}
-
-.dc-manual-input-row input:focus{
-  border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(53,109,255,0.12);
-}
-
-.dc-manual-cta-row{
-  justify-content:flex-end;
-  gap:10px;
-}
-
 @media (max-width: 720px){
   .data-connect-page{ padding:16px; }
   .data-connect-frame{ max-height:calc(100vh - 32px); }
@@ -3221,6 +3166,4 @@ body.data-connect-active .top-actions{
   .dc-upload-screen{ min-height:0; }
   .dc-loader-screen{ padding:36px 20px; min-height:0; }
   .dc-ask-cta{ width:100%; }
-  .dc-manual-cta-row .dc-btn-outline{ flex:1; }
-  .dc-manual-cta-row .dc-ask-cta{ flex:1; }
 }
