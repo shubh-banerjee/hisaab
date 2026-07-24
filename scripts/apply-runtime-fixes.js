@@ -134,6 +134,44 @@ function patchScript() {
     '  function setSubmissionLocked(locked) {'
   ].join('\n'));
 
+  if (!source.includes('voice-transcription-nonblocking-v1')) {
+    source = source.replaceAll('Tap to speak your question — in any language', 'Tap to speak your question — in English, Hindi, or Hinglish');
+    const transcribeCatchMarker = `    } catch (err) {
+      // If Gemini failed but we do have live-preview text, keep it — better than
+      // nothing, and clearly marked as preview to the user.
+      if (!livePreviewText) showError(err.message);
+      else showError(\`Couldn't refine the transcription (${err.message}). Using the rough live preview — feel free to edit before running.\`);
+    } finally {`;
+    const transcribeCatchReplacement = `    } catch (err) {
+      // voice-transcription-nonblocking-v1: transcription is only an input helper.
+      // It must never close the Ask Hisaab shell, show a global error, or block a
+      // typed/rough Hinglish/Hindi question from being asked.
+      const listeningNote = document.getElementById('mic-listening-note');
+      if (livePreviewText) {
+        questionInput.value = livePreviewText;
+        resizeQuestion();
+        updateQuestionState();
+        hideValidationNudge();
+        if (listeningNote) {
+          listeningNote.hidden = false;
+          listeningNote.textContent = 'I heard this roughly. Edit it if needed, then ask Hisaab.';
+          window.setTimeout(() => {
+            if (listeningNote && !recognizing) listeningNote.hidden = true;
+          }, 4200);
+        }
+        questionInput.focus();
+      } else if (listeningNote) {
+        listeningNote.hidden = false;
+        listeningNote.textContent = 'I could not hear that clearly. Try again or type the question.';
+        window.setTimeout(() => {
+          if (listeningNote && !recognizing) listeningNote.hidden = true;
+        }, 4200);
+      }
+    } finally {`;
+    if (!source.includes(transcribeCatchMarker)) throw new Error('transcribe catch marker not found');
+    source = source.replace(transcribeCatchMarker, transcribeCatchReplacement);
+  }
+
   if (!source.includes('dc-summary-boundary-fix')) {
     source = source.replace(
       "titleEl.textContent = \"I couldn't find much to work with\";\n        subEl.textContent = \"This sheet doesn't have enough reliable data yet for me to answer real business questions.\";",
