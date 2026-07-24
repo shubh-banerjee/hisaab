@@ -529,14 +529,14 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 
 .path-card-cta-filled{
   border:1.5px solid var(--accent);
-  color:var(--accent);
-  background:transparent;
-  transition:background-color .15s ease;
+  color:#fff;
+  background:var(--accent);
+  transition:background-color .15s ease, border-color .15s ease;
 }
 
 .path-card:hover .path-card-cta-filled{
-  background:var(--accent-soft);
-  border-color:var(--accent);
+  background:var(--accent-strong);
+  border-color:var(--accent-strong);
 }
 
 .path-bootstrap-link{
