@@ -2023,6 +2023,12 @@
     // moment closing is intentionally not offered.
     const closeBtn = document.getElementById('data-connect-close');
     if (closeBtn) closeBtn.hidden = name === 'loader';
+    // The loader reads cleaner without a visible card border around it —
+    // just the content floating on the page background. Deliberately NOT
+    // touching width/height here (that's what caused the resize-jump bug
+    // fixed just before this) — only the border/shadow visual changes.
+    const frame = document.querySelector('.data-connect-frame');
+    if (frame) frame.classList.toggle('borderless', name === 'loader');
   }
 
   function updateDcReadButtonState() {

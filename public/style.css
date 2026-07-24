@@ -2602,6 +2602,10 @@ body.data-connect-active .top-actions{
   overflow:hidden;
 }
 
+.data-connect-frame.borderless{
+  border-color:transparent;
+}
+
 .dc-close{
   position:absolute;
   top:18px;
