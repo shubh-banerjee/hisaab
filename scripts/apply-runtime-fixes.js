@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, '..');
 const scriptPath = path.join(root, 'public', 'script.js');
 const cssPath = path.join(root, 'public', 'style.css');
 const htmlPath = path.join(root, 'public', 'index.html');
+const serverPath = path.join(root, 'server.js');
 
 function read(filePath) {
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
@@ -108,15 +109,19 @@ function patchScript() {
     'uploadedCsvSize > CSV_MAX_BYTES'
   );
 
-  source = source.replaceAll(
-    '        const body = await readJsonResponse(res);\n        if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);',
-    '        if (res.status === 413) throw new Error(CSV_TOO_LARGE_MESSAGE);\n        const body = await readJsonResponse(res);\n        if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);'
-  );
+  if (!source.includes('throw new Error(CSV_TOO_LARGE_MESSAGE);\n        const body = await readJsonResponse(res);')) {
+    source = source.replaceAll(
+      '        const body = await readJsonResponse(res);\n        if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);',
+      '        if (res.status === 413) throw new Error(CSV_TOO_LARGE_MESSAGE);\n        const body = await readJsonResponse(res);\n        if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);'
+    );
+  }
 
-  source = source.replaceAll(
-    '      const body = await readJsonResponse(res);\n      if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);',
-    '      if (res.status === 413) throw new Error(CSV_TOO_LARGE_MESSAGE);\n      const body = await readJsonResponse(res);\n      if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);'
-  );
+  if (!source.includes('throw new Error(CSV_TOO_LARGE_MESSAGE);\n      const body = await readJsonResponse(res);')) {
+    source = source.replaceAll(
+      '      const body = await readJsonResponse(res);\n      if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);',
+      '      if (res.status === 413) throw new Error(CSV_TOO_LARGE_MESSAGE);\n      const body = await readJsonResponse(res);\n      if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);'
+    );
+  }
 
   source = source.replace(/  function setLoading\(isLoading, isRefine = false\) \{[\s\S]*?\n  \}\n\n  function setSubmissionLocked\(locked\) \{/, [
     '  function setLoading(isLoading, isRefine = false) {',
@@ -148,7 +153,215 @@ function patchScript() {
     '  function setSubmissionLocked(locked) {'
   ].join('\n'));
 
+  if (!source.includes('dc-summary-boundary-fix')) {
+    source = source.replace(
+      "titleEl.textContent = \"I couldn't find much to work with\";\n        subEl.textContent = \"This sheet doesn't have enough reliable data yet for me to answer real business questions.\";",
+      "titleEl.textContent = \"This doesn't look like sales data\";\n        const rowText = Number.isFinite(summary.raw_rows) && summary.raw_rows > 0 ? `I found ${summary.raw_rows} rows, but` : 'I';\n        subEl.textContent = `${rowText} could not find reliable order, sales, customer, delivery fee, or discount columns. Hisaab works best with shop sales/order data.`;"
+    );
+
+    source = source.replace(
+      '    }\n  }\n\n  // Populates the Ask Hisaab screen\'s suggested prompts',
+      [
+        '    }',
+        '',
+        '    // dc-summary-boundary-fix: random/non-business CSVs should stop at the boundary.',
+        "    // Hisaab is not a generic CSV chatbot; it only opens Ask when at least",
+        "    // one sales/business capability is ready or directionally usable.",
+        "    const summaryAskCta = document.getElementById('dc-ask-cta-btn');",
+        '    if (summaryAskCta) {',
+        '      const canAskHisaab = capLabels.length > 0;',
+        "      summaryAskCta.dataset.dcAction = canAskHisaab ? 'ask' : 'upload';",
+        '      summaryAskCta.textContent = canAskHisaab ? \'Ask Hisaab\' : \'Upload sales data\';',
+        '      summaryAskCta.disabled = false;',
+        "      summaryAskCta.setAttribute('aria-label', canAskHisaab ? 'Ask Hisaab' : 'Upload sales data');",
+        '    }',
+        '  }',
+        '',
+        "  // Populates the Ask Hisaab screen's suggested prompts"
+      ].join('\n')
+    );
+  }
+
+  if (!source.includes('dc-summary-upload-action')) {
+    source = source.replace(
+      "    if (askCtaBtn) askCtaBtn.addEventListener('click', () => {",
+      [
+        "    if (askCtaBtn) askCtaBtn.addEventListener('click', () => {",
+        "      // dc-summary-upload-action: if the uploaded CSV wasn't sales/order data,",
+        "      // the summary CTA becomes a retry/upload action instead of opening chat.",
+        "      if (askCtaBtn.dataset.dcAction === 'upload') {",
+        "        questionInput.value = '';",
+        "        resizeQuestion();",
+        "        updateQuestionState();",
+        "        hideGuidanceMessage();",
+        "        dcHideError();",
+        "        setDcScreen('upload');",
+        "        updateDcReadButtonState();",
+        "        return;",
+        "      }"
+      ].join('\n')
+    );
+  }
+
   writeIfChanged(scriptPath, before, source, 'patched public/script.js');
+}
+
+function patchServer() {
+  if (!fs.existsSync(serverPath)) return;
+  let source = read(serverPath);
+  const before = source;
+
+  if (!source.includes('hisaab-scope-guidance')) {
+    const helper = String.raw`
+// hisaab-scope-guidance: product guardrails for Hisaab's data and question scope.
+// Hisaab is a small-business sales analyst, not a generic CSV chatbot.
+function askableCapabilitiesFromSummary(sheetSummary) {
+  const capabilities = sheetSummary?.capability_map?.capabilities || [];
+  return capabilities.filter(item => item.status === 'ready' || item.status === 'limited');
+}
+
+function supportedQuestionsFromSummary(sheetSummary) {
+  const direct = (sheetSummary?.suggested_questions || []).filter(Boolean).slice(0, 3);
+  if (direct.length) return direct;
+
+  const questionByKey = {
+    sales_trend: 'Are my orders going up or down?',
+    pricing: 'What happens if I change my prices?',
+    delivery_fee: 'Should I raise my delivery fee?',
+    promotions: 'Are my discounts actually working?',
+    repeat_customers: 'Are customers coming back?',
+  };
+
+  return askableCapabilitiesFromSummary(sheetSummary)
+    .map(item => questionByKey[item.key])
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function datasetLooksLikeHisaabData(data, dataSource, sheetSummary) {
+  if ((data || []).length > 0) return true;
+  if (sheetSummary?.orders_found) return true;
+  if (askableCapabilitiesFromSummary(sheetSummary).length > 0) return true;
+  const sources = dataSource?.field_sources || {};
+  return ['orders', 'avg_order_value', 'delivery_fee', 'promo_active', 'repeat_orders']
+    .some(field => isSourceUsable(sources[field]));
+}
+
+function readableMissingField(field) {
+  if (field === 'orders') return 'order date or order count';
+  if (field === 'delivery_fee') return 'delivery fee';
+  if (field === 'avg_order_value') return 'sales or order value';
+  if (field === 'promo_active') return 'discount or promo history';
+  if (field === 'repeat_orders_proxy') return 'customer or repeat-order data';
+  return String(field || '').replace(/_/g, ' ');
+}
+
+function guidanceForUnsupportedDataset(sheetSummary, dataSource) {
+  const rows = Number(sheetSummary?.raw_rows || dataSource?.sheet_rows_used || 0);
+  const rowLead = rows > 0 ? `I found ${rows} rows, but` : 'I read the file, but';
+  return `${rowLead} this does not look like shop sales data yet. Hisaab works with orders, sales/order value, customers, delivery fees, discounts, or promos — upload that kind of data to get a real answer.`;
+}
+
+function guidanceForMissingDataQuestion(question, missingFields, sheetSummary) {
+  const text = String(question || '').toLowerCase();
+  const suggested = supportedQuestionsFromSummary(sheetSummary);
+  const suffix = suggested.length
+    ? ` I can still help with: ${suggested.slice(0, 2).join(' or ')}.`
+    : ' Upload shop sales/order data to get a reliable answer.';
+
+  if (/profit|margin|cost|expense|expenses|cogs/.test(text)) {
+    return `I cannot calculate profit honestly because cost or margin data is missing.${suffix}`;
+  }
+
+  if (/product|item|sku|category/.test(text)) {
+    return `I cannot compare products honestly because product/category data is missing.${suffix}`;
+  }
+
+  if (/customer|repeat|loyal/.test(text) && missingFields.some(item => item.field === 'repeat_orders_proxy')) {
+    return `I cannot answer repeat-customer questions honestly because customer data is missing.${suffix}`;
+  }
+
+  const missingNames = missingFields.map(item => readableMissingField(item.field));
+  return `I do not have reliable ${missingNames.join(' or ')} data to answer that specific question yet.${suffix}`;
+}
+
+async function sendHisaabGuidance(res, { sessionId, uploadId, question, dataSource, sheetSummary, guidanceMessage, suggestedQuestions, missingFields = [], reason = 'guidance' }) {
+  const answer = guidanceMessage;
+  const questionPersistence = await firestoreService.saveQuestion({
+    sessionId,
+    uploadId: uploadId || null,
+    question: question.trim(),
+    answer,
+  });
+  await firestoreService.saveEvent({
+    type: 'ask',
+    sessionId,
+    uploadId: uploadId || null,
+    questionId: questionPersistence.id,
+    metadata: {
+      status: 'guidance',
+      reason,
+      missingFields: missingFields.map(item => item.field || item),
+    },
+  });
+  return res.json({
+    session_id: sessionId,
+    status: 'guidance',
+    guidance_message: guidanceMessage,
+    suggested_questions: (suggestedQuestions || []).slice(0, 3),
+    detected_language: detectFallbackLanguage(question),
+    data_source: dataSource,
+    sheet_summary: sheetSummary,
+    persistence: { question: questionPersistence },
+  });
+}
+`;
+    source = source.replace('app.post(\'/api/simulate\', async (req, res) => {', helper + '\napp.post(\'/api/simulate\', async (req, res) => {');
+  }
+
+  const guardedBlockRegex = /  if \(\(sheetUrl && String\(sheetUrl\)\.trim\(\)\) \|\| \(csvText && String\(csvText\)\.trim\(\)\)\) \{[\s\S]*?  \}\n\n  const summary = summarizeData\(data\);/;
+  if (guardedBlockRegex.test(source) && !source.includes('question-scope-before-missing-fields')) {
+    source = source.replace(guardedBlockRegex, String.raw`  const hasConnectedInput = Boolean((sheetUrl && String(sheetUrl).trim()) || (csvText && String(csvText).trim()));
+  if (hasConnectedInput) {
+    // question-scope-before-missing-fields: first validate that the uploaded file is
+    // actually in Hisaab's product scope. Random CSVs must not open generic chat.
+    if (!datasetLooksLikeHisaabData(data, dataSource, sheetSummary)) {
+      return sendHisaabGuidance(res, {
+        sessionId,
+        uploadId,
+        question,
+        dataSource,
+        sheetSummary,
+        guidanceMessage: guidanceForUnsupportedDataset(sheetSummary, dataSource),
+        suggestedQuestions: [],
+        reason: 'unsupported_dataset',
+      });
+    }
+
+    const questionText = question.trim();
+    const earlyScenario = detectScenario(questionText, data);
+    if (earlyScenario.hasLeverSignal) {
+      const missingFields = missingCriticalFields(questionText, dataSource);
+      if (missingFields.length) {
+        return sendHisaabGuidance(res, {
+          sessionId,
+          uploadId,
+          question,
+          dataSource,
+          sheetSummary,
+          guidanceMessage: guidanceForMissingDataQuestion(questionText, missingFields, sheetSummary),
+          suggestedQuestions: supportedQuestionsFromSummary(sheetSummary),
+          missingFields,
+          reason: 'missing_required_data',
+        });
+      }
+    }
+  }
+
+  const summary = summarizeData(data);`);
+  }
+
+  writeIfChanged(serverPath, before, source, 'patched server.js');
 }
 
 function patchCss() {
@@ -215,5 +428,6 @@ function patchHtml() {
 }
 
 patchScript();
+patchServer();
 patchCss();
 patchHtml();
