@@ -2234,6 +2234,15 @@
     document.body.classList.add('data-connect-active');
     const overlay = document.getElementById('data-connect-page');
     if (overlay) overlay.hidden = false;
+    if (!dataConnectRefreshMode) {
+      // Starting fresh — clear whatever was left over from a previous
+      // attempt (a pasted link, an uploaded CSV) rather than silently
+      // reusing it. Refresh mode intentionally skips this: it exists to
+      // re-open the SAME already-connected data, not to start over.
+      sheetUrlInput.value = '';
+      clearCsvUpload();
+      renderSheetUrlState();
+    }
     setPath('real');
     setDcScreen('upload');
     dcHideError();
