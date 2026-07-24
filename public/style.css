@@ -473,13 +473,8 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 
 .path-card:hover{
   transform:translateY(-1px);
-  border-color:var(--line-strong);
-  box-shadow:0 8px 24px rgba(59,111,230,0.08);
-}
-
-.path-card.active{
   border-color:var(--accent);
-  box-shadow:0 8px 28px rgba(59,111,230,0.12);
+  box-shadow:0 8px 24px rgba(59,111,230,0.12);
 }
 
 .path-card-icon{
@@ -527,12 +522,23 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   border:1.5px solid var(--accent);
   color:var(--accent);
   background:transparent;
+  transition:background-color .15s ease;
+}
+
+.path-card:hover .path-card-cta-outline{
+  background:var(--accent-soft);
 }
 
 .path-card-cta-filled{
   border:1.5px solid var(--accent);
   color:#fff;
   background:var(--accent);
+  transition:background-color .15s ease, border-color .15s ease;
+}
+
+.path-card:hover .path-card-cta-filled{
+  background:var(--accent-strong);
+  border-color:var(--accent-strong);
 }
 
 .path-bootstrap-link{
