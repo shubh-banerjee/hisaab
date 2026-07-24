@@ -4,8 +4,8 @@
   "description": "AI-powered what-if simulator for retail business owners",
   "main": "server.js",
   "scripts": {
-    "postinstall": "node scripts/apply-runtime-fixes.js && node scripts/apply-question-scope-fixes.js",
-    "start": "node scripts/apply-runtime-fixes.js && node scripts/apply-question-scope-fixes.js && node server.js",
+    "postinstall": "node scripts/apply-runtime-fixes.js && node scripts/apply-question-scope-fixes.js && node scripts/apply-voice-safety-fixes.js",
+    "start": "node scripts/apply-runtime-fixes.js && node scripts/apply-question-scope-fixes.js && node scripts/apply-voice-safety-fixes.js && node server.js",
     "dev": "node --env-file=.env --watch server.js",
     "seed:demo-decisions": "node --env-file=.env scripts/seed-demo-decisions.js"
   },
