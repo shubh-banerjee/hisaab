@@ -2168,10 +2168,8 @@
   // here.
   function renderDcSuggestedPrompts(questions) {
     const container = document.getElementById('dc-suggested-questions');
-    const label = document.getElementById('dc-try-asking-label');
     if (!container) return;
     const list = (questions || []).slice(0, 3);
-    if (label) label.hidden = list.length === 0;
     container.innerHTML = list.map((q) => `<button class="chip" type="button" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('');
     container.querySelectorAll('.chip').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -2194,7 +2192,7 @@
     const missingLabels = (summary?.missing_optional_labels || []).map((l) => l.toLowerCase());
     if (missingLabels.length) {
       noteEl.hidden = false;
-      noteEl.textContent = `Some answers may be directional because ${missingLabels.join(', ')} data is missing.`;
+      noteEl.textContent = 'Some answers may be less precise — a bit of your data is missing.';
     } else {
       noteEl.hidden = true;
     }

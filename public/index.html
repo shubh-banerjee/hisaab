@@ -301,7 +301,6 @@
       <div class="dc-screen dc-ask-screen" id="dc-screen-ask" data-dc-screen="ask" hidden>
         <div class="ask-block" id="ask-block">
           <h2 class="dc-ask-title">What would you like to understand?</h2>
-          <p class="dc-ask-subtitle">Ask about your orders, sales, delivery fees, discounts, or customers.</p>
 
           <div class="dc-ask-input-wrap">
             <textarea id="question-input" placeholder="For example: Are my orders going down?" rows="1" aria-label="Ask a what-if question" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"></textarea>
@@ -309,15 +308,14 @@
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
             </button>
           </div>
+          <div class="lang-note">Speak in <b>English, हिन्दी,</b> or <b>Hinglish</b> — I'll figure it out</div>
           <div class="mic-listening-note" id="mic-listening-note" hidden>Listening…</div>
           <div class="dc-validation-nudge" id="dc-validation-nudge" hidden>That's a bit too open for a calculation — try naming one specific change, like a price, a fee, or a promotion.</div>
           <div class="dc-guidance-card" id="dc-guidance-card" hidden>
             <div class="dc-guidance-message" id="dc-guidance-message"></div>
             <div class="suggestions" id="dc-guidance-questions"></div>
           </div>
-          <div class="dc-ask-missing-note" id="dc-ask-missing-note" hidden></div>
 
-          <div class="dc-try-asking-label" id="dc-try-asking-label" hidden>Try asking</div>
           <div class="suggestions" id="dc-suggested-questions"></div>
           <div class="suggestions" id="sample-suggestions" hidden>
             <button class="chip" data-q="If I raise my delivery fee by ₹20, what happens to repeat orders?" type="button">Raise delivery fee</button>
@@ -332,8 +330,8 @@
             <button class="chip" data-q="Which lever in my data has the strongest effect on total orders?" type="button">What actually moves my orders?</button>
           </div>
 
+          <div class="dc-ask-missing-note" id="dc-ask-missing-note" hidden></div>
           <div class="loading-status" id="loading-status" hidden aria-live="polite">Running the numbers...</div>
-          <div class="lang-note">Speak in <b>English, हिन्दी,</b> or <b>Hinglish</b> — I'll figure it out</div>
 
           <div class="dc-cta-row">
             <button class="dc-ask-cta" id="simulate-btn" type="button" disabled>
