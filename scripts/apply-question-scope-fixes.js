@@ -73,17 +73,39 @@ function patchServer() {
   let source = read(serverPath);
   const before = source;
 
-  if (!source.includes('hisaab-question-scope-v2')) {
+  if (!source.includes('hisaab-question-scope-v3')) {
     const helper = [
-      '// hisaab-question-scope-v2: Hisaab answers business questions about the connected sales data only.',
-      'function defaultHisaabQuestions(sheetSummary) {',
+      '// hisaab-question-scope-v3: Hisaab answers business questions about connected sales data only.',
+      'function defaultHisaabQuestions(sheetSummary, language = \'en\') {',
       '  const fromSummary = typeof supportedQuestionsFromSummary === \'function\' ? supportedQuestionsFromSummary(sheetSummary) : [];',
-      '  const fallback = [',
-      "    'Are my orders going up or down?',",
-      "    'What happens if I change my prices?',",
-      "    'Should I raise my delivery fee?',",
-      '  ];',
+      '  const fallbackByLanguage = {',
+      '    hi: [',
+      "      'मेरे ऑर्डर बढ़ रहे हैं या घट रहे हैं?',",
+      "      'मेरी बिक्री में क्या बदल रहा है?',",
+      "      'क्या मुझे delivery fee बढ़ानी चाहिए?',",
+      '    ],',
+      '    hinglish: [',
+      "      'Mere orders badh rahe hain ya gir rahe hain?',",
+      "      'Meri sales mein kya change ho raha hai?',",
+      "      'Kya mujhe delivery fee badhani chahiye?',",
+      '    ],',
+      '    en: [',
+      "      'Are my orders going up or down?',",
+      "      'What happens if I change my prices?',",
+      "      'Should I raise my delivery fee?',",
+      '    ],',
+      '  };',
+      '  const fallback = fallbackByLanguage[language] || fallbackByLanguage.en;',
       '  return (fromSummary.length ? fromSummary : fallback).slice(0, 3);',
+      '}',
+      '',
+      'function detectHisaabQuestionLanguage(question) {',
+      '  const text = String(question || \'\').trim().toLowerCase();',
+      '  if (!text) return \'en\';',
+      '  if (/[\\u0900-\\u097F]/.test(text)) return \'hi\';',
+      '  const hinglishSignal = /\\b(main|mai|mein|mujhe|mera|meri|mere|kaise|kya|kyu|kyun|karu|karna|banu|banun|badha|badhau|badhao|dukaan|dhandha|vyapar|bikri|grahak|daam|kimat|munafa|kharcha|amir|ameer)\\b/i;',
+      '  if (hinglishSignal.test(text)) return \'hinglish\';',
+      '  return \'en\';',
       '}',
       '',
       'function questionLooksLikeHisaabQuestion(question) {',
@@ -91,7 +113,7 @@ function patchServer() {
       '  if (!text) return { inScope: false, reason: \'empty\' };',
       '  const businessSignal = /\\b(order|orders|sale|sales|revenue|business|shop|store|customer|customers|repeat|price|prices|pricing|delivery|shipping|fee|fees|discount|promo|promotion|offer|cod|cash on delivery|month|monthly|trend|grow|growth|profit|margin|cost|expense|expenses|product|products|item|items|sku|category|bill|billing|aov|average order|average bill)\\b/i;',
       '  const hindiBusinessSignal = /[\\u0900-\\u097F]*(ऑर्डर|बिक्री|दुकान|ग्राहक|कीमत|डिलीवरी|छूट|मुनाफा|खर्च|बिल|महीना)[\\u0900-\\u097F]*/i;',
-      '  const hinglishBusinessSignal = /\\b(dukaan|dhandha|vyapar|bech|bikri|grahak|daam|kimat|munafa|kharcha|order|delivery|discount)\\b/i;',
+      '  const hinglishBusinessSignal = /\\b(dukaan|dhandha|vyapar|bech|bikri|grahak|daam|kimat|munafa|kharcha|order|delivery|discount|sales|business)\\b/i;',
       '  if (businessSignal.test(text) || hindiBusinessSignal.test(text) || hinglishBusinessSignal.test(text)) {',
       '    return { inScope: true, reason: \'business_data_question\' };',
       '  }',
@@ -99,24 +121,33 @@ function patchServer() {
       '}',
       '',
       'function guidanceForUnsupportedQuestion(question, sheetSummary) {',
-      '  const examples = defaultHisaabQuestions(sheetSummary);',
-      "  const exampleText = examples.length ? ' Try asking: ' + examples.slice(0, 2).join(' or ') + '.' : '';",
-      "  return 'I can’t answer that in Hisaab because it is not about your connected sales data. Ask about orders, sales, prices, delivery fees, discounts, customers, or profit/margin if those columns exist.' + exampleText;",
+      '  const language = detectHisaabQuestionLanguage(question);',
+      '  const examples = defaultHisaabQuestions(sheetSummary, language);',
+      '  const first = examples[0] || \'Are my orders going up or down?\';',
+      '  const second = examples[1] || \'What changed in my sales?\';',
+      '  if (language === \'hi\') {',
+      "    return `मैं Hisaab में इसका जवाब नहीं दे सकता क्योंकि यह आपके जुड़े हुए sales data के बारे में नहीं है। मैं orders, sales, prices, delivery fees, discounts, customers, या profit/margin जैसे सवालों में मदद कर सकता हूँ अगर वे columns मौजूद हैं। Try asking: ${first} or ${second}.`;",
+      '  }',
+      '  if (language === \'hinglish\') {',
+      "    return `Hisaab iska direct answer nahi de sakta kyunki yeh aapke connected sales data ke baare mein nahi hai. Main orders, sales, pricing, delivery fees, discounts, customers, ya profit/margin jaise business-data questions mein help kar sakta hoon. Try asking: ${first} or ${second}.`;",
+      '  }',
+      "  return `I can’t answer that in Hisaab because it is not about your connected sales data. Ask about orders, sales, prices, delivery fees, discounts, customers, or profit/margin if those columns exist. Try asking: ${first} or ${second}.`;",
       '}',
       ''
     ].join('\n');
     source = source.replace("app.post('/api/simulate', async (req, res) => {", helper + "\napp.post('/api/simulate', async (req, res) => {");
   }
 
-  if (!source.includes('hisaab-question-scope-guard-v2')) {
+  if (!source.includes('hisaab-question-scope-guard-v3')) {
     const marker = '  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner);';
     const guard = [
       marker,
       '',
-      '  // hisaab-question-scope-guard-v2: valid sales data does not make Hisaab a generic chatbot.',
+      '  // hisaab-question-scope-guard-v3: valid sales data does not make Hisaab a generic chatbot.',
       '  // Reject unrelated questions before any fallback can silently turn them into price/delivery scenarios.',
       '  const questionScope = questionLooksLikeHisaabQuestion(question.trim());',
       '  if (!questionScope.inScope) {',
+      '    const guidanceLanguage = detectHisaabQuestionLanguage(question.trim());',
       '    return sendHisaabGuidance(res, {',
       '      sessionId,',
       '      uploadId,',
@@ -124,7 +155,7 @@ function patchServer() {
       '      dataSource,',
       '      sheetSummary,',
       '      guidanceMessage: guidanceForUnsupportedQuestion(question.trim(), sheetSummary),',
-      '      suggestedQuestions: defaultHisaabQuestions(sheetSummary),',
+      '      suggestedQuestions: defaultHisaabQuestions(sheetSummary, guidanceLanguage),',
       "      reason: 'unsupported_question',",
       '    });',
       '  }'
@@ -133,12 +164,13 @@ function patchServer() {
     source = source.replace(marker, guard);
   }
 
-  if (!source.includes('hisaab-classifier-fail-closed-v2')) {
+  if (!source.includes('hisaab-classifier-fail-closed-v3')) {
     const catchRegex = /    } catch \(err\) \{\n      \/\/ Classification failed \(network\/parse error\)[\s\S]*?console\.error\('\[classifyQuestionIntentWithGemini\] failed, falling back to regex scenario:', err\?\.message \|\| err\);\n    \}/;
     const failClosed = [
       '    } catch (err) {',
-      '      // hisaab-classifier-fail-closed-v2: never turn an unclear question into a default delivery-fee result.',
+      '      // hisaab-classifier-fail-closed-v3: never turn an unclear question into a default delivery-fee result.',
       "      console.error('[classifyQuestionIntentWithGemini] failed, returning guidance instead of defaulting to a scenario:', err?.message || err);",
+      '      const guidanceLanguage = detectHisaabQuestionLanguage(question.trim());',
       '      return sendHisaabGuidance(res, {',
       '        sessionId,',
       '        uploadId,',
@@ -146,7 +178,7 @@ function patchServer() {
       '        dataSource,',
       '        sheetSummary,',
       '        guidanceMessage: guidanceForUnsupportedQuestion(question.trim(), sheetSummary),',
-      '        suggestedQuestions: defaultHisaabQuestions(sheetSummary),',
+      '        suggestedQuestions: defaultHisaabQuestions(sheetSummary, guidanceLanguage),',
       "        reason: 'intent_classifier_failed',",
       '      });',
       '    }'
