@@ -248,8 +248,6 @@
   const refineSend = document.getElementById('refine-send');
   const refineBtnText = refineSend.querySelector('.btn-text');
   const refineBtnLoader = refineSend.querySelector('.btn-loader');
-  const loadingStatus = document.getElementById('loading-status');
-  const refineLoadingStatus = document.getElementById('refine-loading-status');
 
   const decisionVocabulary = /\b(raise|raised|raising|lower|lowered|change|changed|add|added|remove|removed|stop|start|increase|increased|decrease|decreased|run|running|try|offer|offering|reduce|reduced|cut|discount)\b/i;
   const subjectVocabulary = /\b(fee|fees|price|prices|promo|promotion|discount|cod|cash on delivery|delivery|shipping|orders?|repeat|customer|customers|revenue|aov|month|months)\b/i;
@@ -1113,6 +1111,7 @@
     if (!card || !msgEl || !questionsEl) return;
     msgEl.textContent = body.guidance_message || '';
     const questions = (body.suggested_questions || []).slice(0, 3);
+    questionsEl.hidden = questions.length === 0;
     questionsEl.innerHTML = questions.map((q) => `<button class="chip" type="button" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('');
     questionsEl.querySelectorAll('.chip').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -2193,6 +2192,9 @@
     const container = document.getElementById('dc-suggested-questions');
     if (!container) return;
     const list = (questions || []).slice(0, 3);
+    // Hide entirely when empty — an empty flex container still applies
+    // its own margin-top, adding a visible gap even with zero chips.
+    container.hidden = list.length === 0;
     container.innerHTML = list.map((q) => `<button class="chip" type="button" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('');
     container.querySelectorAll('.chip').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -3199,6 +3201,8 @@
     const loader = isRefine ? refineBtnLoader : btnLoader;
     text.hidden = isLoading;
     loader.hidden = !isLoading;
+    const btn = isRefine ? refineSend : simulateBtn;
+    if (btn) btn.classList.toggle('loading', isLoading);
     // #composer no longer exists as a standalone element in the redesigned
     // Ask Hisaab screen (replaced by .dc-ask-input-wrap + a separate
     // .dc-cta-row) — `composer` is null there. This previously threw a
@@ -3209,7 +3213,6 @@
     // being submitted from it.
     const loadingShell = isRefine ? refineInline : (composer || document.getElementById('ask-block'));
     if (loadingShell) loadingShell.classList.toggle('loading', isLoading);
-    (isRefine ? refineLoadingStatus : loadingStatus).hidden = !isLoading;
     // Every trigger is locked together, not just the one that started the
     // request — this is what prevents a second click/chip/refine-submit
     // while a request is pending from firing an overlapping second call.

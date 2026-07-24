@@ -294,10 +294,10 @@
       </div>
 
       <!-- Screen 4: Ask Hisaab. Reuses the real composer/mic/submit logic
-           (same element IDs: question-input, mic-btn, simulate-btn,
-           loading-status) — only the presentation and the suggested
-           prompts are new. The CTA now lives in its own footer row instead
-           of being crammed as a circular icon button inside the input. -->
+           (same element IDs: question-input, mic-btn, simulate-btn) —
+           only the presentation and the suggested prompts are new. The CTA
+           now lives in its own footer row instead of being crammed as a
+           circular icon button inside the input. -->
       <div class="dc-screen dc-ask-screen" id="dc-screen-ask" data-dc-screen="ask" hidden>
         <div class="ask-block" id="ask-block">
           <h2 class="dc-ask-title">What would you like to understand?</h2>
@@ -331,7 +331,6 @@
           </div>
 
           <div class="dc-ask-missing-note" id="dc-ask-missing-note" hidden></div>
-          <div class="loading-status" id="loading-status" hidden aria-live="polite">Running the numbers...</div>
 
           <div class="dc-cta-row">
             <button class="dc-ask-cta" id="simulate-btn" type="button" disabled>
@@ -453,7 +452,6 @@
           <span class="btn-loader" hidden><span class="spinner"></span></span>
         </button>
       </div>
-      <div class="loading-status" id="refine-loading-status" hidden aria-live="polite">Running the numbers...</div>
     </section>
 
     <section class="results" id="results" hidden>

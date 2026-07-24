@@ -1096,15 +1096,6 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   justify-content:center;
 }
 
-.loading-status{
-  margin-top:8px;
-  color:var(--ink-mute);
-  font-size:12.5px;
-  font-style:italic;
-}
-
-.loading-status[hidden]{ display:none; }
-
 .spinner{
   width:16px;
   height:16px;
@@ -3052,6 +3043,21 @@ body.data-connect-active .top-actions{
   color:var(--ink-mute);
   opacity:0.6;
   cursor:not-allowed;
+}
+
+/* setSubmissionLocked() sets disabled=true for BOTH "input isn't valid
+   yet" and "a request is genuinely in flight" -- those are different
+   states and need different looks. Without this override, the button
+   during loading would go transparent/grey (per the rule above) and
+   only the bare white spinner would remain visible, floating with no
+   button chrome around it at all -- exactly the "broken CTA" bug. This
+   restores the solid blue fill specifically while loading. */
+.dc-ask-cta:disabled.loading{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
+  opacity:1;
+  cursor:default;
 }
 
 .dc-btn-outline{
