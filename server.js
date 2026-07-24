@@ -2482,7 +2482,25 @@ async function handleSimulate(req, res) {
   if ((sheetUrl && String(sheetUrl).trim()) || (csvText && String(csvText).trim())) {
     const missingFields = missingCriticalFields(question.trim(), dataSource);
     if (!data.length || missingFields.length) {
-      const answer = partialDataSummary(dataSource);
+      // Reuses the exact same guidance response shape/rendering already
+      // built for the open-ended-question case (classifyQuestionIntentWithGemini) —
+      // per explicit instruction, no forced manual-data-entry form right
+      // now. Honest about what's missing, but never blocks the user from
+      // getting SOME kind of answer; offers real, already-computed
+      // alternative questions instead (drawn from sheetSummary's actual
+      // capability_map, never fabricated).
+      const missingFieldNames = missingFields.map(item => {
+        if (item.field === 'orders') return 'order dates';
+        if (item.field === 'delivery_fee') return 'delivery fee';
+        if (item.field === 'avg_order_value') return 'order value';
+        if (item.field === 'promo_active') return 'discount history';
+        return item.field;
+      });
+      const guidanceMessage = !data.length
+        ? "I couldn't build a reliable order history from this sheet yet, so I can't compute a real answer for this specific question."
+        : `I don't have reliable ${missingFieldNames.join(' or ')} data to answer this specific question yet.`;
+      const suggestedQuestions = (sheetSummary?.suggested_questions || []).slice(0, 3);
+      const answer = guidanceMessage;
       const questionPersistence = await firestoreService.saveQuestion({
         sessionId,
         uploadId: uploadId || null,
@@ -2495,20 +2513,18 @@ async function handleSimulate(req, res) {
         uploadId: uploadId || null,
         questionId: questionPersistence.id,
         metadata: {
-          status: 'needs_input',
+          status: 'guidance',
           missingFields: missingFields.map(item => item.field),
         },
       });
       return res.json({
         session_id: sessionId,
-        status: 'needs_input',
-        missing_fields: missingFields.length ? missingFields : [
-          { field: 'orders', prompt: 'We could not build monthly order history from this sheet. Which column identifies an order?', input_type: 'text' },
-        ],
-        partial_data_summary: answer,
+        status: 'guidance',
+        guidance_message: guidanceMessage,
+        suggested_questions: suggestedQuestions,
+        detected_language: detectFallbackLanguage(question),
         data_source: dataSource,
         sheet_summary: sheetSummary,
-        analytics_capabilities: sheetSummary?.capability_map || null,
         persistence: {
           question: questionPersistence,
         },
