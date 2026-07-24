@@ -3,6 +3,7 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const serverPath = path.join(root, 'server.js');
+const scriptPath = path.join(root, 'public', 'script.js');
 
 function read(filePath) {
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
@@ -13,6 +14,58 @@ function writeIfChanged(filePath, before, after, label) {
     fs.writeFileSync(filePath, after, 'utf8');
     console.log(`[question-scope-fixes] ${label}`);
   }
+}
+
+function patchClient() {
+  if (!fs.existsSync(scriptPath)) return;
+  let source = read(scriptPath);
+  const before = source;
+
+  if (!source.includes('guidance-single-chip-source-v1')) {
+    const showMarker = `  function showGuidanceMessage(body) {
+    const card = document.getElementById('dc-guidance-card');
+    const msgEl = document.getElementById('dc-guidance-message');
+    const questionsEl = document.getElementById('dc-guidance-questions');
+    if (!card || !msgEl || !questionsEl) return;
+    msgEl.textContent = body.guidance_message || '';`;
+    const showReplacement = `  function showGuidanceMessage(body) {
+    const card = document.getElementById('dc-guidance-card');
+    const msgEl = document.getElementById('dc-guidance-message');
+    const questionsEl = document.getElementById('dc-guidance-questions');
+    const baseSuggestions = document.getElementById('dc-suggested-questions');
+    if (!card || !msgEl || !questionsEl) return;
+    // guidance-single-chip-source-v1: while guidance is visible, keep only the
+    // contextual chips inside the guidance card. The default chips below caused
+    // duplicate options and made the Ask screen noisy.
+    if (baseSuggestions) {
+      baseSuggestions.dataset.hiddenByGuidance = 'true';
+      baseSuggestions.hidden = true;
+    }
+    msgEl.textContent = body.guidance_message || '';`;
+
+    if (!source.includes(showMarker)) throw new Error('showGuidanceMessage marker not found');
+    source = source.replace(showMarker, showReplacement);
+
+    const hideMarker = `  function hideGuidanceMessage() {
+    const card = document.getElementById('dc-guidance-card');
+    if (card) card.hidden = true;
+  }`;
+    const hideReplacement = `  function hideGuidanceMessage() {
+    const card = document.getElementById('dc-guidance-card');
+    if (card) card.hidden = true;
+    const baseSuggestions = document.getElementById('dc-suggested-questions');
+    const askScreen = document.getElementById('dc-screen-ask');
+    if (baseSuggestions && baseSuggestions.dataset.hiddenByGuidance === 'true') {
+      delete baseSuggestions.dataset.hiddenByGuidance;
+      baseSuggestions.hidden = !(askScreen && !askScreen.hidden && baseSuggestions.children.length > 0);
+    }
+  }`;
+
+    if (!source.includes(hideMarker)) throw new Error('hideGuidanceMessage marker not found');
+    source = source.replace(hideMarker, hideReplacement);
+  }
+
+  writeIfChanged(scriptPath, before, source, 'patched public/script.js');
 }
 
 function patchServer() {
@@ -110,7 +163,8 @@ function patchServer() {
 }
 
 try {
+  patchClient();
   patchServer();
 } catch (err) {
-  console.warn(`[question-scope-fixes] skipped server.js: ${err.message}`);
+  console.warn(`[question-scope-fixes] skipped: ${err.message}`);
 }
