@@ -1222,8 +1222,20 @@
     // full visibility since it has no per-card why-text to lean on.
     const hasScenarios = Boolean(data.scenarios_bundle?.scenarios?.length);
     const explainBlockEl = document.querySelector('#results .explain');
+    const evidenceBlockEl = document.getElementById('evidence-block');
     if (hasScenarios) {
       if (explainBlockEl) explainBlockEl.hidden = true;
+      // The chart + top-line percentage barely change across different
+      // lever questions (outcome_metric defaults to 'orders' for delivery
+      // fee, price, AND promo questions alike -- it only changes if the
+      // question specifically mentions repeat customers), so it reads as
+      // "the same chart every time" regardless of what was actually asked.
+      // The plain-language summary above already explains the same
+      // uncertainty in words, and the real decision-relevant numbers
+      // (with proper risk framing) already live on the scenario cards --
+      // this block was restating the same general context without
+      // reflecting the specific decision being considered.
+      if (evidenceBlockEl) evidenceBlockEl.hidden = true;
       revenueImpact.hidden = true;
       downsideCard.hidden = true;
       trendChip.hidden = true;
@@ -1231,6 +1243,7 @@
       if (lowConfActionsEl) lowConfActionsEl.classList.add('demoted');
     } else {
       if (explainBlockEl) explainBlockEl.hidden = false;
+      if (evidenceBlockEl) evidenceBlockEl.hidden = false;
       const lowConfActionsEl = document.getElementById('low-confidence-actions');
       if (lowConfActionsEl) lowConfActionsEl.classList.remove('demoted');
     }
