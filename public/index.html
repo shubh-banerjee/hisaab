@@ -166,17 +166,40 @@
 
       <!-- Screen 1: upload box -->
       <div class="dc-screen dc-upload-screen" id="dc-screen-upload" data-dc-screen="upload">
-        <div class="data-connect-title">Use my sales data</div>
+        <div class="up-title">Connect your sales data</div>
+        <p class="up-sub">Paste a Google Sheets link or upload a CSV file. Hisaab reads whatever columns exist and tells you honestly what it can and can't answer.</p>
+
+        <div class="dc-tabs" role="tablist">
+          <button class="dc-tab active" id="dc-tab-sheet" type="button" role="tab" aria-selected="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
+            Google Sheet
+          </button>
+          <button class="dc-tab" id="dc-tab-csv" type="button" role="tab" aria-selected="false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            Upload CSV
+          </button>
+        </div>
+
         <section class="sheet-slot" id="sheet-slot" aria-label="Connect order data">
-          <div class="lbl">Paste a public Google Sheets link. Hisaab reads whatever columns exist.</div>
-          <div class="sheet-url-field">
-            <input id="sheet-url-input" type="url" placeholder="https://docs.google.com/spreadsheets/..." aria-label="Google Sheets URL">
-            <button class="clear-link-btn" id="clear-sheet-url" type="button" aria-label="Clear Google Sheets link" hidden>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          <div class="dc-panel" id="dc-sheet-panel">
+            <div class="field-label">Sheet link</div>
+            <div class="sheet-url-field">
+              <input id="sheet-url-input" type="url" placeholder="https://docs.google.com/spreadsheets/..." aria-label="Google Sheets URL">
+              <button class="clear-link-btn" id="clear-sheet-url" type="button" aria-label="Clear Google Sheets link" hidden>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+            <div class="dc-link-status" id="dc-link-status" hidden></div>
+          </div>
+
+          <div class="dc-panel" id="dc-csv-panel" hidden>
+            <button class="dc-dropzone" id="csv-upload-link" type="button">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0-12 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              <span class="dc-dropzone-title" id="csv-dropzone-title">Click to upload or drag and drop</span>
+              <span class="dc-dropzone-sub">CSV files only</span>
             </button>
           </div>
-          <div class="dc-link-status" id="dc-link-status" hidden></div>
-          <div class="or">or <button id="csv-upload-link" type="button">upload a CSV file</button></div>
+
           <div class="sheet-actions">
             <div class="pending-data-note" id="pending-data-note" hidden>
               <span class="dot"></span>

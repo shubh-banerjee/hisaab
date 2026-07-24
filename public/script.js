@@ -623,12 +623,13 @@
   }
 
   function renderCsvUploadState() {
+    const titleEl = document.getElementById('csv-dropzone-title');
     if (uploadedCsv && uploadedFileName) {
-      csvUploadLink.textContent = uploadedFileName;
+      if (titleEl) titleEl.textContent = uploadedFileName;
       csvUploadLink.classList.add('has-file');
       csvUploadLink.title = 'Remove selected CSV';
     } else {
-      csvUploadLink.textContent = 'upload a CSV file';
+      if (titleEl) titleEl.textContent = 'Click to upload or drag and drop';
       csvUploadLink.classList.remove('has-file');
       csvUploadLink.title = '';
     }
@@ -1945,6 +1946,11 @@
     document.querySelectorAll('.dc-screen').forEach((el) => {
       el.hidden = el.getAttribute('data-dc-screen') !== name;
     });
+    // Every screen keeps its close X except the loader — interrupting a
+    // read mid-flight could leave state half-applied, so this is the one
+    // moment closing is intentionally not offered.
+    const closeBtn = document.getElementById('data-connect-close');
+    if (closeBtn) closeBtn.hidden = name === 'loader';
   }
 
   function updateDcReadButtonState() {
@@ -2233,6 +2239,23 @@
       const overlay = document.getElementById('data-connect-page');
       if (e.key === 'Escape' && overlay && !overlay.hidden) closeDataConnectPage();
     });
+
+    // Sheet / CSV tabs — purely a visual toggle between the two input
+    // panels. The underlying sheetUrlInput/csvFileInput logic is
+    // completely unchanged; this just decides which one is visible.
+    const tabSheet = document.getElementById('dc-tab-sheet');
+    const tabCsv = document.getElementById('dc-tab-csv');
+    const panelSheet = document.getElementById('dc-sheet-panel');
+    const panelCsv = document.getElementById('dc-csv-panel');
+    function setDcUploadTab(tab) {
+      const isSheet = tab === 'sheet';
+      if (tabSheet) { tabSheet.classList.toggle('active', isSheet); tabSheet.setAttribute('aria-selected', String(isSheet)); }
+      if (tabCsv) { tabCsv.classList.toggle('active', !isSheet); tabCsv.setAttribute('aria-selected', String(!isSheet)); }
+      if (panelSheet) panelSheet.hidden = !isSheet;
+      if (panelCsv) panelCsv.hidden = isSheet;
+    }
+    if (tabSheet) tabSheet.addEventListener('click', () => setDcUploadTab('sheet'));
+    if (tabCsv) tabCsv.addEventListener('click', () => setDcUploadTab('csv'));
 
     const readBtn = document.getElementById('dc-read-data-btn');
     if (readBtn) readBtn.addEventListener('click', () => {
