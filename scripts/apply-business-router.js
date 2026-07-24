@@ -6,6 +6,14 @@ const serverPath = path.join(root, 'server.js');
 const scriptPath = path.join(root, 'public', 'script.js');
 const cssPath = path.join(root, 'public', 'style.css');
 
+const decode = value => Buffer.from(value, 'base64').toString('utf8');
+const SERVER_HELPER = decode('Ci8vIGhpc2FhYi1idXNpbmVzcy1yb3V0ZXItdjE6IHJvdXRlIFNNQiBxdWVzdGlvbnMgaW50byBob25lc3QgYW5zd2VyIHR5cGVzLCBub3Qgb25lIGZvcmNlZCB3aGF0LWlmIGNhbGN1bGF0b3IuCmZ1bmN0aW9uIHNvdXJjZUF2YWlsYWJsZUZvckJ1c2luZXNzUm91dGVyKGRhdGFTb3VyY2UsIGZpZWxkKSB7CiAgY29uc3Qgc3RhdHVzID0gZGF0YVNvdXJjZT8uZmllbGRfc291cmNlcz8uW2ZpZWxkXT8uc3RhdHVzOwogIHJldHVybiBbJ2Rlcml2ZWQnLCAnZGVyaXZlZF9tYW51YWwnLCAnZGVyaXZlZF9sb3dfY29uZmlkZW5jZScsICdmYWxsYmFjayddLmluY2x1ZGVzKHN0YXR1cyk7Cn0KCmZ1bmN0aW9uIGRldGVjdEJ1c2luZXNzQW5zd2VyVHlwZShxdWVzdGlvbikgewogIGNvbnN0IHRleHQgPSBTdHJpbmcocXVlc3Rpb24gfHwgJycpLnRyaW0oKS50b0xvd2VyQ2FzZSgpOwogIGNvbnN0IGFza3NDaGFuZ2UgPSAvXGIoXCd3aGF0XFxzK2hhcHBlbnN8Y2hhbmdlfHJhaXNlfGluY3JlYXNlfGRlY3JlYXNlfGxvd2VyfHJlZHVjZXx0ZXN0fHRyeXxzaG91bGRcXHMraXxpZlxccytpfGlmXFxzK3dlfGltcGFjdHxlZmZlY3QpXFxiL2kudGVzdCh0ZXh0KTsKICBjb25zdCB3aGF0SWZMZXZlciA9IC9cYihwcmljZXxwcmljZXN8cHJpY2luZ3xkZWxpdmVyeXxzaGlwcGluZ3xmZWV8ZmVlc3xkaXNjb3VudHxwcm9tb3xwcm9tb3Rpb258b2ZmZXJ8Y29kfGNhc2hcXHMrb25cXHMrZGVsaXZlcnkpXFxiL2kudGVzdCh0ZXh0KTsKICBpZiAoYXNrc0NoYW5nZSAmJiB3aGF0SWZMZXZlcikgcmV0dXJuICd3aGF0X2lmJzsKICBpZiAoL1xiKG9yZGVyfG9yZGVycylcYi9pLnRlc3QodGV4dCkgJiYgL1xiKHVwfGRvd258Z29pbmd8dHJlbmR8Z3Jvd2luZ3xkcm9wcGluZ3xkcm9wfGluY3JlYXNlfGRlY3JlYXNlfG1vbnRofG1vbnRoc3xjaGFuZ2VkfGNoYW5nZSlcYi9pLnRlc3QodGV4dCkpIHJldHVybiAnb3JkZXJfdHJlbmQnOwogIGlmICgvXGIoc2FsZXN8cmV2ZW51ZXxlYXJuaW5nfGVhcm5pbmdzfGJpbGx8YmlsbGluZ3xhb3Z8YXZlcmFnZVxccytvcmRlcnxvcmRlclxccyt2YWx1ZXxtb25leSlcYi9pLnRlc3QodGV4dCkpIHJldHVybiAnc2FsZXNfdHJlbmQnOwogIGlmICgvXGIoY3VzdG9tZXJ8Y3VzdG9tZXJzfHJlcGVhdHxyZXR1cm5pbmd8cmV0YWlufHJldGVudGlvbnxsb3lhbHxsb3lhbHR5fGNvbWVcXHMrYmFja3xjb21pbmdcXHMrYmFjaylcYi9pLnRlc3QodGV4dCkpIHJldHVybiAnY3VzdG9tZXJfcmV0ZW50aW9uJzsKICBpZiAoL1xiKHByb2ZpdHxtYXJnaW58Y29zdHxleHBlbnNlfGV4cGVuc2VzfGNvZ3MpXFxiL2kudGVzdCh0ZXh0KSkgcmV0dXJuICdwcm9maXRfbWlzc2luZyc7CiAgaWYgKC9cYihwcm9kdWN0fHByb2R1Y3RzfGl0ZW18aXRlbXN8c2t1fGNhdGVnb3J5fGNhdGVnb3JpZXMpXFxiL2kudGVzdCh0ZXh0KSkgcmV0dXJuICdwcm9kdWN0X21pc3NpbmcnOwogIGlmICgvXGIoZ3Jvd3xncm93dGh8aW1wcm92ZXxiZXR0ZXJ8d2hhdFxccytzaG91bGR8d2hhdFxcbytzaGFsbHxidXNpbmVzc3xzaG9wfHN0b3JlfG5leHR8c3RyYXRlZ3l8cmV0YWlufGJhZGhhfGJhZGhhdXxrYWlzZXxreWFcXHMrY2FydXxrYXJuYSkgXFxiL2kudGVzdCh0ZXh0KSkgcmV0dXJuICdidXNpbmVzc19ndWlkYW5jZSc7CiAgcmV0dXJuICdidXNpbmVzc19ndWlkYW5jZSc7Cn0KCmZ1bmN0aW9uIG1ldHJpY1Nlcmllc0ZvckJ1c2luZXNzUm91dGVyKHJvd3MsIG1ldHJpYykgewogIGlmIChtZXRyaWMgPT09ICdyZXZlbnVlJykgewogICAgcmV0dXJuIChyb3dzIHx8IFtdKQogICAgICAubWFwKHJvdyA9PiAoeyBtb250aDogcm93Lm1vbnRoLCB2YWx1ZTogTnVtYmVyKHJvdy5vcmRlcnMpICogTnVtYmVyKHJvdy5hdmdfb3JkZXJfdmFsdWUpIH0pKQogICAgICAuZmlsdGVyKHBvaW50ID0+IHBvaW50Lm1vbnRoICYmIE51bWJlci5pc0Zpbml0ZShwb2ludC52YWx1ZSkpOwogIH0KICByZXR1cm4gKHJvd3MgfHwgW10pCiAgICAubWFwKHJvdyA9PiAoeyBtb250aDogcm93Lm1vbnRoLCB2YWx1ZTogTnVtYmVyKHJvd1ttZXRyaWNdKSB9KSkKICAgIC5maWx0ZXIocG9pbnQgPT4gcG9pbnQubW9udGggJiYgTnVtYmVyLmlzRmluaXRlKHBvaW50LnZhbHVlKSk7Cn0KCmZ1bmN0aW9uIGNvbXBhcmVCdXNpbmVzc01ldHJpYyhyb3dzLCBtZXRyaWMpIHsKICBjb25zdCBzZXJpZXMgPSBtZXRyaWNTZXJpZXNGb3JCdXNpbmVzc1JvdXRlcihyb3dzLCBtZXRyaWMpOwogIGlmIChzZXJpZXMubGVuZ3RoIDwgMikgewogICAgcmV0dXJuIHsgb2s6IGZhbHNlLCBzZXJpZXMsIGNoYW5nZVBjdDogbnVsbCwgZGlyZWN0aW9uOiAnbm90X2Vub3VnaF9oaXN0b3J5JywgcmVjZW50QXZnOiBudWxsLCBlYXJsaWVyQXZnOiBudWxsIH07CiAgfQogIGNvbnN0IHNwbGl0ID0gTWF0aC5tYXgoMSwgTWF0aC5mbG9vcihzZXJpZXMubGVuZ3RoIC8gMikpOwogIGNvbnN0IGVhcmxpZXIgPSBzZXJpZXMuc2xpY2UoMCwgc3BsaXQpLm1hcChwID0+IHAudmFsdWUpOwogIGNvbnN0IHJlY2VudCA9IHNlcmllcy5zbGljZShzcGxpdCkubWFwKHAgPT4gcC52YWx1ZSk7CiAgY29uc3QgZWFybGllckF2ZyA9IG1lYW4oZWFybGllcik7CiAgY29uc3QgcmVjZW50QXZnID0gbWVhbihyZWNlbnQpOwogIGNvbnN0IGNoYW5nZVBjdCA9IGVhcmxpZXJBdmcgPyAoKHJlY2VudEF2ZyAtIGVhcmxpZXJBdmcpIC8gZWFybGllckF2ZykgKiAxMDAgOiAwOwogIGNvbnN0IGRpcmVjdGlvbiA9IE1hdGguYWJzKGNoYW5nZVBjdCkgPCA1ID8gJ3N0YWJsZScgOiBjaGFuZ2VQY3QgPiAwID8gJ3VwJyA6ICdkb3duJzsKICByZXR1cm4geyBvazogdHJ1ZSwgc2VyaWVzLCBjaGFuZ2VQY3Q6IHJvdW5kKGNoYW5nZVBjdCwgMSksIGRpcmVjdGlvbiwgcmVjZW50QXZnOiByb3VuZChyZWNlbnRBdmcsIDEpLCBlYXJsaWVyQXZnOiByb3VuZChlYXJsaWVyQXZnLCAxKSB9Owp9CgpmdW5jdGlvbiBtb25leVBsYWluKHZhbHVlKSB7CiAgY29uc3QK');
+const SERVER_INSERTION = decode('ICBjb25zdCBzdW1tYXJ5ID0gc3VtbWFyaXplRGF0YShkYXRhKTsKCiAgLy8gYnVzaW5lc3Mtcm91dGVyLWJlZm9yZS13aGF0LWlmLXYxOiBhbnN3ZXIgbm9uLXdoYXQtaWYgYnVzaW5lc3MgcXVlc3Rpb25zIHdpdGggdGhlIHJpZ2h0IHJlc3VsdCB0eXBlLgogIGNvbnN0IHJvdXRlZEJ1c2luZXNzQW5zd2VyID0gYnVpbGRCdXNpbmVzc0Fuc3dlclJvdXRlKHF1ZXN0aW9uLnRyaW0oKSwgZGF0YSwgZGF0YVNvdXJjZSwgc2hlZXRTdW1tYXJ5KTsKICBpZiAocm91dGVkQnVzaW5lc3NBbnN3ZXIpIHsKICAgIHJldHVybiBzZW5kQnVzaW5lc3NBbnN3ZXIocmVzLCB7CiAgICAgIHNlc3Npb25JZCwKICAgICAgdXBsb2FkSWQsCiAgICAgIHF1ZXN0aW9uLAogICAgICBkYXRhU291cmNlLAogICAgICBzaGVldFN1bW1hcnksCiAgICAgIGFuc3dlckJ1bmRsZTogcm91dGVkQnVzaW5lc3NBbnN3ZXIsCiAgICAgIHJvd3M6IGRhdGEsCiAgICAgIHN1bW1hcnksCiAgICB9KTsKICB9CgogIC8vIElmIHRoZSBxdWVzdGlvbiBoYXMgemVybyByZWFsIGxldmVyIHNpZ25hbA==');
+const CLIENT_HELPER = decode('CiAgLy8gYnVzaW5lc3MtYW5zd2VyLXJlbmRlcmVyLXYxOiBzaW1wbGUgU01CLWZyaWVuZGx5IHJlc3VsdCBwYWdlIGZvciBpbnNpZ2h0L2d1aWRhbmNlIHF1ZXN0aW9ucy4KICBmdW5jdGlvbiBlbnN1cmVCdXNpbmVzc0Fuc3dlckJsb2NrKCkgewogICAgbGV0IGJsb2NrID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2J1c2luZXNzLWFuc3dlci1ibG9jaycpOwogICAgaWYgKGJsb2NrKSByZXR1cm4gYmxvY2s7CiAgICBibG9jayA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ2RpdicpOwogICAgYmxvY2suaWQgPSAnYnVzaW5lc3MtYW5zd2VyLWJsb2NrJzsKICAgIGJsb2NrLmNsYXNzTmFtZSA9ICdidXNpbmVzcy1hbnN3ZXItYmxvY2snOwogICAgY29uc3Qgc2NlbmFyaW9CbG9jayA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzY2VuYXJpb3MtYmxvY2snKTsKICAgIGNvbnN0IHJlc3VsdHMgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncmVzdWx0cycpOwogICAgaWYgKHNjZW5hcmlvQmxvY2sgJiYgc2NlbmFyaW9CbG9jay5wYXJlbnRFbGVtZW50KSBzY2VuYXJpb0Jsb2NrLnBhcmVudEVsZW1lbnQuaW5zZXJ0QmVmb3JlKGJsb2NrLCBzY2VuYXJpb0Jsb2NrKTsKICAgIGVsc2UgaWYgKHJlc3VsdHMpIHJlc3VsdHMuYXBwZW5kQ2hpbGQoYmxvY2spOwogICAgcmV0dXJuIGJsb2NrOwogIH0KCiAgZnVuY3Rpb24gYnVzaW5lc3NDaGlwSHRtbCh0ZXh0KSB7CiAgICByZXR1cm4gJzxidXR0b24gY2xhc3M9ImNoaXAiIHR5cGU9ImJ1dHRvbiIgZGF0YS1wcm9tcHQ9IicgKyBlc2NhcGVIdG1sKHRleHQpICsgJyI+JyArIGVzY2FwZUh0bWwodGV4dCkgKyAnPC9idXR0b24+JzsKICB9CgogIGZ1bmN0aW9uIGJ1c2luZXNzQ2FyZEh0bWwoY2FyZCkgewogICAgY29uc3QgdG9uZSA9IGVzY2FwZUh0bWwoY2FyZC50b25lIHx8ICcnKTsKICAgIGNvbnN0IHByb21wdEJ1dHRvbiA9IGNhcmQucHJvbXB0ID8gJzxidXR0b24gY2xhc3M9ImJ1c2luZXNzLWNhcmQtY3RhIiB0eXBlPSJidXR0b24iIGRhdGEtcHJvbXB0PSInICsgZXNjYXBlSHRtbChjYXJkLnByb21wdCkgKyAnIj4nICsgZXNjYXBlSHRtbChjYXJkLmN0YSB8fCAnQXNrIHRoaXMnKSArICc8L2J1dHRvbj4nIDogJyc7CiAgICByZXR1cm4gJzxkaXYgY2xhc3M9ImJ1c2luZXNzLWFjdGlvbi1jYXJkICcgKyB0b25lICsgJyI+JyArCiAgICAgICc8ZGl2IGNsYXNzPSJidXNpbmVzcy1jYXJkLWxhYmVsIj4nICsgZXNjYXBlSHRtbChjYXJkLmxhYmVsIHx8ICcnKSArICc8L2Rpdj4nICsKICAgICAgJzxoND4nICsgZXNjYXBlSHRtbChjYXJkLnRpdGxlIHx8ICcnKSArICc8L2g0PicgKwogICAgICAnPHA+JyArIGVzY2FwZUh0bWwoY2FyZC5ib2R5IHx8ICcnKSArICc8L3A+JyArCiAgICAgIHByb21wdEJ1dHRvbiArCiAgICAgICc8L2Rpdj4nOwogIH0KCiAgZnVuY3Rpb24gcmVuZGVyQnVzaW5lc3NBbnN3ZXIoZGF0YSwgZWxhcHNlZCA9IDApIHsKICAgIGNvbnN0IGRlbW9PdmVybGF5ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2RlbW8tbGVzc29uJyk7CiAgICBpZiAoZGVtb092ZXJsYXkgJiYgIWRlbW9PdmVybGF5LmhpZGRlbikgY2xvc2VEZW1vTGVzc29uKCk7CiAgICBjb25zdCBkYXRhQ29ubmVjdE92ZXJsYXkgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZGF0YS1jb25uZWN0LXBhZ2UnKTsKICAgIGlmIChkYXRhQ29ubmVjdE92ZXJsYXkgJiYgIWRhdGFDb25uZWN0T3ZlcmxheS5oaWRkZW4pIGNsb3NlRGF0YUNvbm5lY3RQYWdlKCk7CgogICAgY29uc3QgYnVuZGxlID0gZGF0YS5idXNpbmVzc19hbnN3ZXIgfHwge307CiAgICBjb25zdCBkZXRlY3RlZCA9IFN0cmluZyhkYXRhLmdlbmVyYXRlZD8uZGV0ZWN0ZWRfbGFuZ3VhZ2UgfHwgZGF0YS5kZXRlY3RlZF9sYW5ndWFnZSB8fCAnJykudG9Mb3dlckNhc2UoKTsKICAgIHNldFVJTGFuZyhkZXRlY3RlZCA9PT0gJ2hpJyA/ICdoaScgOiAnZW4nKTsKICAgIGlmIChkYXRhLnNlc3Npb25faWQpIGxvY2FsU3RvcmFnZS5zZXRJdGVtKCdoaXNhYWJTZXNzaW9uSWQnLCBkYXRhLnNlc3Npb25faWQpOwogICAgbGFzdFNpbXVsYXRpb25QZXJzaXN0ZW5jZSA9IGRhdGEucGVyc2lzdGVuY2UgfHwgbnVsbDsKICAgIHNldERhdGFTb3VyY2UoZGF0YS5kYXRhX3NvdXJjZSk7CiAgICByZW5kZXJDb25uZWN0ZWREYXRhU3RhdGUoZGF0YS5kYXRhX3NvdXJjZSk7CiAgICBpZiAoZGF0YS5zaGVldF9zdW1tYXJ5KSB7CiAgICAgIGxhc3RTaGVldFN1bW1hcnkgPSBkYXRhLnNoZWV0X3N1bW1hcnk7CiAgICAgIHJlbmRlclNoZWV0U3VtbWFyeShkYXRhLnNoZWV0X3N1bW1hcnkpOwogICAgfQoKICAgIGNvbnN0IGJsb2NrID0gZW5zdXJlQnVzaW5lc3NBbnN3ZXJCbG9jaygpOwogICAgY29uc3QgZmFjdHMgPSBBcnJheS5pc0FycmF5KGJ1bmRsZS5mb3VuZF9mYWN0cykgPyBidW5kbGUuZm91bmRfZmFjdHMuZmlsdGVyKEJvb2xlYW4pLnNsaWNlKDAsIDQpIDogW107CiAgICBjb25zdCBjYXJkcyA9IEFycmF5LmlzQXJyYXkoYnVuZGxlLmFjdGlvbl9jYXJkcykgPyBidW5kbGUuYWN0aW9uX2NhcmRzLmZpbHRlcihCb29sZWFuKS5zbGljZSgwLCAzKSA6IFtdOwogICAgY29uc3Qgc3VnZ2VzdGlvbnMgPSBBcnJheS5pc0FycmF5KGJ1bmRsZS5zdWdnZXN0ZWRfcXVlc3Rpb25zKSA/IGJ1bmRsZS5zdWdnZXN0ZWRfcXVlc3Rpb25zLmZpbHRlcihCb29sZWFuKS5zbGljZSgwLCAzKSA6IFtdOwogICAgY29uc3QgZmFjdHNIdG1sID0gZmFjdHMubGVuZ3RoID8gJzxkaXYgY2xhc3M9ImJ1c2luZXNzLWZhY3RzIj4nICsgZmFjdHMubWFwKGZhY3QgPT4gJzxzcGFuPicgKyBlc2NhcGVIdG1sKGZhY3QpICsgJzwvc3Bhbj4nKS5qb2luKCcnKSArICc8L2Rpdj4nIDogJyc7CiAgICBjb25zdCBsaW1pdGF0aW9uSHRtbCA9IGJ1bmRsZS5saW1pdGF0aW9uID8gJzxkaXYgY2xhc3M9ImJ1c2luZXNzLWxpbWl0YXRpb24iPicgKyBlc2NhcGVIdG1sKGJ1bmRsZS5saW1pdGF0aW9uKSArICc8L2Rpdj4nIDogJyc7CiAgICBjb25zdCBjYXJkc0h0bWwgPSBjYXJkcy5sZW5ndGggPyAnPGRpdiBjbGFzcz0iYnVzaW5lc3MtYWN0aW9uLWdyaWQiPicgKyBjYXJkcy5tYXAoYnVzaW5lc3NDYXJkSHRtbCkuam9pbignJykgKyAnPC9kaXY+JyA6ICcnOwogICAgY29uc3Qgc3VnZ2VzdGlvbnNIdG1sID0gc3VnZ2VzdGlvbnMubGVuZ3RoID8gJzxkaXYgY2xhc3M9ImJ1c2luZXNzLW5leHQtcXVlc3Rpb25zIj48ZGl2IGNsYXNzPSJidXNpbmVzcy1leWVicm93Ij5Hb29kIG5leHQgcXVlc3Rpb25zPC9kaXY+JyArIHN1Z2dlc3Rpb25zLm1hcChidXNpbmVzc0NoaXBIdG1sKS5qb2luKCcnKSArICc8L2Rpdj4nIDogJyc7CgogICAgYmxvY2suaW5uZXJIVE1MID0KICAgICAgJzxkaXYgY2xhc3M9ImJ1c2luZXNzLWFuc3dlci1xdWVzdGlvbiI+JyArCiAgICAgICAgJzxkaXYgY2xhc3M9ImJ1c2luZXNzLWV5ZWJyb3ciPllvdSBhc2tlZDwvZGl2PicgKwogICAgICAgICc8aDI+JyArIGVzY2FwZUh0bWwoZGF0YS5xdWVzdGlvbiB8fCBsYXN0UXVlc3Rpb24gfHwgJycpICsgJzwvaDI+JyArCiAgICAgICAgJzxwPicgKyBlc2NhcGVIdG1sKGJ1bmRsZS5zdWJ0ZXh0IHx8ICdJIGxvb2tlZCBhdCB3aGF0IHlvdXIgdXBsb2FkZWQgZGF0YSBjYW4gaG9uZXN0bHkgc3VwcG9ydC4nKSArICc8L3A+JyArCiAgICAgICc8L2Rpdj4nICsKICAgICAgJzxkaXYgY2xhc3M9ImJ1c2luZXNzLWFuc3dlci1jYXJkIj4nICsKICAgICAgICAJzxkaXYgY2xhc3M9ImJ1c2luZXNzLWV5ZWJyb3ciPkhpc2FhYiBzYXlzPC9kaXY+JyArCiAgICAgICAgJzxoMz4nICsgZXNjYXBlSHRtbChidW5kbGUudGl0bGUgfHwgJ0hlcmUgaXMgdGhlIGNsZWFyZXN0IHJlYWQnKSArICc8L2gzPicgKwogICAgICAgICc8cCBjbGFzcz0iYnVzaW5lc3MtYW5zd2VyLW1haW4iPicgKyBlc2NhcGVIdG1sKGJ1bmRsZS5hbnN3ZXIgfHwgJycpICsgJzwvcD4nICsKICAgICAgICBmYWN0c0h0bWwgKwogICAgICAgIGxpbWl0YXRpb25IdG1sICsKICAgICAgJzwvZGl2PicgKwogICAgICBjYXJkc0h0bWwgKwogICAgICBzdWdnZXN0aW9uc0h0bWw7CgogICAgYmxvY2suaGlkZGVuID0gZmFsc2U7CiAgICBibG9jay5xdWVyeVNlbGVjdG9yQWxsKCdbZGF0YS1wcm9tcHRdJykuZm9yRWFjaChidG4gPT4gewogICAgICBidG4uYWRkRXZlbnRMaXN0ZW5lcignY2xpY2snLCBhc3luYyAoKSA9PiB7CiAgICAgICAgY29uc3QgcHJvbXB0ID0gYnRuLmdldEF0dHJpYnV0ZSgnZGF0YS1wcm9tcHQnKSB8fCAnJzsKICAgICAgICBpZiAoIXByb21wdCkgcmV0dXJuOwogICAgICAgIHF1ZXN0aW9uSW5wdXQudmFsdWUgPSBwcm9tcHQ7CiAgICAgICAgcmVzaXplUXVlc3Rpb24oKTsKICAgICAgICB1cGRhdGVRdWVzdGlvblN0YXRlKCk7CiAgICAgICAgYXdhaXQgcnVuU2ltdWxhdGlvbih7IHF1ZXN0aW9uT3ZlcnJpZGU6IHByb21wdCwgc2tpcFZhbGlkYXRpb246IHRydWUgfSk7CiAgICAgIH0pOwogICAgfSk7CgogICAgY29uc3Qgc2NlbmFyaW9zQmxvY2sgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc2NlbmFyaW9zLWJsb2NrJyk7CiAgICBpZiAoc2NlbmFyaW9zQmxvY2spIHNjZW5hcmlvc0Jsb2NrLmhpZGRlbiA9IHRydWU7CiAgICBjb25zdCBldmlkZW5jZUJsb2NrID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2V2aWRlbmNlLWJsb2NrJyk7CiAgICBpZiAoZXZpZGVuY2VCbG9jaykgZXZpZGVuY2VCbG9jay5oaWRkZW4gPSB0cnVlOwogICAgY29uc3QgY29uZmlkZW5jZUJsb2NrRWwgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY29uZmlkZW5jZS1ibG9jaycpOwogICAgaWYgKGNvbmZpZGVuY2VCbG9ja0VsKSBjb25maWRlbmNlQmxvY2tFbC5oaWRkZW4gPSB0cnVlOwogICAgY29uc3QgZXhwbGFpbkJsb2NrRWwgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcjcmVzdWx0cyAuZXhwbGFpbicpOwogICAgaWYgKGV4cGxhaW5CbG9ja0VsKSBleHBsYWluQmxvY2tFbC5oaWRkZW4gPSB0cnVlOwogICAgaW50ZW50UHJvbXB0LmNsYXNzTGlzdC5yZW1vdmUoJ3Nob3cnLCAnY2FwdHVyZWQnKTsKICAgIGludGVudFByb21wdC5oaWRkZW4gPSB0cnVlOwogICAgcmVmaW5lSW5saW5lLmhpZGRlbiA9IHRydWU7CgogICAgc3RhZ2UuY2xhc3NMaXN0LmFkZCgnaGFzLXJlc3VsdCcpOwogICAgcmVzdWx0c1NlY3Rpb24uaGlkZGVuID0gZmFsc2U7CiAgICByZXN1bHRzU2VjdGlvbi5jbGFzc0xpc3QuYWRkKCdzaG93Jyk7CiAgICBjdXJyZW50UmVzdWx0ID0gbWFrZVJlc3VsdFNuYXBzaG90KGRhdGEsIGVsYXBzZWQsIHsKICAgICAgaWQ6IGNyeXB0by5yYW5kb21VVUlEID8gY3J5cHRvLnJhbmRvbVVVSUQoKSA6ICdyZXN1bHQtJyArIERhdGUubm93KCksCiAgICAgIHF1ZXN0aW9uOiBkYXRhLnF1ZXN0aW9uIHx8IGxhc3RRdWVzdGlvbiwKICAgICAgcmVmaW5lbWVudDogJycsCiAgICAgIHZhbHVlOiBmaW5pdGVOdW1iZXIoZGF0YS5jb21wdXRlZD8ub3V0Y29tZV92YWx1ZSksCiAgICAgIGlzV2VhazogdHJ1ZQogICAgfSk7CiAgICByZXN1bHRzU2VjdGlvbi5zY3JvbGxJbnRvKHsgYmVoYXZpb3I6ICdzbW9vdGgnLCBibG9jazogJ25lYXJlc3QnIH0pOwogICAgdXBkYXRlQXdheUZyb21MYW5kaW5nU3RhdGUoKTsKICB9Cg==');
+const CLIENT_STATUS_REPLACEMENT = decode('ICAgICAgaWYgKGJvZHkuc3RhdHVzID09PSAnYnVzaW5lc3NfYW5zd2VyJykgewogICAgICAgIGlmIChib2R5LnNlc3Npb25faWQpIGxvY2FsU3RvcmFnZS5zZXRJdGVtKCdoaXNhYWJTZXNzaW9uSWQnLCBib2R5LnNlc3Npb25faWQpOwogICAgICAgIHJlbmRlckJ1c2luZXNzQW5zd2VyKGJvZHksIERhdGUubm93KCkgLSBzdGFydFRpbWUpOwogICAgICAgIHJldHVybjsKICAgICAgfQogICAgICAvLyBidXNpbmVzcy1hbnN3ZXItc3RhdHVzLXYxCiAgICAgIGlmIChib2R5LnN0YXR1cyA9PT0gJ2d1aWRhbmNlJykgew==');
+const HIDE_REPLACEMENT = decode('ICAgIGlmIChzY2VuYXJpb3NCbG9jaykgc2NlbmFyaW9zQmxvY2suaGlkZGVuID0gdHJ1ZTsKICAgIGNvbnN0IGJ1c2luZXNzQW5zd2VyQmxvY2sgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnYnVzaW5lc3MtYW5zd2VyLWJsb2NrJyk7CiAgICBpZiAoYnVzaW5lc3NBbnN3ZXJCbG9jaykgYnVzaW5lc3NBbnN3ZXJCbG9jay5oaWRkZW4gPSB0cnVlOwogICAgLy8gaGlkZS1idXNpbmVzcy1hbnN3ZXItYmxvY2stdjE=');
+const BUSINESS_CSS = decode('Ci8qIGJ1c2luZXNzLWFuc3dlci11aS12MTogcGxhaW4sIGNhbG0gYW5hbHlzdCByZXN1bHQgZm9yIG5vbi13aGF0LWlmIHF1ZXN0aW9ucyAqLwouYnVzaW5lc3MtYW5zd2VyLWJsb2Nre21heC13aWR0aDo3NjBweDttYXJnaW46MCBhdXRvIDI4cHg7ZGlzcGxheTpncmlkO2dhcDoxOHB4O30KLmJ1c2luZXNzLWFuc3dlci1xdWVzdGlvbntwYWRkaW5nOjAgMCAycHg7fQouYnVzaW5lc3MtZXllYnJvd3tmb250LXNpemU6MTJweDtsZXR0ZXItc3BhY2luZzouMTJlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7Y29sb3I6IzgxOTBhYTtmb250LXdlaWdodDo4MDA7bWFyZ2luLWJvdHRvbTo4cHg7fQouYnVzaW5lc3MtYW5zd2VyLXF1ZXN0aW9uIGgye21hcmdpbjowO2NvbG9yOnZhcigtLWluayk7Zm9udC1zaXplOjI2cHg7bGluZS1oZWlnaHQ6MS4xNTtsZXR0ZXItc3BhY2luZzotLjAzZW07fQouYnVzaW5lc3MtYW5zd2VyLXF1ZXN0aW9uIHB7bWFyZ2luOjhweCAwIDA7Y29sb3I6dmFyKC0tbXV0ZWQpO2ZvbnQtc2l6ZToxNXB4O2xpbmUtaGVpZ2h0OjEuNTU7bWF4LXdpZHRoOjY4MHB4O30KLmJ1c2luZXNzLWFuc3dlci1jYXJkLC5idXNpbmVzcy1hY3Rpb24tY2FyZHtib3JkZXI6MXB4IHNvbGlkIHJnYmEoMTMzLDE0OCwxNzksLjI4KTtib3JkZXItcmFkaXVzOjIycHg7YmFja2dyb3VuZDpyZ2JhKDI1NSwyNTUsMjU1LC41NCk7Ym94LXNoYWRvdzpub25lO30KLmJ1c2luZXNzLWFuc3dlci1jYXJke3BhZGRpbmc6MjhweDt9Ci5idXNpbmVzcy1hbnN3ZXItY2FyZCBoM3ttYXJnaW46MDtjb2xvcjp2YXIoLS1pbmspO2ZvbnQtc2l6ZTozMHB4O2xpbmUtaGVpZ2h0OjEuMTI7bGV0dGVyLXNwYWNpbmc6LS4wNGVtO30KLmJ1c2luZXNzLWFuc3dlci1tYWlue21hcmdpbjoxNHB4IDAgMDtjb2xvcjojMzQ0MjVmO2ZvbnQtc2l6ZToxOHB4O2xpbmUtaGVpZ2h0OjEuNjt9Ci5idXNpbmVzcy1mYWN0c3tkaXNwbGF5OmZsZXg7ZmxleC13cmFwOndyYXA7Z2FwOjhweDttYXJnaW4tdG9wOjE4cHg7fQouYnVzaW5lc3MtZmFjdHMgc3Bhbntib3JkZXI6MXB4IHNvbGlkIHJnYmEoMTMzLDE0OCwxNzksLjI4KTtib3JkZXItcmFkaXVzOjk5OXB4O3BhZGRpbmc6OHB4IDEycHg7YmFja2dyb3VuZDojZmZmO2NvbG9yOiMzNDQyNWY7Zm9udC1zaXplOjEzcHg7Zm9udC13ZWlnaHQ6NzAwO30KLmJ1c2luZXNzLWxpbWl0YXRpb257bWFyZ2luLXRvcDoxOHB4O2JvcmRlci1yYWRpdXM6MTZweDtiYWNrZ3JvdW5kOiNmZmY4ZTg7Ym9yZGVyOjFweCBzb2xpZCAjZjNkNzlkO2NvbG9yOiM4YTViMDA7cGFkZGluZzoxMnB4IDE0cHg7Zm9udC1zaXplOjE0cHg7bGluZS1oZWlnaHQ6MS40NTt9Ci5idXNpbmVzcy1hY3Rpb24tZ3JpZHtkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOnJlcGVhdCgzLG1pbm1heCgwLDFmcikpO2dhcDoxNHB4O30KLmJ1c2luZXNzLWFjdGlvbi1jYXJke3BhZGRpbmc6MjBweDttaW4taGVpZ2h0OjIyMHB4O2Rpc3BsYXk6ZmxleDtmbGV4LWRpcmVjdGlvbjpjb2x1bW47YWxpZ24taXRlbXM6ZmxleC1zdGFydDt9Ci5idXNpbmVzcy1jYXJkLWxhYmVse2ZvbnQtc2l6ZToxMXB4O2xldHRlci1zcGFjaW5nOi4xMmVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtjb2xvcjojODE5MGFhO2ZvbnQtd2VpZ2h0OjkwMDttYXJnaW4tYm90dG9tOjEycHg7fQouYnVzaW5lc3MtYWN0aW9uLWNhcmQuc2FmZXtib3JkZXItY29sb3I6IzhmYjRmZjt9Ci5idXNpbmVzcy1hY3Rpb24tY2FyZC5tb2RlcmF0ZXtib3JkZXItY29sb3I6cmdiYSgxMzMsMTQ4LDE3OSwuMzQpO30KLmJ1c2luZXNzLWFjdGlvbi1jYXJkLmhpZ2hlcntib3JkZXItY29sb3I6I2YwYzc3Yjt9Ci5idXNpbmVzcy1hY3Rpb24tY2FyZCBoNHttYXJnaW46MDtjb2xvcjp2YXIoLS1pbmspO2ZvbnQtc2l6ZToxOHB4O2xpbmUtaGVpZ2h0OjEuMjU7bGV0dGVyLXNwYWNpbmc6LS4wMmVtO30KLmJ1c2luZXNzLWFjdGlvbi1jYXJkIHB7bWFyZ2luOjEwcHggMCAxOHB4O2NvbG9yOiM0YjVhNzg7Zm9udC1zaXplOjE0cHg7bGluZS1oZWlnaHQ6MS41O30KLmJ1c2luZXNzLWNhcmQtY3Rhe21hcmdpbi10b3A6YXV0bztib3JkZXI6MXB4IHNvbGlkIHJnYmEoNDksMTA5LDI1NSwuMzUpO2JvcmRlci1yYWRpdXM6OTk5cHg7YmFja2dyb3VuZDojZmZmO2NvbG9yOnZhcigtLWFjY2VudCk7Zm9udC13ZWlnaHQ6ODAwO3BhZGRpbmc6MTBweCAxNnB4O21pbi13aWR0aDoxMTJweDt9Ci5idXNpbmVzcy1jYXJkLWN0YTpob3Zlcntib3JkZXItY29sb3I6dmFyKC0tYWNjZW50KTt9Ci5idXNpbmVzcy1uZXh0LXF1ZXN0aW9uc3tib3JkZXItdG9wOjFweCBzb2xpZCByZ2JhKDEzMywxNDgsMTc5LC4xOCk7cGFkZGluZy10b3A6MTZweDtkaXNwbGF5OmZsZXg7ZmxleC13cmFwOndyYXA7Z2FwOjhweDthbGlnbi1pdGVtczpjZW50ZXI7fQouYnVzaW5lc3MtbmV4dC1xdWVzdGlvbnMgLmJ1c2luZXNzLWV5ZWJyb3d7d2lkdGg6MTAwJTttYXJnaW4tYm90dG9tOjA7fQpAbWVkaWEgKG1heC13aWR0aDogODIwcHgpey5idXNpbmVzcy1hbnN3ZXItYmxvY2t7bWF4LXdpZHRoOjEwMCU7fS5idXNpbmVzcy1hY3Rpb24tZ3JpZHtncmlkLXRlbXBsYXRlLWNvbHVtbnM6MWZyO30uYnVzaW5lc3MtYW5zd2VyLWNhcmR7cGFkZGluZzoyMnB4fS5idXNpbmVzcy1hbnN3ZXItY2FyZCBoM3tmb250LXNpemU6MjRweH0uYnVzaW5lc3MtYW5zd2VyLXF1ZXN0aW9uIGgye2ZvbnQtc2l6ZToyMnB4fX0K');
+
 function read(filePath) {
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
 }
@@ -23,258 +31,13 @@ function patchServer() {
   const before = source;
 
   if (!source.includes('hisaab-business-router-v1')) {
-    const helper = String.raw`
-// hisaab-business-router-v1: route SMB questions into honest answer types, not one forced what-if calculator.
-function sourceAvailableForBusinessRouter(dataSource, field) {
-  const status = dataSource?.field_sources?.[field]?.status;
-  return ['derived', 'derived_manual', 'derived_low_confidence', 'fallback'].includes(status);
-}
-
-function detectBusinessAnswerType(question) {
-  const text = String(question || '').trim().toLowerCase();
-  const asksChange = /\b(what\s+happens|change|raise|increase|decrease|lower|reduce|test|try|should\s+i|if\s+i|if\s+we|impact|effect)\b/i.test(text);
-  const whatIfLever = /\b(price|prices|pricing|delivery|shipping|fee|fees|discount|promo|promotion|offer|cod|cash\s+on\s+delivery)\b/i.test(text);
-  if (asksChange && whatIfLever) return 'what_if';
-  if (/\b(order|orders)\b/i.test(text) && /\b(up|down|going|trend|growing|dropping|drop|increase|decrease|month|months|changed|change)\b/i.test(text)) return 'order_trend';
-  if (/\b(sales|revenue|earning|earnings|bill|billing|aov|average\s+order|order\s+value|money)\b/i.test(text)) return 'sales_trend';
-  if (/\b(customer|customers|repeat|returning|retain|retention|loyal|loyalty|come\s+back|coming\s+back)\b/i.test(text)) return 'customer_retention';
-  if (/\b(profit|margin|cost|expense|expenses|cogs)\b/i.test(text)) return 'profit_missing';
-  if (/\b(product|products|item|items|sku|category|categories)\b/i.test(text)) return 'product_missing';
-  if (/\b(grow|growth|improve|better|what\s+should|what\s+shall|business|shop|store|next|strategy|retain|badha|badhau|kaise|kya\s+karu|karna)\b/i.test(text)) return 'business_guidance';
-  return 'business_guidance';
-}
-
-function metricSeriesForBusinessRouter(rows, metric) {
-  if (metric === 'revenue') {
-    return (rows || [])
-      .map(row => ({ month: row.month, value: Number(row.orders) * Number(row.avg_order_value) }))
-      .filter(point => point.month && Number.isFinite(point.value));
-  }
-  return (rows || [])
-    .map(row => ({ month: row.month, value: Number(row[metric]) }))
-    .filter(point => point.month && Number.isFinite(point.value));
-}
-
-function compareBusinessMetric(rows, metric) {
-  const series = metricSeriesForBusinessRouter(rows, metric);
-  if (series.length < 2) {
-    return { ok: false, series, changePct: null, direction: 'not_enough_history', recentAvg: null, earlierAvg: null };
-  }
-  const split = Math.max(1, Math.floor(series.length / 2));
-  const earlier = series.slice(0, split).map(p => p.value);
-  const recent = series.slice(split).map(p => p.value);
-  const earlierAvg = mean(earlier);
-  const recentAvg = mean(recent);
-  const changePct = earlierAvg ? ((recentAvg - earlierAvg) / earlierAvg) * 100 : 0;
-  const direction = Math.abs(changePct) < 5 ? 'stable' : changePct > 0 ? 'up' : 'down';
-  return { ok: true, series, changePct: round(changePct, 1), direction, recentAvg: round(recentAvg, 1), earlierAvg: round(earlierAvg, 1) };
-}
-
-function moneyPlain(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 'not available';
-  return '₹' + Math.round(n).toLocaleString('en-IN');
-}
-
-function trendSentence(label, stats) {
-  if (!stats.ok) return `I do not have enough history yet to read ${label} honestly.`;
-  if (stats.direction === 'up') return `${label} are up by about ${Math.abs(stats.changePct)}% compared with the earlier period.`;
-  if (stats.direction === 'down') return `${label} are down by about ${Math.abs(stats.changePct)}% compared with the earlier period.`;
-  return `${label} look mostly stable compared with the earlier period.`;
-}
-
-function capabilityStatusByKey(sheetSummary, key) {
-  return (sheetSummary?.capability_map?.capabilities || []).find(item => item.key === key)?.status || 'missing';
-}
-
-function buildTrendBusinessAnswer(question, rows, dataSource, sheetSummary, metric) {
-  const isRevenue = metric === 'revenue';
-  const stats = compareBusinessMetric(rows, metric);
-  const metricLabel = isRevenue ? 'Sales' : 'Orders';
-  const promptForNext = isRevenue ? 'What changed in my sales?' : 'What happens if I change my prices?';
-  const foundFacts = [];
-  if (stats.ok) {
-    foundFacts.push(`${metricLabel}: ${stats.direction === 'stable' ? 'mostly stable' : stats.direction === 'up' ? 'going up' : 'going down'}`);
-    foundFacts.push(`Recent average: ${isRevenue ? moneyPlain(stats.recentAvg) : Math.round(stats.recentAvg) + ' orders'}`);
-    foundFacts.push(`Earlier average: ${isRevenue ? moneyPlain(stats.earlierAvg) : Math.round(stats.earlierAvg) + ' orders'}`);
-  }
-  const limitation = isRevenue && !sourceAvailableForBusinessRouter(dataSource, 'avg_order_value')
-    ? 'I can read order movement, but sales amount is limited because order value is missing.'
-    : sheetSummary?.caveat_line || '';
-  return {
-    answer_type: isRevenue ? 'sales_trend' : 'order_trend',
-    title: isRevenue ? 'Here is what your sales are doing' : 'Here is what your orders are doing',
-    answer: trendSentence(metricLabel, stats),
-    subtext: stats.ok ? 'I compared your recent history with the earlier part of the same file.' : 'Upload more dated sales rows to make this stronger.',
-    found_facts: foundFacts,
-    limitation,
-    action_cards: [
-      { tone: 'safe', label: 'Safest next step', title: 'Check the slow period first', body: 'Look at the months where orders were weaker before changing prices or offers.', cta: 'Ask this', prompt: 'Which months were weaker for my orders?' },
-      { tone: 'moderate', label: 'Small test', title: 'Try one small improvement', body: 'Pick one change for a few days, then compare orders before and after.', cta: 'Ask this', prompt: promptForNext },
-      { tone: 'higher', label: 'Higher risk', title: 'Avoid a big discount first', body: 'A large discount can hide the real issue if orders are falling for another reason.', cta: 'Ask this', prompt: 'Are my discounts actually working?' },
-    ],
-    suggested_questions: supportedQuestionsFromSummary(sheetSummary),
-  };
-}
-
-function buildCustomerBusinessAnswer(question, rows, dataSource, sheetSummary) {
-  const hasRepeat = sourceAvailableForBusinessRouter(dataSource, 'repeat_orders');
-  const stats = hasRepeat ? compareBusinessMetric(rows, 'repeat_orders') : { ok: false, direction: 'missing', changePct: null };
-  const title = 'Here is how to think about customers';
-  const answer = hasRepeat
-    ? trendSentence('Repeat customer orders', stats)
-    : 'I can guide retention, but I cannot measure repeat customers accurately because customer/repeat-order data is missing.';
-  const foundFacts = hasRepeat && stats.ok
-    ? [`Repeat orders: ${stats.direction === 'stable' ? 'mostly stable' : stats.direction === 'up' ? 'improving' : 'falling'}`, `Recent average: ${Math.round(stats.recentAvg)} repeat orders`, `Earlier average: ${Math.round(stats.earlierAvg)} repeat orders`]
-    : ['Customer column: not reliable enough', 'Use this as guidance, not measurement'];
-  return {
-    answer_type: 'customer_retention',
-    title,
-    answer,
-    subtext: 'For a small shop, retention usually means bringing recent buyers back before spending heavily on new customers.',
-    found_facts: foundFacts,
-    limitation: hasRepeat ? (sheetSummary?.caveat_line || '') : 'Add customer name, phone, email, or repeat-order ID later to measure this properly.',
-    action_cards: [
-      { tone: 'safe', label: 'Safest', title: 'Message recent buyers', body: 'Start with people who bought recently. A simple reminder is low cost and easy to track.', cta: 'Ask this', prompt: 'Are customers coming back?' },
-      { tone: 'moderate', label: 'Small test', title: 'Try a repeat-customer offer', body: 'Give a small thank-you offer to returning buyers for a few days, then watch orders.', cta: 'Ask this', prompt: 'Are my discounts actually working?' },
-      { tone: 'higher', label: 'Higher effort', title: 'Start collecting customer IDs', body: 'Use phone number or name in your sheet so Hisaab can measure repeat customers next time.', cta: 'Ask this', prompt: 'What data should I add for repeat customers?' },
-    ],
-    suggested_questions: supportedQuestionsFromSummary(sheetSummary),
-  };
-}
-
-function buildBroadBusinessAnswer(question, rows, dataSource, sheetSummary) {
-  const orderStats = compareBusinessMetric(rows, 'orders');
-  const hasAov = sourceAvailableForBusinessRouter(dataSource, 'avg_order_value');
-  const hasRepeat = sourceAvailableForBusinessRouter(dataSource, 'repeat_orders');
-  const hasPromo = sourceAvailableForBusinessRouter(dataSource, 'promo_active');
-  const facts = [];
-  if (orderStats.ok) facts.push(`Orders: ${orderStats.direction === 'stable' ? 'mostly stable' : orderStats.direction === 'up' ? 'going up' : 'going down'}`);
-  facts.push(hasAov ? 'Order value: available' : 'Order value: missing');
-  facts.push(hasRepeat ? 'Customer data: available' : 'Customer data: missing');
-  const mainFocus = orderStats.direction === 'down'
-    ? 'First, understand why orders are dropping before making a big change.'
-    : hasRepeat
-      ? 'First, use existing customers better before spending on broad offers.'
-      : 'First, make the next small test measurable: orders, sales, or repeat customers.';
-  return {
-    answer_type: 'business_guidance',
-    title: 'Here is a practical next step',
-    answer: mainFocus,
-    subtext: 'I am using what your uploaded data can support, and I will not guess beyond missing columns.',
-    found_facts: facts,
-    limitation: sheetSummary?.caveat_line || (!hasRepeat ? 'Customer retention answers will be directional until customer data is added.' : ''),
-    action_cards: [
-      { tone: 'safe', label: 'Safest', title: 'Find the trend first', body: 'Before changing anything, confirm whether orders are rising, falling, or stable.', cta: 'Ask this', prompt: 'Are my orders going up or down?' },
-      { tone: 'moderate', label: 'Small test', title: hasRepeat ? 'Bring recent customers back' : 'Test one small offer', body: hasRepeat ? 'Target recent buyers before running a broad discount.' : 'Run a small offer for a few days and track orders.', cta: 'Ask this', prompt: hasPromo ? 'Are my discounts actually working?' : 'What changed in my sales?' },
-      { tone: 'higher', label: 'Higher risk', title: 'Avoid broad discounts first', body: 'A broad discount can reduce revenue if the real issue is price, delivery fee, or retention.', cta: 'Ask this', prompt: 'What happens if I change my prices?' },
-    ],
-    suggested_questions: supportedQuestionsFromSummary(sheetSummary),
-  };
-}
-
-function buildMissingDataBusinessAnswer(type, question, dataSource, sheetSummary) {
-  const isProfit = type === 'profit_missing';
-  return {
-    answer_type: type,
-    title: isProfit ? 'I need cost data to answer profit' : 'I need product data to answer this',
-    answer: isProfit
-      ? 'I can read sales movement, but I cannot calculate profit honestly without cost, margin, or expense data.'
-      : 'I can read overall sales/orders, but I cannot compare products without product, item, SKU, or category data.',
-    subtext: 'I can still guide you using the reliable parts of your sheet.',
-    found_facts: supportedQuestionsFromSummary(sheetSummary).length ? ['Some sales questions are still answerable'] : ['The current sheet is limited'],
-    limitation: isProfit ? 'Add cost price, expenses, margin, or profit columns to make this accurate.' : 'Add product name, SKU, item, or category columns to make this accurate.',
-    action_cards: [
-      { tone: 'safe', label: 'Use current data', title: 'Check order trend', body: 'This uses the data already available in your sheet.', cta: 'Ask this', prompt: 'Are my orders going up or down?' },
-      { tone: 'moderate', label: 'Improve data', title: isProfit ? 'Add cost or margin' : 'Add product/category', body: 'One extra column will unlock a much more accurate answer next time.', cta: 'Ask this', prompt: isProfit ? 'What data should I add to calculate profit?' : 'What data should I add to compare products?' },
-    ],
-    suggested_questions: supportedQuestionsFromSummary(sheetSummary),
-  };
-}
-
-function buildBusinessAnswerRoute(question, rows, dataSource, sheetSummary) {
-  const type = detectBusinessAnswerType(question);
-  if (type === 'what_if') return null;
-  if (type === 'order_trend') return buildTrendBusinessAnswer(question, rows, dataSource, sheetSummary, 'orders');
-  if (type === 'sales_trend') {
-    const metric = sourceAvailableForBusinessRouter(dataSource, 'avg_order_value') ? 'revenue' : 'orders';
-    return buildTrendBusinessAnswer(question, rows, dataSource, sheetSummary, metric);
-  }
-  if (type === 'customer_retention') return buildCustomerBusinessAnswer(question, rows, dataSource, sheetSummary);
-  if (type === 'profit_missing' || type === 'product_missing') return buildMissingDataBusinessAnswer(type, question, dataSource, sheetSummary);
-  return buildBroadBusinessAnswer(question, rows, dataSource, sheetSummary);
-}
-
-async function sendBusinessAnswer(res, { sessionId, uploadId, question, dataSource, sheetSummary, answerBundle, rows, summary }) {
-  const answer = answerBundle.answer;
-  const questionPersistence = await firestoreService.saveQuestion({ sessionId, uploadId: uploadId || null, question: question.trim(), answer });
-  await firestoreService.saveEvent({
-    type: 'ask',
-    sessionId,
-    uploadId: uploadId || null,
-    questionId: questionPersistence.id,
-    metadata: { status: 'business_answer', answerType: answerBundle.answer_type },
-  });
-  const trend = compareBusinessMetric(rows, answerBundle.answer_type === 'sales_trend' && sourceAvailableForBusinessRouter(dataSource, 'avg_order_value') ? 'revenue' : 'orders');
-  return res.json({
-    session_id: sessionId,
-    status: 'business_answer',
-    question: question.trim(),
-    answer_type: answerBundle.answer_type,
-    business_answer: answerBundle,
-    summary,
-    data_source: dataSource,
-    sheet_summary: sheetSummary,
-    chart_series: (trend.series || []).map(point => ({ month: point.month, value: point.value, orders: point.value })),
-    generated: {
-      recommendation: answerBundle.answer,
-      why: answerBundle.subtext || '',
-      outcome_metric_label: answerBundle.answer_type.replace(/_/g, ' '),
-      detected_language: detectFallbackLanguage(question),
-      source: 'business_router',
-    },
-    computed: {
-      outcome_metric: answerBundle.answer_type === 'sales_trend' ? 'revenue' : 'orders',
-      outcome_value: trend.ok ? trend.changePct : null,
-      range_low: null,
-      range_high: null,
-      confidence: 0.55,
-      monthly_revenue_impact: null,
-      worst_case_revenue_impact: null,
-      trend_pct: trend.ok ? trend.changePct : null,
-      method: 'business_question_router',
-      sample_size: rows.length,
-      low_signal_warning: answerBundle.limitation || null,
-    },
-    persistence: { question: questionPersistence },
-  });
-}
-`;
-    source = source.replace("app.post('/api/simulate', async (req, res) => {", helper + "\napp.post('/api/simulate', async (req, res) => {");
+    source = source.replace("app.post('/api/simulate', async (req, res) => {", SERVER_HELPER + "\napp.post('/api/simulate', async (req, res) => {");
   }
 
   if (!source.includes('business-router-before-what-if-v1')) {
     const marker = "  const summary = summarizeData(data);\n\n  // If the question has zero real lever signal";
-    const replacement = String.raw`  const summary = summarizeData(data);
-
-  // business-router-before-what-if-v1: answer non-what-if business questions with the right result type.
-  const routedBusinessAnswer = buildBusinessAnswerRoute(question.trim(), data, dataSource, sheetSummary);
-  if (routedBusinessAnswer) {
-    return sendBusinessAnswer(res, {
-      sessionId,
-      uploadId,
-      question,
-      dataSource,
-      sheetSummary,
-      answerBundle: routedBusinessAnswer,
-      rows: data,
-      summary,
-    });
-  }
-
-  // If the question has zero real lever signal`;
     if (!source.includes(marker)) throw new Error('business router insertion marker not found');
-    source = source.replace(marker, replacement);
+    source = source.replace(marker, SERVER_INSERTION);
   }
 
   writeIfChanged(serverPath, before, source, 'patched server.js');
@@ -286,130 +49,21 @@ function patchScript() {
   const before = source;
 
   if (!source.includes('business-answer-renderer-v1')) {
-    const helper = String.raw`
-  // business-answer-renderer-v1: simple SMB-friendly result page for insight/guidance questions.
-  function ensureBusinessAnswerBlock() {
-    let block = document.getElementById('business-answer-block');
-    if (block) return block;
-    block = document.createElement('div');
-    block.id = 'business-answer-block';
-    block.className = 'business-answer-block';
-    const scenarioBlock = document.getElementById('scenarios-block');
-    const results = document.getElementById('results');
-    if (scenarioBlock && scenarioBlock.parentElement) scenarioBlock.parentElement.insertBefore(block, scenarioBlock);
-    else if (results) results.appendChild(block);
-    return block;
-  }
-
-  function renderBusinessAnswer(data, elapsed = 0) {
-    const demoOverlay = document.getElementById('demo-lesson');
-    if (demoOverlay && !demoOverlay.hidden) closeDemoLesson();
-    const dataConnectOverlay = document.getElementById('data-connect-page');
-    if (dataConnectOverlay && !dataConnectOverlay.hidden) closeDataConnectPage();
-
-    const bundle = data.business_answer || {};
-    const detected = String(data.generated?.detected_language || data.detected_language || '').toLowerCase();
-    setUILang(detected === 'hi' ? 'hi' : 'en');
-    if (data.session_id) localStorage.setItem('hisaabSessionId', data.session_id);
-    lastSimulationPersistence = data.persistence || null;
-    setDataSource(data.data_source);
-    renderConnectedDataState(data.data_source);
-    if (data.sheet_summary) {
-      lastSheetSummary = data.sheet_summary;
-      renderSheetSummary(data.sheet_summary);
-    }
-
-    const block = ensureBusinessAnswerBlock();
-    const facts = Array.isArray(bundle.found_facts) ? bundle.found_facts.filter(Boolean).slice(0, 4) : [];
-    const cards = Array.isArray(bundle.action_cards) ? bundle.action_cards.filter(Boolean).slice(0, 3) : [];
-    const suggestions = Array.isArray(bundle.suggested_questions) ? bundle.suggested_questions.filter(Boolean).slice(0, 3) : [];
-    block.innerHTML = `
-      <div class="business-answer-question">
-        <div class="business-eyebrow">You asked</div>
-        <h2>${escapeHtml(data.question || lastQuestion || '')}</h2>
-        <p>${escapeHtml(bundle.subtext || 'I looked at what your uploaded data can honestly support.')}</p>
-      </div>
-      <div class="business-answer-card">
-        <div class="business-eyebrow">Hisaab says</div>
-        <h3>${escapeHtml(bundle.title || 'Here is the clearest read')}</h3>
-        <p class="business-answer-main">${escapeHtml(bundle.answer || '')}</p>
-        ${facts.length ? `<div class="business-facts">${facts.map(fact => `<span>${escapeHtml(fact)}</span>`).join('')}</div>` : ''}
-        ${bundle.limitation ? `<div class="business-limitation">${escapeHtml(bundle.limitation)}</div>` : ''}
-      </div>
-      ${cards.length ? `<div class="business-action-grid">${cards.map(card => `
-        <div class="business-action-card ${escapeHtml(card.tone || '')}">
-          <div class="business-card-label">${escapeHtml(card.label || '')}</div>
-          <h4>${escapeHtml(card.title || '')}</h4>
-          <p>${escapeHtml(card.body || '')}</p>
-          ${card.prompt ? `<button class="business-card-cta" type="button" data-prompt="${escapeHtml(card.prompt)}">${escapeHtml(card.cta || 'Ask this')}</button>` : ''}
-        </div>
-      `).join('')}</div>` : ''}
-      ${suggestions.length ? `<div class="business-next-questions"><div class="business-eyebrow">Good next questions</div>${suggestions.map(q => `<button class="chip" type="button" data-prompt="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('')}</div>` : ''}
-    `;
-    block.hidden = false;
-    block.querySelectorAll('[data-prompt]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const prompt = btn.getAttribute('data-prompt') || '';
-        if (!prompt) return;
-        questionInput.value = prompt;
-        resizeQuestion();
-        updateQuestionState();
-        await runSimulation({ questionOverride: prompt, skipValidation: true });
-      });
-    });
-
-    const scenariosBlock = document.getElementById('scenarios-block');
-    if (scenariosBlock) scenariosBlock.hidden = true;
-    const evidenceBlock = document.getElementById('evidence-block');
-    if (evidenceBlock) evidenceBlock.hidden = true;
-    const confidenceBlockEl = document.getElementById('confidence-block');
-    if (confidenceBlockEl) confidenceBlockEl.hidden = true;
-    const explainBlockEl = document.querySelector('#results .explain');
-    if (explainBlockEl) explainBlockEl.hidden = true;
-    intentPrompt.classList.remove('show', 'captured');
-    intentPrompt.hidden = true;
-    refineInline.hidden = true;
-
-    stage.classList.add('has-result');
-    resultsSection.hidden = false;
-    resultsSection.classList.add('show');
-    currentResult = makeResultSnapshot(data, elapsed, {
-      id: crypto.randomUUID ? crypto.randomUUID() : `result-${Date.now()}`,
-      question: data.question || lastQuestion,
-      refinement: '',
-      value: finiteNumber(data.computed?.outcome_value),
-      isWeak: true,
-    });
-    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    updateAwayFromLandingState();
-  }
-`;
     const marker = '  function renderResults(data, elapsed, options = {}) {';
     if (!source.includes(marker)) throw new Error('renderResults marker not found');
-    source = source.replace(marker, helper + '\n' + marker);
+    source = source.replace(marker, CLIENT_HELPER + '\n' + marker);
   }
 
   if (!source.includes('business-answer-status-v1')) {
-    const marker = `      if (body.status === 'guidance') {`;
-    const replacement = `      if (body.status === 'business_answer') {
-        if (body.session_id) localStorage.setItem('hisaabSessionId', body.session_id);
-        renderBusinessAnswer(body, Date.now() - startTime);
-        return;
-      }
-      // business-answer-status-v1
-      if (body.status === 'guidance') {`;
+    const marker = "      if (body.status === 'guidance') {";
     if (!source.includes(marker)) throw new Error('guidance status marker not found');
-    source = source.replace(marker, replacement);
+    source = source.replace(marker, CLIENT_STATUS_REPLACEMENT);
   }
 
   if (!source.includes('hide-business-answer-block-v1')) {
-    const marker = `    if (scenariosBlock) scenariosBlock.hidden = true;`;
-    const replacement = `    if (scenariosBlock) scenariosBlock.hidden = true;
-    const businessAnswerBlock = document.getElementById('business-answer-block');
-    if (businessAnswerBlock) businessAnswerBlock.hidden = true;
-    // hide-business-answer-block-v1`;
+    const marker = "    if (scenariosBlock) scenariosBlock.hidden = true;";
     if (!source.includes(marker)) throw new Error('hideResults marker not found');
-    source = source.replace(marker, replacement);
+    source = source.replace(marker, HIDE_REPLACEMENT);
   }
 
   writeIfChanged(scriptPath, before, source, 'patched public/script.js');
@@ -419,42 +73,16 @@ function patchCss() {
   if (!fs.existsSync(cssPath)) return;
   let source = read(cssPath);
   const before = source;
-  if (!source.includes('business-answer-ui-v1')) {
-    source += `
-
-/* business-answer-ui-v1: plain, calm analyst result for non-what-if questions */
-.business-answer-block{max-width:760px;margin:0 auto 28px;display:grid;gap:18px;}
-.business-answer-question{padding:0 0 2px;}
-.business-eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8190aa;font-weight:800;margin-bottom:8px;}
-.business-answer-question h2{margin:0;color:var(--ink);font-size:26px;line-height:1.15;letter-spacing:-.03em;}
-.business-answer-question p{margin:8px 0 0;color:var(--muted);font-size:15px;line-height:1.55;max-width:680px;}
-.business-answer-card,.business-action-card{border:1px solid rgba(133,148,179,.28);border-radius:22px;background:rgba(255,255,255,.54);box-shadow:none;}
-.business-answer-card{padding:28px;}
-.business-answer-card h3{margin:0;color:var(--ink);font-size:30px;line-height:1.12;letter-spacing:-.04em;}
-.business-answer-main{margin:14px 0 0;color:#34425f;font-size:18px;line-height:1.6;}
-.business-facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}
-.business-facts span{border:1px solid rgba(133,148,179,.28);border-radius:999px;padding:8px 12px;background:#fff;color:#34425f;font-size:13px;font-weight:700;}
-.business-limitation{margin-top:18px;border-radius:16px;background:#fff8e8;border:1px solid #f3d79d;color:#8a5b00;padding:12px 14px;font-size:14px;line-height:1.45;}
-.business-action-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
-.business-action-card{padding:20px;min-height:220px;display:flex;flex-direction:column;align-items:flex-start;}
-.business-card-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8190aa;font-weight:900;margin-bottom:12px;}
-.business-action-card.safe{border-color:#8fb4ff;}
-.business-action-card.moderate{border-color:rgba(133,148,179,.34);}
-.business-action-card.higher{border-color:#f0c77b;}
-.business-action-card h4{margin:0;color:var(--ink);font-size:18px;line-height:1.25;letter-spacing:-.02em;}
-.business-action-card p{margin:10px 0 18px;color:#4b5a78;font-size:14px;line-height:1.5;}
-.business-card-cta{margin-top:auto;border:1px solid rgba(49,109,255,.35);border-radius:999px;background:#fff;color:var(--accent);font-weight:800;padding:10px 16px;min-width:112px;}
-.business-card-cta:hover{border-color:var(--accent);}
-.business-next-questions{border-top:1px solid rgba(133,148,179,.18);padding-top:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
-.business-next-questions .business-eyebrow{width:100%;margin-bottom:0;}
-@media (max-width: 820px){.business-answer-block{max-width:100%;}.business-action-grid{grid-template-columns:1fr;}.business-answer-card{padding:22px}.business-answer-card h3{font-size:24px}.business-answer-question h2{font-size:22px}}
-`;
-  }
+  if (!source.includes('business-answer-ui-v1')) source += BUSINESS_CSS;
   writeIfChanged(cssPath, before, source, 'patched public/style.css');
 }
 
 function runPatch(label, fn) {
-  try { fn(); } catch (err) { console.warn(`[business-router] skipped ${label}: ${err.message}`); }
+  try {
+    fn();
+  } catch (err) {
+    console.warn(`[business-router] skipped ${label}: ${err.message}`);
+  }
 }
 
 runPatch('server.js', patchServer);
