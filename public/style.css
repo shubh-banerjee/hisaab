@@ -464,17 +464,15 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   padding:40px 32px 32px;
   border:1px solid var(--line);
   border-radius:20px;
-  background:var(--surface);
+  background:transparent;
   color:inherit;
-  box-shadow:0 2px 6px rgba(15,24,48,0.03);
-  transition:border-color .15s ease, background .15s ease, box-shadow .15s ease, transform .15s ease;
+  transition:border-color .15s ease, transform .15s ease;
   cursor:pointer;
 }
 
 .path-card:hover{
   transform:translateY(-1px);
   border-color:var(--accent);
-  box-shadow:0 8px 24px rgba(59,111,230,0.12);
 }
 
 .path-card-icon{
