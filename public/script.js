@@ -2023,11 +2023,6 @@
     // moment closing is intentionally not offered.
     const closeBtn = document.getElementById('data-connect-close');
     if (closeBtn) closeBtn.hidden = name === 'loader';
-    // The loader's content is minimal — a wide 720px frame left it looking
-    // sparse and off-center. Narrow just this screen's frame rather than
-    // the whole modal (upload/summary/ask genuinely need the width).
-    const frame = document.querySelector('.data-connect-frame');
-    if (frame) frame.classList.toggle('narrow', name === 'loader');
   }
 
   function updateDcReadButtonState() {
