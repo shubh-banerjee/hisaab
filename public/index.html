@@ -382,7 +382,12 @@
         <span class="path-card-cta path-card-cta-filled">Add my data</span>
       </button>
     </div>
-    <div class="path-bootstrap-link">
+    <!-- Hidden for now per product decision: this entry point hasn't had the
+         same testing/polish pass as every other path today, and daily-log
+         onboarding isn't the core value prop for the hackathon demo. All
+         underlying code (bootstrap-slot, /api/bootstrap/* endpoints) is
+         untouched and easy to re-link later — nothing here was deleted. -->
+    <div class="path-bootstrap-link" hidden>
       <span>No sales file yet? </span><button id="path-bootstrap" type="button" data-i18n="path.bootstrap_link">Start with a simple daily sales log</button>
     </div>
 

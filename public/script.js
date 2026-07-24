@@ -409,7 +409,12 @@
     beginRefinement(currentResult, lastRefinement);
   });
   document.querySelectorAll('.intent-btn').forEach(btn => {
-    btn.addEventListener('click', () => captureIntent(btn.dataset.intent));
+    btn.addEventListener('click', () => {
+      // Immediate visual confirmation — same pattern as the scenario CTAs.
+      document.querySelectorAll('.intent-btn.selected').forEach((el) => el.classList.remove('selected'));
+      btn.classList.add('selected');
+      captureIntent(btn.dataset.intent);
+    });
   });
   intentRetry.addEventListener('click', () => {
     if (activeIntent) captureIntent(activeIntent);
@@ -1218,6 +1223,32 @@
       trendChip.hidden = true;
     }
 
+    // Simplify what shows inside the details disclosure when scenario
+    // cards are present — per direct user feedback, the EST CHANGE /
+    // WORST CASE / RECENT TREND stat grid and the separate "What this
+    // means" box were "messy metrics, not adding value": the exact same
+    // ranges already live on each scenario card's own "why" text, and the
+    // recommendation is already covered by the plain-language summary at
+    // the top of this disclosure. This runs AFTER the hidden-state
+    // assignments above so it correctly wins instead of being overridden.
+    // Only applies when scenarios exist — the legacy no-scenarios flow
+    // (handled in renderScenariosBlock's early-return branch) restores
+    // full visibility since it has no per-card why-text to lean on.
+    const hasScenarios = Boolean(data.scenarios_bundle?.scenarios?.length);
+    const explainBlockEl = document.querySelector('#results .explain');
+    if (hasScenarios) {
+      if (explainBlockEl) explainBlockEl.hidden = true;
+      revenueImpact.hidden = true;
+      downsideCard.hidden = true;
+      trendChip.hidden = true;
+      const lowConfActionsEl = document.getElementById('low-confidence-actions');
+      if (lowConfActionsEl) lowConfActionsEl.classList.add('demoted');
+    } else {
+      if (explainBlockEl) explainBlockEl.hidden = false;
+      const lowConfActionsEl = document.getElementById('low-confidence-actions');
+      if (lowConfActionsEl) lowConfActionsEl.classList.remove('demoted');
+    }
+
     confidenceBlock.classList.toggle('weak', isWeak);
     confidenceBadge.classList.toggle('weak', isWeak);
     confidenceLabel.textContent = pct === null
@@ -1312,6 +1343,9 @@
         if (evidence && intentPromptEl) results.insertBefore(evidence, intentPromptEl);
         if (confBlock && intentPromptEl) results.insertBefore(confBlock, intentPromptEl);
         if (explainBlock && intentPromptEl) results.insertBefore(explainBlock, intentPromptEl);
+        // Visibility (explain block, stat callouts, demoted actions) is
+        // handled centrally in renderResults right after the stat elements
+        // get their real hidden state — this branch only repositions.
       }
       return;
     }
@@ -1384,6 +1418,12 @@
     // still visible but non-functional (safe degrade — never a broken app).
     grid.querySelectorAll('.s-cta').forEach((btn) => {
       btn.addEventListener('click', () => {
+        // Immediate visual confirmation the click registered — previously
+        // nothing happened to the button itself on click, which read as
+        // broken even though the intent was captured correctly underneath.
+        grid.querySelectorAll('.s-cta.selected').forEach((el) => el.classList.remove('selected'));
+        btn.classList.add('selected');
+
         const scenarioId = btn.getAttribute('data-scenario-id') || '';
         // Baseline "skip" scenario maps to intent = 'skipped'; every other
         // scenario maps to intent = 'applied' (the user is committing to a
@@ -3128,6 +3168,9 @@
     viewInLog.hidden = true;
     intentError.hidden = true;
     window.clearTimeout(intentPromptTimer);
+    // A new question should never inherit a previous answer's green
+    // confirmed state.
+    document.querySelectorAll('.s-cta.selected, .intent-btn.selected').forEach((el) => el.classList.remove('selected'));
     updateAwayFromLandingState();
   }
 

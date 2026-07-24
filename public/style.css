@@ -253,15 +253,15 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 }
 
 .new-question-btn{
-  background:var(--ink);
+  background:var(--accent);
   color:#fff;
-  border-color:var(--ink);
+  border-color:var(--accent);
   font-weight:600;
 }
 
 .new-question-btn:hover{
-  background:#152343;
-  border-color:#152343;
+  background:var(--accent-strong);
+  border-color:var(--accent-strong);
 }
 
 .new-question-btn svg{
@@ -427,7 +427,7 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   transition:background-color 120ms ease;
 }
 .cb-opt:hover{ background:var(--surface-hover); }
-.cb-opt.primary{ background:var(--ink); color:#fff; border-color:var(--ink); }
+.cb-opt.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
 .cb-opt.primary:hover{ background:#000; }
 .cb-followup{
   margin-top:14px;
@@ -658,13 +658,13 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   font-weight:500;
   padding:11px 18px;
   border-radius:10px;
-  background:var(--ink);
+  background:var(--accent);
   color:#fff;
   border:none;
   cursor:pointer;
   white-space:nowrap;
 }
-.bs-save-btn:hover{ background:#000; }
+.bs-save-btn:hover{ background:var(--accent-strong); }
 .bs-optional{
   display:flex;
   flex-direction:column;
@@ -1359,13 +1359,13 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   flex-direction:column;
 }
 .scenario.best{
-  border:1px solid var(--ink);
+  border:1px solid var(--accent);
 }
 .best-flag{
   position:absolute;
   top:-9px;
   left:18px;
-  background:var(--ink);
+  background:var(--accent);
   color:#fff;
   font-size:10.5px;
   font-weight:700;
@@ -1446,11 +1446,16 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 }
 .s-cta:hover{ background:var(--surface-hover); }
 .scenario.best .s-cta{
-  background:var(--ink);
+  background:var(--accent);
   color:#fff;
-  border-color:var(--ink);
+  border-color:var(--accent);
 }
-.scenario.best .s-cta:hover{ background:#000; }
+.scenario.best .s-cta:hover{ background:var(--accent-strong); }
+.s-cta.selected{
+  background:var(--good) !important;
+  color:#fff !important;
+  border-color:var(--good) !important;
+}
 
 /* Threshold line — sits below the scenario grid. Only shown when the
    backend included threshold data (data resolution actually supports
@@ -1751,15 +1756,37 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 
 .cta-primary{
   border:1px solid transparent;
-  background:var(--ink);
+  background:var(--accent);
   color:#fff;
 }
 
-.cta-primary:hover{ background:#232C48; }
+.cta-primary:hover{ background:var(--accent-strong); }
 
 .cta-row.refreshing-data button{
   opacity:.72;
   cursor:progress;
+}
+
+.cta-row.demoted{
+  gap:16px;
+  margin-top:10px;
+}
+.cta-row.demoted button{
+  padding:0;
+  border-radius:0;
+  border:none;
+  background:none;
+  font-size:12px;
+  font-weight:500;
+  color:var(--ink-mute);
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+.cta-row.demoted button:hover{ color:var(--ink-soft); }
+.cta-row.demoted .cta-primary,
+.cta-row.demoted .cta-secondary{
+  background:none;
+  color:var(--ink-mute);
 }
 
 .connected-data-note{
@@ -1919,14 +1946,20 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 }
 
 .intent-btn.primary{
-  border-color:var(--ink);
-  background:var(--ink);
+  border-color:var(--accent);
+  background:var(--accent);
   color:#fff;
 }
 
 .intent-btn.primary:hover{
-  background:#232C48;
+  background:var(--accent-strong);
   color:#fff;
+}
+
+.intent-btn.selected{
+  border-color:var(--good) !important;
+  background:var(--good) !important;
+  color:#fff !important;
 }
 
 .refine-link{
@@ -2036,7 +2069,7 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   padding:10px 18px;
   border:none;
   border-radius:999px;
-  background:var(--ink);
+  background:var(--accent);
   color:#fff;
   font-size:12.5px;
   font-weight:600;
