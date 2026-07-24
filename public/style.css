@@ -1145,10 +1145,10 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 }
 
 .lang-note{
-  margin-top:24px;
+  margin-top:20px;
   color:var(--ink-mute);
   font-size:12px;
-  text-align:center;
+  text-align:left;
 }
 
 .lang-note b{
@@ -2647,11 +2647,16 @@ body.data-connect-active .top-actions{
 }
 
 .dc-summary-screen,
-.dc-ask-screen,
 .dc-manual-screen{
   display:flex;
   flex-direction:column;
   min-height:420px;
+}
+
+.dc-ask-screen{
+  display:flex;
+  flex-direction:column;
+  min-height:340px;
 }
 
 .dc-ask-screen .ask-block{
