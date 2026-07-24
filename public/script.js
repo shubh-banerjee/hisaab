@@ -251,13 +251,6 @@
   const loadingStatus = document.getElementById('loading-status');
   const refineLoadingStatus = document.getElementById('refine-loading-status');
 
-  const pageGreetingPhrases = [
-    'What would you like to change?',
-    'आप क्या बदलना चाहते हैं?',
-    'আপনি কী পরিবর্তন করতে চান?',
-    'நீங்கள் என்ன மாற்ற விரும்புகிறீர்கள்?',
-    'What would you like to change?',
-  ];
   const decisionVocabulary = /\b(raise|raised|raising|lower|lowered|change|changed|add|added|remove|removed|stop|start|increase|increased|decrease|decreased|run|running|try|offer|offering|reduce|reduced|cut|discount)\b/i;
   const subjectVocabulary = /\b(fee|fees|price|prices|promo|promotion|discount|cod|cash on delivery|delivery|shipping|orders?|repeat|customer|customers|revenue|aov|month|months)\b/i;
 
@@ -538,7 +531,6 @@
     document.body.classList.remove('intro-loading');
     document.body.classList.add('intro-done');
     greet.style.opacity = '1';
-    greet.textContent = pageGreetingPhrases[0];
     subtitle.classList.add('show');
   }
 
