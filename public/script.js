@@ -1934,8 +1934,8 @@
     'Checking your sales fields',
     'Preparing your summary',
   ];
-  const READING_STEP_MS = 900;
-  const READING_DONE_PAUSE_MS = 380;
+  const READING_STEP_MS = 1900;
+  const READING_DONE_PAUSE_MS = 650;
   const READING_CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 
   let readingStepIndex = 0;
@@ -2010,6 +2010,11 @@
     // moment closing is intentionally not offered.
     const closeBtn = document.getElementById('data-connect-close');
     if (closeBtn) closeBtn.hidden = name === 'loader';
+    // The loader's content is minimal — a wide 720px frame left it looking
+    // sparse and off-center. Narrow just this screen's frame rather than
+    // the whole modal (upload/summary/ask genuinely need the width).
+    const frame = document.querySelector('.data-connect-frame');
+    if (frame) frame.classList.toggle('narrow', name === 'loader');
   }
 
   function updateDcReadButtonState() {

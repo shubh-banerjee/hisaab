@@ -244,7 +244,16 @@
            just the loading moment, matching a fintech-style "verifying your
            details" experience. Messages cycle one at a time via JS. -->
       <div class="dc-screen dc-loader-screen" id="dc-screen-loader" data-dc-screen="loader" hidden aria-live="polite">
-        <div class="reading-spinner"></div>
+        <div class="file-scan" aria-hidden="true">
+          <svg width="44" height="54" viewBox="0 0 44 54">
+            <path d="M4 2h22l12 12v36a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="none" stroke="var(--line-strong)" stroke-width="2"/>
+            <path d="M26 2v12h12" fill="none" stroke="var(--line-strong)" stroke-width="2"/>
+            <line x1="10" y1="26" x2="32" y2="26" stroke="var(--line-strong)" stroke-width="2"/>
+            <line x1="10" y1="33" x2="32" y2="33" stroke="var(--line-strong)" stroke-width="2"/>
+            <line x1="10" y1="40" x2="24" y2="40" stroke="var(--line-strong)" stroke-width="2"/>
+            <rect class="file-scan-beam" x="2" y="6" width="40" height="3" rx="1.5" fill="var(--accent)"/>
+          </svg>
+        </div>
         <div class="reading-loader-title">Reading your sales data</div>
         <div class="reading-loader-sub">Hisaab is checking what your data can explain.</div>
         <div class="reading-checklist" id="reading-checklist"></div>
