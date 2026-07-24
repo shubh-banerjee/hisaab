@@ -2100,6 +2100,8 @@
     } else {
       capSection.hidden = true;
     }
+
+    updateDcManualLinkVisibility();
   }
 
   // Populates the Ask Hisaab screen's suggested prompts as real, clickable
@@ -2194,23 +2196,50 @@
   // Maps the user-facing missing-field labels (as sent by
   // summarizeSheetParse's OPTIONAL_FIELD_LABELS) back to the technical
   // field key manualInputs/the /api/simulate payload expects.
+  //
+  // Deliberately excludes 'Discounts / promos' -> promo_active. Manually
+  // answering "have you run any promos, yes or no" applies that single
+  // value to EVERY row in the whole history at once (see
+  // applyManualInputs() in server.js) -- which makes the promo/non-promo
+  // comparison this question depends on mathematically impossible: one
+  // side of the comparison is always forced to zero rows. The result was
+  // a fabricated, deterministic answer (~0% if "yes", ~-100% if "no") that
+  // had nothing to do with the actual data -- a real bug, not just a weak
+  // signal. The underlying math now returns an honest "cannot estimate"
+  // for a degenerate split (fixed in computePromoLift()), but that just
+  // means this prompt would ALWAYS resolve to "not enough data" no matter
+  // what's typed -- a pointless interaction, so it's removed rather than
+  // kept as a dead end that wastes the user's time.
   const DC_LABEL_TO_FIELD_KEY = {
     'Customer / repeat orders': 'repeat_orders_proxy',
     'Order value': 'avg_order_value',
     'Delivery fee': 'delivery_fee',
-    'Discounts / promos': 'promo_active',
   };
   const DC_FIELD_PROMPT = {
     repeat_orders_proxy: { title: 'Add customer info', sub: 'Do most of your orders come from repeat customers? Just answer yes or no.', placeholder: 'yes or no' },
     avg_order_value: { title: 'Add order value', sub: 'Roughly what does a typical order come to?', placeholder: 'e.g. 350' },
     delivery_fee: { title: 'Add delivery fee', sub: "What's your current delivery fee?", placeholder: 'e.g. 40' },
-    promo_active: { title: 'Add discount info', sub: 'Have you run any discounts or promos recently? Just answer yes or no.', placeholder: 'yes or no' },
   };
   let dcManualFieldKey = null;
 
-  function openDcManualEntry() {
+  // Only shows the "Need to add missing data manually?" link when at
+  // least one missing field can actually be meaningfully filled in. If
+  // the only thing missing is discounts/promos (or anything else with no
+  // valid manual mapping), there is nothing this flow could honestly help
+  // with, so the link itself is hidden rather than leading to a dead end.
+  function firstActionableMissingLabel() {
     const missingLabels = lastSheetSummary?.missing_optional_labels || [];
-    const firstLabel = missingLabels[0];
+    return missingLabels.find((label) => DC_LABEL_TO_FIELD_KEY[label]) || null;
+  }
+
+  function updateDcManualLinkVisibility() {
+    const link = document.getElementById('dc-manual-link');
+    if (!link) return;
+    link.hidden = !firstActionableMissingLabel();
+  }
+
+  function openDcManualEntry() {
+    const firstLabel = firstActionableMissingLabel();
     const fieldKey = firstLabel ? DC_LABEL_TO_FIELD_KEY[firstLabel] : null;
     const prompt = fieldKey ? DC_FIELD_PROMPT[fieldKey] : null;
     dcManualFieldKey = fieldKey;

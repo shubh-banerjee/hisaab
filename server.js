@@ -1435,6 +1435,31 @@ function lowSignalMessage({ leverLabel, reasons }, language = 'en') {
 function computePromoLift(data, outcomeMetric, scenario = {}) {
   const promo = data.filter(row => row.promo_active).map(row => row[outcomeMetric]);
   const nonPromo = data.filter(row => !row.promo_active).map(row => row[outcomeMetric]);
+
+  // If every row falls on the same side (no real promo/non-promo split to
+  // compare), there is nothing to estimate from — the comparison this
+  // whole function is built on requires SOME rows in each group. Without
+  // this guard, an empty group forces the math to a fabricated,
+  // deterministic result: mean([]) resolves as falsy, which makes the
+  // "difference from baseline" collapse to exactly 0% (empty non-promo
+  // group) or exactly -100% (empty promo group) — a fake number that
+  // looks computed but is actually just an artifact of missing data,
+  // decided entirely by which group happened to be empty rather than by
+  // anything in the data itself. Return the same honest "cannot estimate"
+  // shape computeRegressionResult already uses for a lever with no
+  // variance (pct/low/high: null), so the existing lowSignalWarning/
+  // cannotEstimateOutcome handling downstream picks this up automatically.
+  if (promo.length === 0 || nonPromo.length === 0) {
+    return {
+      pct: null,
+      low: null,
+      high: null,
+      confidence: 0.2,
+      method: 'unsupported_promo_no_variance',
+      sampleSize: promo.length + nonPromo.length,
+    };
+  }
+
   const promoMean = mean(promo);
   const nonPromoMean = mean(nonPromo);
   const diff = promoMean - nonPromoMean;
