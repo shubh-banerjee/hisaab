@@ -155,7 +155,6 @@
 
   const stage = document.getElementById('stage');
   const introLoader = document.getElementById('intro-loader');
-  const introGreeting = document.getElementById('intro-greeting');
   const introLogo = document.getElementById('intro-logo');
   const brandReset = document.getElementById('brand-reset');
   const greet = document.getElementById('greet');
@@ -259,7 +258,6 @@
     'நீங்கள் என்ன மாற்ற விரும்புகிறீர்கள்?',
     'What would you like to change?',
   ];
-  const loaderPhrases = ['Hello', 'नमस्ते', 'নমস্কার', 'வணக்கம்'];
   const decisionVocabulary = /\b(raise|raised|raising|lower|lowered|change|changed|add|added|remove|removed|stop|start|increase|increased|decrease|decreased|run|running|try|offer|offering|reduce|reduced|cut|discount)\b/i;
   const subjectVocabulary = /\b(fee|fees|price|prices|promo|promotion|discount|cod|cash on delivery|delivery|shipping|orders?|repeat|customer|customers|revenue|aov|month|months)\b/i;
 
@@ -482,13 +480,12 @@
   }
 
   function setupIntro() {
-    greet.textContent = pageGreetingPhrases[0];
     subtitle.classList.remove('show');
     playIntroLoader();
   }
 
   function playIntroLoader() {
-    if (!introLoader || !introGreeting || !introLogo) {
+    if (!introLoader || !introLogo) {
       document.body.classList.remove('intro-loading');
       document.body.classList.add('intro-done');
       subtitleTimer = window.setTimeout(() => subtitle.classList.add('show'), 600);
@@ -502,39 +499,26 @@
     document.body.classList.remove('intro-done');
     introLoader.hidden = false;
     introLoader.classList.remove('hide');
-    introGreeting.classList.remove('show', 'exit');
     introLogo.classList.remove('show', 'zoom');
-    introGreeting.textContent = loaderPhrases[0];
 
-    loaderPhrases.forEach((phrase, index) => {
-      const base = index * 820;
-      introTimers.push(window.setTimeout(() => {
-        introGreeting.classList.remove('exit');
-        introGreeting.textContent = phrase;
-        window.requestAnimationFrame(() => introGreeting.classList.add('show'));
-      }, base));
-      introTimers.push(window.setTimeout(() => {
-        introGreeting.classList.add('exit');
-      }, base + 610));
-    });
-
-    const logoStart = loaderPhrases.length * 820 + 240;
+    // No more language-cycling greeting before the logo — just "hisaab."
+    // itself, zooming in immediately as the first thing the user sees.
     introTimers.push(window.setTimeout(() => {
-      introGreeting.classList.remove('show', 'exit');
       introLogo.classList.add('show');
-    }, logoStart));
+    }, 60));
+    const zoomStart = 1150;
     introTimers.push(window.setTimeout(() => {
       introLogo.classList.add('zoom');
-    }, logoStart + 1280));
+    }, zoomStart));
     introTimers.push(window.setTimeout(() => {
       document.body.classList.remove('intro-loading');
       document.body.classList.add('intro-done');
       introLoader.classList.add('hide');
       subtitleTimer = window.setTimeout(() => subtitle.classList.add('show'), 600);
-    }, logoStart + 2100));
+    }, zoomStart + 1280));
     introTimers.push(window.setTimeout(() => {
       introLoader.hidden = true;
-    }, logoStart + 2900));
+    }, zoomStart + 2080));
   }
 
   function stopIntro() {
