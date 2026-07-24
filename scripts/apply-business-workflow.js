@@ -7,36 +7,85 @@ const serverPath = path.join(root, 'server.js');
 const scriptPath = path.join(root, 'public', 'script.js');
 const cssPath = path.join(root, 'public', 'style.css');
 
-function read(filePath) { return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : ''; }
+function read(filePath) {
+  return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
+}
+
 function writeIfChanged(filePath, before, after, label) {
-  if (before !== after) { fs.writeFileSync(filePath, after, 'utf8'); console.log('[business-workflow] ' + label); }
+  if (before !== after) {
+    fs.writeFileSync(filePath, after, 'utf8');
+    console.log('[business-workflow] ' + label);
+  }
+}
+
+function insertOnce(source, markerText, insertion, label) {
+  if (source.includes(label)) return source;
+  const index = source.indexOf(markerText);
+  if (index === -1) throw new Error('Marker not found: ' + label);
+  return source.slice(0, index) + insertion + source.slice(index);
+}
+
+function replaceOnce(source, markerText, replacement, label, required = true) {
+  if (source.includes(label)) return source;
+  const index = source.indexOf(markerText);
+  if (index === -1) {
+    if (required) throw new Error('Marker not found: ' + label);
+    console.warn('[business-workflow] optional marker skipped: ' + label);
+    return source;
+  }
+  return source.slice(0, index) + replacement + source.slice(index + markerText.length);
 }
 
 const SERVER_HELPER = String.raw`
-// hisaab-business-workflow-v2
-function hbwUse(info) { return ['derived', 'derived_manual', 'derived_low_confidence', 'fallback'].includes(info && info.status); }
-function hbwField(src, field) { return hbwUse(src && src.field_sources && src.field_sources[field]); }
-function hbwMetric(metric, value) { var n = Number(value); if (!Number.isFinite(n)) return 'not enough data'; return metric === 'revenue' ? '₹' + Math.round(n).toLocaleString('en-IN') : Math.round(n).toLocaleString('en-IN') + ' orders'; }
+// hisaab-business-workflow-v3
+function hbwUse(info) {
+  return ['derived', 'derived_manual', 'derived_low_confidence', 'fallback'].includes(info && info.status);
+}
+
+function hbwField(src, field) {
+  return hbwUse(src && src.field_sources && src.field_sources[field]);
+}
+
+function hbwMetric(metric, value) {
+  var n = Number(value);
+  if (!Number.isFinite(n)) return 'not enough data';
+  if (metric === 'revenue') return '₹' + Math.round(n).toLocaleString('en-IN');
+  return Math.round(n).toLocaleString('en-IN') + ' orders';
+}
+
 function hbwSeries(rows, metric) {
   return (rows || []).map(function(row) {
-    if (metric === 'revenue') { var orders = Number(row.orders); var aov = Number(row.avg_order_value); return { month: row.month, value: Number.isFinite(orders) && Number.isFinite(aov) ? orders * aov : NaN }; }
+    if (metric === 'revenue') {
+      var orders = Number(row.orders);
+      var aov = Number(row.avg_order_value);
+      return { month: row.month, value: Number.isFinite(orders) && Number.isFinite(aov) ? orders * aov : NaN };
+    }
     return { month: row.month, value: Number(row[metric]) };
-  }).filter(function(point) { return point.month && Number.isFinite(point.value); });
+  }).filter(function(point) {
+    return point.month && Number.isFinite(point.value);
+  });
 }
+
 function hbwCompare(rows, metric) {
   var series = hbwSeries(rows, metric);
-  if (series.length < 2) return { ok: false, series: series, direction: 'not_enough_history', changePct: null, recentAvg: null, earlierAvg: null };
+  if (series.length < 2) {
+    return { ok: false, series: series, direction: 'not_enough_history', changePct: null, recentAvg: null, earlierAvg: null };
+  }
   var split = Math.max(1, Math.floor(series.length / 2));
   var earlier = series.slice(0, split).map(function(point) { return point.value; });
   var recent = series.slice(split).map(function(point) { return point.value; });
-  var earlierAvg = mean(earlier); var recentAvg = mean(recent);
+  var earlierAvg = mean(earlier);
+  var recentAvg = mean(recent);
   var changePct = earlierAvg ? ((recentAvg - earlierAvg) / earlierAvg) * 100 : 0;
   var direction = Math.abs(changePct) < 5 ? 'stable' : changePct > 0 ? 'up' : 'down';
   return { ok: true, series: series, direction: direction, changePct: round(changePct, 1), recentAvg: round(recentAvg, 1), earlierAvg: round(earlierAvg, 1) };
 }
+
 function hbwQuestions(summary) {
   var caps = summary && summary.capability_map && summary.capability_map.capabilities || [];
-  function usable(key) { return caps.some(function(item) { return item.key === key && ['ready', 'limited'].includes(item.status); }); }
+  function usable(key) {
+    return caps.some(function(item) { return item.key === key && ['ready', 'limited'].includes(item.status); });
+  }
   var q = [];
   if (usable('sales_trend')) q.push('Are my orders going up or down?');
   if (usable('repeat_customers')) q.push('Are customers coming back?');
@@ -46,53 +95,206 @@ function hbwQuestions(summary) {
   if (!q.length && summary && summary.orders_found) q.push('Are my orders going up or down?', 'What can I check with this data?');
   return Array.from(new Set(q)).slice(0, 3);
 }
+
 function hbwType(question) {
   var text = String(question || '').trim().toLowerCase();
-  var businessTerms = /\b(order|orders|sale|sales|revenue|customer|customers|repeat|retain|retention|loyalty|business|shop|store|dukan|dukandar|bikri|vyapar|profit|margin|cost|price|pricing|delivery|fee|discount|promo|offer|cod|cash\s+on\s+delivery|grow|growth|improve|better|badha|badhau|kya\s+karu)\b/i;
-  var broadBusiness = /\b(what\s+should\s+i\s+do|what\s+shall\s+i\s+do|how\s+can\s+i\s+improve|how\s+can\s+i\s+grow|next\s+step|what\s+can\s+i\s+check)\b/i;
+  var businessTerms = /\b(order|orders|sale|sales|revenue|customer|customers|repeat|retain|retention|loyalty|business|shop|store|dukan|dukandar|bikri|vyapar|profit|profits|margin|margins|cost|costs|price|pricing|delivery|fee|discount|promo|offer|cod|cash\s+on\s+delivery|grow|growth|improve|better|badha|badhau|kya\s+karu)\b/i;
+  var broadBusiness = /\b(what\s+should\s+i\s+do|what\s+shall\s+i\s+do|how\s+can\s+i\s+improve|how\s+can\s+i\s+grow|next\s+step|what\s+can\s+i\s+check|increase\s+profits?)\b/i;
   var hindiBusiness = /[\u0900-\u097F]/.test(text) && /(व्यापार|बिजनेस|दुकान|बिक्री|ग्राहक|ऑर्डर|मुनाफा|छूट|डिलीवरी)/.test(text);
   var hasBusiness = businessTerms.test(text) || broadBusiness.test(text) || hindiBusiness;
-  var asksChange = /\b(what\s+happens|change|raise|increase|decrease|lower|reduce|test|try|should\s+i|if\s+i|if\s+we|impact|effect|run|start)\b/i.test(text);
-  var lever = /\b(price|prices|pricing|delivery|shipping|fee|fees|discount|promo|promotion|offer|cod|cash\s+on\s+delivery)\b/i.test(text);
+  var asksWhatIf = /\b(what\s+happens|change|raise|increase|decrease|lower|reduce|test|try|should\s+i|if\s+i|if\s+we|impact|effect|working|work|help|worth|run|start)\b/i.test(text);
+  var lever = /\b(price|prices|pricing|delivery|shipping|fee|fees|discount|discounts|promo|promotion|offer|offers|cod|cash\s+on\s+delivery)\b/i.test(text);
   if (!hasBusiness) return 'out_of_scope';
-  if (asksChange && lever) return 'what_if';
+  if (asksWhatIf && lever) return 'what_if';
   if (/\b(customer|customers|repeat|returning|retain|retention|loyal|loyalty|come\s+back|coming\s+back|grahak)\b/i.test(text)) return 'customer_retention';
-  if (/\b(profit|margin|cost|expense|expenses|cogs|munafa)\b/i.test(text)) return 'profit_missing';
+  if (/\b(profit|profits|margin|margins|cost|costs|expense|expenses|cogs|munafa)\b/i.test(text)) return 'profit_missing';
   if (/\b(product|products|item|items|sku|category|categories|product\s+wise)\b/i.test(text)) return 'product_missing';
-  if (/\b(order|orders|trend|up|down|going|growing|dropping|drop|increase|decrease|month|months|changed|change)\b/i.test(text)) return 'order_trend';
+  if (/\b(order|orders|trend|up|down|going|growing|dropping|drop|increase|decrease|month|months|changed|change|weak|weaker)\b/i.test(text)) return 'order_trend';
   if (/\b(sales|revenue|earning|earnings|bill|billing|aov|average\s+order|order\s+value|money|bikri)\b/i.test(text)) return 'sales_trend';
   return 'business_guidance';
 }
-function hbwTrendLine(label, stats) { if (!stats.ok) return 'I need more dated history before I can read ' + label.toLowerCase() + ' honestly.'; if (stats.direction === 'up') return label + ' are going up by about ' + Math.abs(stats.changePct) + '%.'; if (stats.direction === 'down') return label + ' are going down by about ' + Math.abs(stats.changePct) + '%.'; return label + ' look mostly stable right now.'; }
-function hbwCard(tone, label, title, body, prompt) { return { tone: tone, label: label, title: title, body: body, cta: 'Ask this', prompt: prompt }; }
+
+function hbwTrendLine(label, stats) {
+  if (!stats.ok) return 'I need more dated history before I can read ' + label.toLowerCase() + ' honestly.';
+  if (stats.direction === 'up') return label + ' are going up by about ' + Math.abs(stats.changePct) + '%.';
+  if (stats.direction === 'down') return label + ' are going down by about ' + Math.abs(stats.changePct) + '%.';
+  return label + ' look mostly stable right now.';
+}
+
+function hbwCard(tone, label, title, body, prompt) {
+  return { tone: tone, label: label, title: title, body: body, cta: 'Ask this', prompt: prompt };
+}
+
 function hbwTrendAnswer(rows, src, summary, metric) {
-  var stats = hbwCompare(rows, metric); var isSales = metric === 'revenue'; var canRead = stats.ok && hbwField(src, 'orders') && hbwField(src, 'trend') && (!isSales || hbwField(src, 'avg_order_value'));
-  return { answer_type: isSales ? 'sales_trend' : 'order_trend', title: canRead ? (isSales ? 'Here is what your sales are doing' : 'Here is what your orders are doing') : (isSales ? 'I need clearer sales value' : 'I need clearer order history'), answer: canRead ? hbwTrendLine(isSales ? 'Sales' : 'Orders', stats) : (isSales ? 'I can guide from order movement, but I cannot read true sales value because order value is missing.' : 'I can see some rows, but not enough reliable dated order history to answer this honestly yet.'), subtext: canRead ? 'I compared the recent part of your sheet with the earlier part.' : 'Add the missing column and Hisaab can give a stronger read next time.', found_facts: stats.ok ? ['Recent average: ' + hbwMetric(metric, stats.recentAvg), 'Earlier average: ' + hbwMetric(metric, stats.earlierAvg), 'Change: ' + (stats.direction === 'stable' ? 'mostly stable' : Math.abs(stats.changePct) + '% ' + stats.direction)] : ['Needs at least two dated periods'], limitation: summary && summary.caveat_line ? summary.caveat_line : '', action_cards: [hbwCard('safe', 'Safest', 'Find the weak period', 'Check where orders changed before changing prices or offers.', 'Which months were weaker for my orders?'), hbwCard('moderate', 'Small test', 'Try one small improvement', 'Pick one small change and compare before and after.', 'What happens if I change my prices?'), hbwCard('higher', 'Be careful', 'Avoid a broad discount first', 'A large discount can hide the real reason orders changed.', 'Are my discounts actually working?')], suggested_questions: hbwQuestions(summary), chart_series: stats.series };
+  var stats = hbwCompare(rows, metric);
+  var isSales = metric === 'revenue';
+  var canRead = stats.ok && hbwField(src, 'orders') && hbwField(src, 'trend') && (!isSales || hbwField(src, 'avg_order_value'));
+  return {
+    answer_type: isSales ? 'sales_trend' : 'order_trend',
+    title: canRead ? (isSales ? 'Here is what your sales are doing' : 'Here is what your orders are doing') : (isSales ? 'I need clearer sales value' : 'I need clearer order history'),
+    answer: canRead ? hbwTrendLine(isSales ? 'Sales' : 'Orders', stats) : (isSales ? 'I can guide from order movement, but I cannot read true sales value because order value is missing.' : 'I can see some rows, but not enough reliable dated order history to answer this honestly yet.'),
+    subtext: canRead ? 'I compared the recent part of your sheet with the earlier part.' : 'Add the missing column and Hisaab can give a stronger read next time.',
+    found_facts: stats.ok ? ['Recent average: ' + hbwMetric(metric, stats.recentAvg), 'Earlier average: ' + hbwMetric(metric, stats.earlierAvg), 'Change: ' + (stats.direction === 'stable' ? 'mostly stable' : Math.abs(stats.changePct) + '% ' + stats.direction)] : ['Needs at least two dated periods'],
+    limitation: summary && summary.caveat_line ? summary.caveat_line : '',
+    action_cards: [
+      hbwCard('safe', 'Safest', 'Find the weak period', 'Check where orders changed before changing prices or offers.', 'Which months were weaker for my orders?'),
+      hbwCard('moderate', 'Small test', 'Try one small improvement', 'Pick one small change and compare before and after.', 'What happens if I change my prices?'),
+      hbwCard('higher', 'Be careful', 'Avoid a broad discount first', 'A large discount can hide the real reason orders changed.', 'Are my discounts actually working?')
+    ],
+    suggested_questions: hbwQuestions(summary),
+    chart_series: stats.series
+  };
 }
+
 function hbwCustomerAnswer(rows, src, summary) {
-  var hasRepeat = hbwField(src, 'repeat_orders'); var stats = hasRepeat ? hbwCompare(rows, 'repeat_orders') : { ok: false, series: [] };
-  return { answer_type: 'customer_retention', title: 'Here is how to think about customers', answer: hasRepeat && stats.ok ? hbwTrendLine('Repeat customer orders', stats) : 'I can guide retention, but I cannot measure repeat customers properly because customer data is missing or weak.', subtext: 'For a small shop, retention usually means bringing recent buyers back before spending heavily on new customers.', found_facts: hasRepeat && stats.ok ? ['Recent repeat orders: ' + hbwMetric('orders', stats.recentAvg), 'Earlier repeat orders: ' + hbwMetric('orders', stats.earlierAvg)] : ['Customer tracking is not reliable enough yet', 'Use this as guidance, not measurement'], limitation: hasRepeat ? ((summary && summary.caveat_line) || '') : 'Add customer name, phone, email, or repeat-order ID later to measure this properly.', action_cards: [hbwCard('safe', 'Safest', 'Message recent buyers', 'Start with people who bought recently. A simple reminder is low cost and easy to track.', 'Are customers coming back?'), hbwCard('moderate', 'Small test', 'Try a repeat-buyer offer', 'Give a small thank-you offer to returning buyers for a few days, then watch orders.', 'Are my discounts actually working?'), hbwCard('higher', 'Higher effort', 'Start collecting customer IDs', 'Use phone number or name in your sheet so Hisaab can measure repeat customers next time.', 'What data should I add for repeat customers?')], suggested_questions: hbwQuestions(summary), chart_series: stats.series || [] };
+  var hasRepeat = hbwField(src, 'repeat_orders');
+  var stats = hasRepeat ? hbwCompare(rows, 'repeat_orders') : { ok: false, series: [] };
+  return {
+    answer_type: 'customer_retention',
+    title: 'Here is how to think about customers',
+    answer: hasRepeat && stats.ok ? hbwTrendLine('Repeat customer orders', stats) : 'I can guide retention, but I cannot measure repeat customers properly because customer data is missing or weak.',
+    subtext: 'For a small shop, retention usually means bringing recent buyers back before spending heavily on new customers.',
+    found_facts: hasRepeat && stats.ok ? ['Recent repeat orders: ' + hbwMetric('orders', stats.recentAvg), 'Earlier repeat orders: ' + hbwMetric('orders', stats.earlierAvg)] : ['Customer tracking is not reliable enough yet', 'Use this as guidance, not measurement'],
+    limitation: hasRepeat ? ((summary && summary.caveat_line) || '') : 'Add customer name, phone, email, or repeat-order ID later to measure this properly.',
+    action_cards: [
+      hbwCard('safe', 'Safest', 'Message recent buyers', 'Start with people who bought recently. A simple reminder is low cost and easy to track.', 'Are customers coming back?'),
+      hbwCard('moderate', 'Small test', 'Try a repeat-buyer offer', 'Give a small thank-you offer to returning buyers for a few days, then watch orders.', 'Are my discounts actually working?'),
+      hbwCard('higher', 'Higher effort', 'Start collecting customer IDs', 'Use phone number or name in your sheet so Hisaab can measure repeat customers next time.', 'What data should I add for repeat customers?')
+    ],
+    suggested_questions: hbwQuestions(summary),
+    chart_series: stats.series || []
+  };
 }
+
 function hbwBroadAnswer(rows, src, summary) {
-  var stats = hbwCompare(rows, 'orders'); var hasRepeat = hbwField(src, 'repeat_orders'); var hasAov = hbwField(src, 'avg_order_value'); var hasPromo = hbwField(src, 'promo_active');
+  var stats = hbwCompare(rows, 'orders');
+  var hasRepeat = hbwField(src, 'repeat_orders');
+  var hasAov = hbwField(src, 'avg_order_value');
+  var hasPromo = hbwField(src, 'promo_active');
   var focus = stats.ok && stats.direction === 'down' ? 'First understand why orders are dropping before making a big change.' : hasRepeat ? 'Start with your existing customers before spending on broad offers.' : 'Start with one measurable change: orders, sales, or repeat customers.';
-  return { answer_type: 'business_guidance', title: 'Here is a practical next step', answer: focus, subtext: 'I am using what your uploaded data can support, and I will not guess beyond missing columns.', found_facts: [stats.ok ? 'Orders: ' + (stats.direction === 'stable' ? 'mostly stable' : stats.direction) : 'Order trend: needs more history', hasAov ? 'Order value: available' : 'Order value: missing', hasRepeat ? 'Customer data: available' : 'Customer data: missing'], limitation: (summary && summary.caveat_line) || (!hasRepeat ? 'Retention answers will be directional until customer data is added.' : ''), action_cards: [hbwCard('safe', 'Safest', 'Understand the trend first', 'Before changing anything, confirm whether orders are rising, falling, or stable.', 'Are my orders going up or down?'), hbwCard('moderate', 'Small test', hasRepeat ? 'Bring recent customers back' : 'Try one small offer', hasRepeat ? 'Target recent buyers before running a broad discount.' : 'Run a small offer for a few days and track orders.', hasPromo ? 'Are my discounts actually working?' : 'What changed in my sales?'), hbwCard('higher', 'Higher risk', 'Avoid changing everything', 'A big discount or price change can hide the real issue if you cannot track it.', 'What happens if I change my prices?')], suggested_questions: hbwQuestions(summary), chart_series: stats.series };
+  return {
+    answer_type: 'business_guidance',
+    title: 'Here is a practical next step',
+    answer: focus,
+    subtext: 'I am using what your uploaded data can support, and I will not guess beyond missing columns.',
+    found_facts: [stats.ok ? 'Orders: ' + (stats.direction === 'stable' ? 'mostly stable' : stats.direction) : 'Order trend: needs more history', hasAov ? 'Order value: available' : 'Order value: missing', hasRepeat ? 'Customer data: available' : 'Customer data: missing'],
+    limitation: (summary && summary.caveat_line) || (!hasRepeat ? 'Retention answers will be directional until customer data is added.' : ''),
+    action_cards: [
+      hbwCard('safe', 'Safest', 'Understand the trend first', 'Before changing anything, confirm whether orders are rising, falling, or stable.', 'Are my orders going up or down?'),
+      hbwCard('moderate', 'Small test', hasRepeat ? 'Bring recent customers back' : 'Try one small offer', hasRepeat ? 'Target recent buyers before running a broad discount.' : 'Run a small offer for a few days and track orders.', hasPromo ? 'Are my discounts actually working?' : 'What changed in my sales?'),
+      hbwCard('higher', 'Higher risk', 'Avoid changing everything', 'A big discount or price change can hide the real issue if you cannot track it.', 'What happens if I change my prices?')
+    ],
+    suggested_questions: hbwQuestions(summary),
+    chart_series: stats.series
+  };
 }
-function hbwMissingAnswer(type, summary) { var profit = type === 'profit_missing'; return { answer_type: type, title: profit ? 'I need cost data to answer profit' : 'I need product data to answer this', answer: profit ? 'I can read sales movement, but I cannot calculate profit honestly without cost, margin, or expense data.' : 'I can read overall sales and orders, but I cannot compare products without product, item, SKU, or category data.', subtext: 'I can still guide you using the reliable parts of your sheet.', found_facts: hbwQuestions(summary).length ? ['Some sales questions are still answerable'] : ['The current sheet is limited'], limitation: profit ? 'Add cost price, expenses, margin, or profit columns to make this accurate.' : 'Add product name, SKU, item, or category columns to make this accurate.', action_cards: [hbwCard('safe', 'Use current data', 'Check order trend', 'This uses the data already available in your sheet.', 'Are my orders going up or down?'), hbwCard('moderate', 'Improve data', profit ? 'Add cost or margin' : 'Add product/category', 'One extra column will unlock a much more accurate answer next time.', profit ? 'What data should I add to calculate profit?' : 'What data should I add to compare products?')], suggested_questions: hbwQuestions(summary), chart_series: [] }; }
-function hbwRoute(question, rows, src, summary) { var type = hbwType(question); if (type === 'what_if') return { status: 'what_if' }; if (type === 'out_of_scope') return { status: 'guidance', guidance_message: 'Hisaab only answers questions about your connected business data — orders, sales, prices, delivery fees, discounts, customers, profit, or products.', suggested_questions: hbwQuestions(summary), guidance_type: 'out_of_scope' }; if (!rows || !rows.length) return { status: 'business_result', answer: hbwMissingAnswer('data_needed', summary) }; if (type === 'order_trend') return { status: 'business_result', answer: hbwTrendAnswer(rows, src, summary, 'orders') }; if (type === 'sales_trend') return { status: 'business_result', answer: hbwTrendAnswer(rows, src, summary, hbwField(src, 'avg_order_value') ? 'revenue' : 'orders') }; if (type === 'customer_retention') return { status: 'business_result', answer: hbwCustomerAnswer(rows, src, summary) }; if (type === 'profit_missing' || type === 'product_missing') return { status: 'business_result', answer: hbwMissingAnswer(type, summary) }; return { status: 'business_result', answer: hbwBroadAnswer(rows, src, summary) }; }
-async function hbwSendGuidance(res, ctx) { var answer = ctx.route.guidance_message || 'Hisaab can help with questions about your connected business data.'; var saved = await firestoreService.saveQuestion({ sessionId: ctx.sessionId, uploadId: ctx.uploadId || null, question: ctx.question.trim(), answer: answer }); await firestoreService.saveEvent({ type: 'ask', sessionId: ctx.sessionId, uploadId: ctx.uploadId || null, questionId: saved.id, metadata: { status: 'guidance', guidanceType: ctx.route.guidance_type || 'business_scope' } }); return res.json({ session_id: ctx.sessionId, status: 'guidance', guidance_message: answer, suggested_questions: (ctx.route.suggested_questions || []).slice(0, 3), detected_language: detectFallbackLanguage(ctx.question), data_source: ctx.dataSource, sheet_summary: ctx.sheetSummary, persistence: { question: saved } }); }
-async function hbwSendResult(res, ctx) { var bundle = ctx.route.answer || {}; var answer = bundle.answer || bundle.title || 'Here is what Hisaab found.'; var saved = await firestoreService.saveQuestion({ sessionId: ctx.sessionId, uploadId: ctx.uploadId || null, question: ctx.question.trim(), answer: answer }); await firestoreService.saveEvent({ type: 'ask', sessionId: ctx.sessionId, uploadId: ctx.uploadId || null, questionId: saved.id, metadata: { status: 'business_result', answerType: bundle.answer_type } }); var stats = hbwCompare(ctx.rows, bundle.answer_type === 'sales_trend' && hbwField(ctx.dataSource, 'avg_order_value') ? 'revenue' : 'orders'); return res.json({ session_id: ctx.sessionId, status: 'business_result', question: ctx.question.trim(), business_result: bundle, computed: { outcome_metric: bundle.answer_type || 'business_guidance', outcome_value: stats.ok ? stats.changePct : null, range_low: null, range_high: null, confidence: stats.ok ? 0.55 : 0.28, monthly_revenue_impact: null, worst_case_revenue_impact: null, trend_pct: stats.ok ? stats.changePct : null, method: 'business_question_workflow', sample_size: ctx.rows.length, low_signal_warning: bundle.limitation || null }, generated: { recommendation: bundle.answer || '', why: bundle.subtext || '', outcome_metric_label: String(bundle.answer_type || '').replace(/_/g, ' '), detected_language: detectFallbackLanguage(ctx.question), source: 'business_question_workflow' }, summary: ctx.summary, data_source: ctx.dataSource, sheet_summary: ctx.sheetSummary, analytics_capabilities: ctx.sheetSummary && ctx.sheetSummary.capability_map || null, chart_series: (bundle.chart_series || []).map(function(point) { return { month: point.month, value: point.value, orders: point.value }; }), persistence: { question: saved } }); }
+
+function hbwMissingAnswer(type, summary) {
+  if (type === 'data_needed') {
+    return {
+      answer_type: 'data_needed',
+      title: 'I need clearer business data',
+      answer: 'I found the file, but I cannot build a reliable business answer from it yet.',
+      subtext: 'Add dated orders first. Then Hisaab can guide you honestly.',
+      found_facts: ['Needs dated order history'],
+      limitation: 'This protects the product from becoming a generic CSV chatbot.',
+      action_cards: [hbwCard('safe', 'Fix data', 'Add order dates and order rows', 'This unlocks the basic order trend answer first.', 'Are my orders going up or down?')],
+      suggested_questions: hbwQuestions(summary),
+      chart_series: []
+    };
+  }
+  var profit = type === 'profit_missing';
+  return {
+    answer_type: type,
+    title: profit ? 'I need cost data to answer profit' : 'I need product data to answer this',
+    answer: profit ? 'I can read sales movement, but I cannot calculate profit honestly without cost, margin, or expense data.' : 'I can read overall sales and orders, but I cannot compare products without product, item, SKU, or category data.',
+    subtext: 'I can still guide you using the reliable parts of your sheet.',
+    found_facts: hbwQuestions(summary).length ? ['Some sales questions are still answerable'] : ['The current sheet is limited'],
+    limitation: profit ? 'Add cost price, expenses, margin, or profit columns to make this accurate.' : 'Add product name, SKU, item, or category columns to make this accurate.',
+    action_cards: [
+      hbwCard('safe', 'Use current data', 'Check order trend', 'This uses the data already available in your sheet.', 'Are my orders going up or down?'),
+      hbwCard('moderate', 'Improve data', profit ? 'Add cost or margin' : 'Add product/category', 'One extra column will unlock a much more accurate answer next time.', profit ? 'What data should I add to calculate profit?' : 'What data should I add to compare products?')
+    ],
+    suggested_questions: hbwQuestions(summary),
+    chart_series: []
+  };
+}
+
+function hbwRoute(question, rows, src, summary) {
+  var type = hbwType(question);
+  if (type === 'what_if') return { status: 'what_if' };
+  if (type === 'out_of_scope') {
+    return { status: 'guidance', guidance_message: 'Hisaab only answers questions about your connected business data — orders, sales, prices, delivery fees, discounts, customers, profit, or products.', suggested_questions: hbwQuestions(summary), guidance_type: 'out_of_scope' };
+  }
+  if (!rows || !rows.length) return { status: 'business_result', answer: hbwMissingAnswer('data_needed', summary) };
+  if (type === 'order_trend') return { status: 'business_result', answer: hbwTrendAnswer(rows, src, summary, 'orders') };
+  if (type === 'sales_trend') return { status: 'business_result', answer: hbwTrendAnswer(rows, src, summary, hbwField(src, 'avg_order_value') ? 'revenue' : 'orders') };
+  if (type === 'customer_retention') return { status: 'business_result', answer: hbwCustomerAnswer(rows, src, summary) };
+  if (type === 'profit_missing' || type === 'product_missing') return { status: 'business_result', answer: hbwMissingAnswer(type, summary) };
+  return { status: 'business_result', answer: hbwBroadAnswer(rows, src, summary) };
+}
+
+async function hbwSendGuidance(res, ctx) {
+  var answer = ctx.route.guidance_message || 'Hisaab can help with questions about your connected business data.';
+  var saved = await firestoreService.saveQuestion({ sessionId: ctx.sessionId, uploadId: ctx.uploadId || null, question: ctx.question.trim(), answer: answer });
+  await firestoreService.saveEvent({ type: 'ask', sessionId: ctx.sessionId, uploadId: ctx.uploadId || null, questionId: saved.id, metadata: { status: 'guidance', guidanceType: ctx.route.guidance_type || 'business_scope' } });
+  return res.json({ session_id: ctx.sessionId, status: 'guidance', guidance_message: answer, suggested_questions: (ctx.route.suggested_questions || []).slice(0, 3), detected_language: detectFallbackLanguage(ctx.question), data_source: ctx.dataSource, sheet_summary: ctx.sheetSummary, persistence: { question: saved } });
+}
+
+async function hbwSendResult(res, ctx) {
+  var bundle = ctx.route.answer || {};
+  var answer = bundle.answer || bundle.title || 'Here is what Hisaab found.';
+  var saved = await firestoreService.saveQuestion({ sessionId: ctx.sessionId, uploadId: ctx.uploadId || null, question: ctx.question.trim(), answer: answer });
+  await firestoreService.saveEvent({ type: 'ask', sessionId: ctx.sessionId, uploadId: ctx.uploadId || null, questionId: saved.id, metadata: { status: 'business_result', answerType: bundle.answer_type } });
+  var metric = bundle.answer_type === 'sales_trend' && hbwField(ctx.dataSource, 'avg_order_value') ? 'revenue' : 'orders';
+  var stats = hbwCompare(ctx.rows, metric);
+  return res.json({
+    session_id: ctx.sessionId,
+    status: 'business_result',
+    question: ctx.question.trim(),
+    business_result: bundle,
+    computed: { outcome_metric: bundle.answer_type || 'business_guidance', outcome_value: stats.ok ? stats.changePct : null, range_low: null, range_high: null, confidence: stats.ok ? 0.55 : 0.28, monthly_revenue_impact: null, worst_case_revenue_impact: null, trend_pct: stats.ok ? stats.changePct : null, method: 'business_question_workflow', sample_size: ctx.rows.length, low_signal_warning: bundle.limitation || null },
+    generated: { recommendation: bundle.answer || '', why: bundle.subtext || '', outcome_metric_label: String(bundle.answer_type || '').replace(/_/g, ' '), detected_language: detectFallbackLanguage(ctx.question), source: 'business_question_workflow' },
+    summary: ctx.summary,
+    data_source: ctx.dataSource,
+    sheet_summary: ctx.sheetSummary,
+    analytics_capabilities: ctx.sheetSummary && ctx.sheetSummary.capability_map || null,
+    chart_series: (bundle.chart_series || []).map(function(point) { return { month: point.month, value: point.value, orders: point.value }; }),
+    persistence: { question: saved }
+  });
+}
 `;
 
 const CLIENT_HELPER = String.raw`
-  // business-result-renderer-v2
-  function ensureBusinessResultBlock() { let block = document.getElementById('business-result-block'); if (block) return block; block = document.createElement('section'); block.id = 'business-result-block'; block.className = 'business-result-block'; const scenariosBlock = document.getElementById('scenarios-block'); const results = document.getElementById('results'); if (scenariosBlock && scenariosBlock.parentElement) scenariosBlock.parentElement.insertBefore(block, scenariosBlock); else if (results) results.appendChild(block); return block; }
+  // business-result-renderer-v3
+  function ensureBusinessResultBlock() {
+    let block = document.getElementById('business-result-block');
+    if (block) return block;
+    block = document.createElement('section');
+    block.id = 'business-result-block';
+    block.className = 'business-result-block';
+    const scenariosBlock = document.getElementById('scenarios-block');
+    const results = document.getElementById('results');
+    if (scenariosBlock && scenariosBlock.parentElement) scenariosBlock.parentElement.insertBefore(block, scenariosBlock);
+    else if (results) results.appendChild(block);
+    return block;
+  }
+
   function renderBusinessResult(data, elapsed = 0) {
-    const demoOverlay = document.getElementById('demo-lesson'); if (demoOverlay && !demoOverlay.hidden) closeDemoLesson();
-    const dataConnectOverlay = document.getElementById('data-connect-page'); if (dataConnectOverlay && !dataConnectOverlay.hidden) closeDataConnectPage();
-    const bundle = data.business_result || {}; const detected = String(data.generated?.detected_language || data.detected_language || '').toLowerCase(); setUILang(detected === 'hi' ? 'hi' : 'en');
-    if (data.session_id) localStorage.setItem('hisaabSessionId', data.session_id); lastSimulationPersistence = data.persistence || null; lastQuestion = data.question || lastQuestion;
-    if (data.sheet_summary) { lastSheetSummary = data.sheet_summary; renderSheetSummary(data.sheet_summary); } renderConnectedDataState(data.data_source); setDataSource(data.data_source);
+    const demoOverlay = document.getElementById('demo-lesson');
+    if (demoOverlay && !demoOverlay.hidden) closeDemoLesson();
+    const dataConnectOverlay = document.getElementById('data-connect-page');
+    if (dataConnectOverlay && !dataConnectOverlay.hidden) closeDataConnectPage();
+    const bundle = data.business_result || {};
+    const detected = String(data.generated?.detected_language || data.detected_language || '').toLowerCase();
+    setUILang(detected === 'hi' ? 'hi' : 'en');
+    if (data.session_id) localStorage.setItem('hisaabSessionId', data.session_id);
+    lastSimulationPersistence = data.persistence || null;
+    lastQuestion = data.question || lastQuestion;
+    if (data.sheet_summary) { lastSheetSummary = data.sheet_summary; renderSheetSummary(data.sheet_summary); }
+    renderConnectedDataState(data.data_source);
+    setDataSource(data.data_source);
+
     const block = ensureBusinessResultBlock();
     const facts = Array.isArray(bundle.found_facts) ? bundle.found_facts.filter(Boolean).slice(0, 4) : [];
     const cards = Array.isArray(bundle.action_cards) ? bundle.action_cards.filter(Boolean).slice(0, 3) : [];
@@ -102,33 +304,104 @@ const CLIENT_HELPER = String.raw`
     const cardsHtml = cards.length ? '<div class="br-actions">' + cards.map(card => '<article class="br-action ' + escapeHtml(card.tone || '') + '"><div class="br-action-label">' + escapeHtml(card.label || '') + '</div><h4>' + escapeHtml(card.title || '') + '</h4><p>' + escapeHtml(card.body || '') + '</p>' + (card.prompt ? '<button class="br-action-cta" type="button" data-prompt="' + escapeHtml(card.prompt) + '">' + escapeHtml(card.cta || 'Ask this') + '</button>' : '') + '</article>').join('') + '</div>' : '';
     const nextHtml = suggestions.length ? '<div class="br-next"><div class="br-eyebrow">Good next questions</div>' + suggestions.map(q => '<button class="chip" type="button" data-prompt="' + escapeHtml(q) + '">' + escapeHtml(q) + '</button>').join('') + '</div>' : '';
     block.innerHTML = '<div class="br-question"><div class="br-eyebrow">You asked</div><h2>' + escapeHtml(data.question || lastQuestion || '') + '</h2></div><div class="br-card br-answer"><div class="br-eyebrow">Hisaab says</div><h3>' + escapeHtml(bundle.title || 'Here is the clearest read') + '</h3><p class="br-main">' + escapeHtml(bundle.answer || '') + '</p>' + (bundle.subtext ? '<p class="br-sub">' + escapeHtml(bundle.subtext) + '</p>' : '') + factsHtml + limitHtml + '</div>' + cardsHtml + nextHtml;
-    block.hidden = false; block.querySelectorAll('[data-prompt]').forEach(btn => btn.addEventListener('click', async () => { const prompt = btn.getAttribute('data-prompt') || ''; if (!prompt) return; questionInput.value = prompt; resizeQuestion(); updateQuestionState(); await runSimulation({ questionOverride: prompt, skipValidation: true }); }));
-    const resultTop = document.querySelector('#results .result-top'); if (resultTop) resultTop.hidden = true; const scenariosBlock = document.getElementById('scenarios-block'); if (scenariosBlock) scenariosBlock.hidden = true; const evidenceBlock = document.getElementById('evidence-block'); if (evidenceBlock) evidenceBlock.hidden = true; const confidenceBlockEl = document.getElementById('confidence-block'); if (confidenceBlockEl) confidenceBlockEl.hidden = true; const explainBlockEl = document.querySelector('#results .explain'); if (explainBlockEl) explainBlockEl.hidden = true; intentPrompt.classList.remove('show', 'captured'); intentPrompt.hidden = true; refineInline.hidden = true;
-    activeResultId = crypto.randomUUID ? crypto.randomUUID() : 'result-' + Date.now() + '-' + Math.random().toString(16).slice(2); currentResult = makeResultSnapshot(data, elapsed, { id: activeResultId, question: data.question || lastQuestion, refinement: '', value: finiteNumber(data.computed?.outcome_value), isWeak: true }); stage.classList.add('has-result'); resultsSection.hidden = false; resultsSection.classList.add('show'); resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); updateAwayFromLandingState();
+    block.hidden = false;
+    block.querySelectorAll('[data-prompt]').forEach(btn => btn.addEventListener('click', async () => {
+      const prompt = btn.getAttribute('data-prompt') || '';
+      if (!prompt) return;
+      questionInput.value = prompt;
+      resizeQuestion();
+      updateQuestionState();
+      await runSimulation({ questionOverride: prompt, skipValidation: true });
+    }));
+
+    const resultTop = document.querySelector('#results .result-top'); if (resultTop) resultTop.hidden = true;
+    const scenariosBlock = document.getElementById('scenarios-block'); if (scenariosBlock) scenariosBlock.hidden = true;
+    const evidenceBlock = document.getElementById('evidence-block'); if (evidenceBlock) evidenceBlock.hidden = true;
+    const confidenceBlockEl = document.getElementById('confidence-block'); if (confidenceBlockEl) confidenceBlockEl.hidden = true;
+    const explainBlockEl = document.querySelector('#results .explain'); if (explainBlockEl) explainBlockEl.hidden = true;
+    intentPrompt.classList.remove('show', 'captured');
+    intentPrompt.hidden = true;
+    refineInline.hidden = true;
+
+    activeResultId = crypto.randomUUID ? crypto.randomUUID() : 'result-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+    currentResult = makeResultSnapshot(data, elapsed, { id: activeResultId, question: data.question || lastQuestion, refinement: '', value: finiteNumber(data.computed?.outcome_value), isWeak: true });
+    stage.classList.add('has-result');
+    resultsSection.hidden = false;
+    resultsSection.classList.add('show');
+    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    updateAwayFromLandingState();
   }
 `;
 
 const CSS = String.raw`
 
-/* business-result-ui-v2 */
+/* business-result-ui-v3 */
 .business-result-block{max-width:820px;margin:0 auto 28px;display:grid;gap:18px}.br-question{padding:0 2px}.br-eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8190aa;font-weight:850;margin-bottom:8px}.br-question h2{margin:0;color:var(--ink);font-size:26px;line-height:1.15;letter-spacing:-.03em}.br-card,.br-action{border:1px solid rgba(133,148,179,.30);border-radius:24px;background:rgba(255,255,255,.62);box-shadow:none}.br-answer{padding:30px}.br-answer h3{margin:0;color:var(--ink);font-size:32px;line-height:1.1;letter-spacing:-.04em}.br-main{margin:14px 0 0;color:#2f3d58;font-size:19px;line-height:1.55}.br-sub{margin:10px 0 0;color:#5b6780;font-size:15px;line-height:1.55}.br-facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.br-facts span{border:1px solid rgba(133,148,179,.30);border-radius:999px;padding:8px 12px;background:#fff;color:#34425f;font-size:13px;font-weight:750}.br-limitation{margin-top:18px;border-radius:16px;background:#fff8e8;border:1px solid #f3d79d;color:#8a5b00;padding:12px 14px;font-size:14px;line-height:1.45}.br-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.br-action{padding:20px;min-height:220px;display:flex;flex-direction:column;align-items:flex-start}.br-action.safe{border-color:rgba(49,109,255,.36)}.br-action.moderate{border-color:rgba(133,148,179,.36)}.br-action.higher{border-color:rgba(239,177,64,.52)}.br-action-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8190aa;font-weight:900;margin-bottom:12px}.br-action h4{margin:0;color:var(--ink);font-size:18px;line-height:1.25;letter-spacing:-.02em}.br-action p{margin:10px 0 18px;color:#4b5a78;font-size:14px;line-height:1.5}.br-action-cta{margin-top:auto;border:1px solid rgba(49,109,255,.35);border-radius:999px;background:#fff;color:var(--accent);font-weight:850;padding:10px 16px;min-width:112px;cursor:pointer}.br-action-cta:hover{border-color:var(--accent)}.br-next{border-top:1px solid rgba(133,148,179,.18);padding-top:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.br-next .br-eyebrow{width:100%;margin-bottom:0}@media(max-width:840px){.business-result-block{max-width:100%}.br-actions{grid-template-columns:1fr}.br-answer{padding:24px}.br-answer h3{font-size:27px}.br-action{min-height:auto}}
 `;
 
 function patchServer() {
-  let source = read(serverPath); const before = source;
-  if (!source.includes('hisaab-business-workflow-v2')) { const marker = "app.post('/api/simulate', async (req, res) => {"; if (!source.includes(marker)) throw new Error('simulate route marker not found'); source = source.replace(marker, SERVER_HELPER + '\n' + marker); }
-  if (!source.includes('business-workflow-router-entry-v2')) { const marker = "  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner);\n\n  if ((sheetUrl && String(sheetUrl).trim()) || (csvText && String(csvText).trim())) {"; const repl = "  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner);\n\n  // business-workflow-router-entry-v2\n  const hbwRouted = hbwRoute(question.trim(), data, dataSource, sheetSummary);\n  if (hbwRouted.status === 'guidance') return hbwSendGuidance(res, { sessionId, uploadId, question, route: hbwRouted, dataSource, sheetSummary });\n  if (hbwRouted.status === 'business_result') {\n    const hbwSummary = summarizeData(data);\n    return hbwSendResult(res, { sessionId, uploadId, question, route: hbwRouted, rows: data, dataSource, sheetSummary, summary: hbwSummary });\n  }\n\n  if ((sheetUrl && String(sheetUrl).trim()) || (csvText && String(csvText).trim())) {"; if (!source.includes(marker)) throw new Error('business workflow insertion marker not found'); source = source.replace(marker, repl); }
+  let source = read(serverPath);
+  const before = source;
+
+  source = insertOnce(source, "app.post('/api/simulate', async (req, res) => {", SERVER_HELPER + '\n', 'hisaab-business-workflow-v3');
+
+  if (!source.includes('business-workflow-router-entry-v3')) {
+    const marker = '  const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner);';
+    const insertion = marker + "\n\n  // business-workflow-router-entry-v3\n  const hbwRouted = hbwRoute(question.trim(), data, dataSource, sheetSummary);\n  if (hbwRouted.status === 'guidance') return hbwSendGuidance(res, { sessionId, uploadId, question, route: hbwRouted, dataSource, sheetSummary });\n  if (hbwRouted.status === 'business_result') {\n    const hbwSummary = summarizeData(data);\n    return hbwSendResult(res, { sessionId, uploadId, question, route: hbwRouted, rows: data, dataSource, sheetSummary, summary: hbwSummary });\n  }";
+    source = replaceOnce(source, marker, insertion, 'business-workflow-router-entry-v3');
+  }
+
   writeIfChanged(serverPath, before, source, 'patched server.js');
 }
+
 function patchClient() {
-  let source = read(scriptPath); const before = source;
-  if (!source.includes('business-result-renderer-v2')) { const marker = '  function renderResults(data, elapsed, options = {}) {'; if (!source.includes(marker)) throw new Error('renderResults marker not found'); source = source.replace(marker, CLIENT_HELPER + '\n' + marker); }
-  if (!source.includes('business-result-status-v2')) { const marker = "      if (body.status === 'guidance') {"; const repl = "      if (body.status === 'business_result') {\n        if (body.session_id) localStorage.setItem('hisaabSessionId', body.session_id);\n        renderBusinessResult(body, Date.now() - startTime);\n        return;\n      }\n      // business-result-status-v2\n      if (body.status === 'guidance') {"; if (!source.includes(marker)) throw new Error('guidance marker not found'); source = source.replace(marker, repl); }
-  if (!source.includes('business-result-hide-v2')) { const marker = "    if (scenariosBlock) scenariosBlock.hidden = true;"; const repl = "    if (scenariosBlock) scenariosBlock.hidden = true;\n    const businessResultBlock = document.getElementById('business-result-block');\n    if (businessResultBlock) businessResultBlock.hidden = true;\n    const resultTopForReset = document.querySelector('#results .result-top');\n    if (resultTopForReset) resultTopForReset.hidden = false;\n    const evidenceForReset = document.getElementById('evidence-block');\n    if (evidenceForReset) evidenceForReset.hidden = false;\n    const confidenceForReset = document.getElementById('confidence-block');\n    if (confidenceForReset) confidenceForReset.hidden = false;\n    const explainForReset = document.querySelector('#results .explain');\n    if (explainForReset) explainForReset.hidden = false;\n    // business-result-hide-v2"; if (!source.includes(marker)) throw new Error('hideResults marker not found'); source = source.replace(marker, repl); }
-  if (!source.includes('business-result-normal-reset-v2')) { const marker = '    const computed = data.computed || data;'; const repl = "    const previousBusinessResult = document.getElementById('business-result-block');\n    if (previousBusinessResult) previousBusinessResult.hidden = true;\n    const resultTopForNormal = document.querySelector('#results .result-top');\n    if (resultTopForNormal) resultTopForNormal.hidden = false;\n    const computed = data.computed || data;\n    // business-result-normal-reset-v2"; if (!source.includes(marker)) throw new Error('renderResults reset marker not found'); source = source.replace(marker, repl); }
-  if (!source.includes('business-result-stable-cta-v2')) { const marker = "    text.hidden = isLoading;\n    loader.hidden = !isLoading;\n    const btn = isRefine ? refineSend : simulateBtn;"; const repl = "    const btn = isRefine ? refineSend : simulateBtn;\n    if (!isRefine && btn) {\n      text.hidden = false;\n      text.textContent = isLoading ? 'Thinking…' : 'Ask Hisaab';\n      loader.hidden = !isLoading;\n    } else {\n      text.hidden = isLoading;\n      loader.hidden = !isLoading;\n    }\n    // business-result-stable-cta-v2"; if (!source.includes(marker)) throw new Error('setLoading marker not found'); source = source.replace(marker, repl); }
+  let source = read(scriptPath);
+  const before = source;
+
+  source = insertOnce(source, '  function renderResults(data, elapsed, options = {}) {', CLIENT_HELPER + '\n', 'business-result-renderer-v3');
+
+  if (!source.includes('business-result-status-v3')) {
+    const marker = "      if (body.status === 'guidance') {";
+    const replacement = "      if (body.status === 'business_result') {\n        if (body.session_id) localStorage.setItem('hisaabSessionId', body.session_id);\n        renderBusinessResult(body, Date.now() - startTime);\n        return;\n      }\n      // business-result-status-v3\n" + marker;
+    source = replaceOnce(source, marker, replacement, 'business-result-status-v3');
+  }
+
+  if (!source.includes('business-result-hide-v3')) {
+    const marker = "    if (scenariosBlock) scenariosBlock.hidden = true;";
+    const replacement = marker + "\n    const businessResultBlock = document.getElementById('business-result-block');\n    if (businessResultBlock) businessResultBlock.hidden = true;\n    const resultTopForReset = document.querySelector('#results .result-top');\n    if (resultTopForReset) resultTopForReset.hidden = false;\n    const evidenceForReset = document.getElementById('evidence-block');\n    if (evidenceForReset) evidenceForReset.hidden = false;\n    const confidenceForReset = document.getElementById('confidence-block');\n    if (confidenceForReset) confidenceForReset.hidden = false;\n    const explainForReset = document.querySelector('#results .explain');\n    if (explainForReset) explainForReset.hidden = false;\n    if (intentPrompt) intentPrompt.hidden = false;\n    // business-result-hide-v3";
+    source = replaceOnce(source, marker, replacement, 'business-result-hide-v3', false);
+  }
+
+  if (!source.includes('business-result-normal-reset-v3')) {
+    const marker = '    const computed = data.computed || data;';
+    const replacement = "    const previousBusinessResult = document.getElementById('business-result-block');\n    if (previousBusinessResult) previousBusinessResult.hidden = true;\n    const resultTopForNormal = document.querySelector('#results .result-top');\n    if (resultTopForNormal) resultTopForNormal.hidden = false;\n    if (intentPrompt) intentPrompt.hidden = false;\n    // business-result-normal-reset-v3\n" + marker;
+    source = replaceOnce(source, marker, replacement, 'business-result-normal-reset-v3');
+  }
+
+  if (!source.includes('business-result-stable-cta-v3')) {
+    const marker = "    text.hidden = isLoading;\n    loader.hidden = !isLoading;\n    const btn = isRefine ? refineSend : simulateBtn;";
+    const replacement = "    const btn = isRefine ? refineSend : simulateBtn;\n    if (!isRefine && btn) {\n      text.hidden = false;\n      text.textContent = isLoading ? 'Thinking…' : 'Ask Hisaab';\n      loader.hidden = !isLoading;\n    } else {\n      text.hidden = isLoading;\n      loader.hidden = !isLoading;\n    }\n    // business-result-stable-cta-v3";
+    source = replaceOnce(source, marker, replacement, 'business-result-stable-cta-v3', false);
+  }
+
   writeIfChanged(scriptPath, before, source, 'patched public/script.js');
 }
-function patchCss() { const before = read(cssPath); let source = before; if (!source.includes('business-result-ui-v2')) source += CSS; writeIfChanged(cssPath, before, source, 'patched public/style.css'); }
-patchServer(); patchClient(); patchCss();
-for (const file of [serverPath, scriptPath]) { try { childProcess.execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' }); } catch (err) { throw new Error('Syntax check failed for ' + path.basename(file) + ': ' + ((err.stderr && err.stderr.toString()) || err.message)); } }
+
+function patchCss() {
+  const before = read(cssPath);
+  let source = before;
+  if (!source.includes('business-result-ui-v3')) source += CSS;
+  writeIfChanged(cssPath, before, source, 'patched public/style.css');
+}
+
+patchServer();
+patchClient();
+patchCss();
+
+for (const file of [serverPath, scriptPath]) {
+  try {
+    childProcess.execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' });
+  } catch (err) {
+    throw new Error('Syntax check failed for ' + path.basename(file) + ': ' + ((err.stderr && err.stderr.toString()) || err.message));
+  }
+}
