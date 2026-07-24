@@ -2817,8 +2817,8 @@ body.data-connect-active .top-actions{
   flex-direction:column;
   align-items:center;
   text-align:center;
-  padding:72px 32px;
-  min-height:340px;
+  padding:44px 32px;
+  min-height:200px;
   justify-content:center;
 }
 
@@ -2847,16 +2847,12 @@ body.data-connect-active .top-actions{
   font-size:13.5px;
   color:var(--ink-soft);
   max-width:340px;
-  margin-bottom:28px;
+  margin-bottom:20px;
 }
 
 .reading-checklist{
   display:flex;
-  flex-direction:column;
-  gap:12px;
-  text-align:left;
-  width:100%;
-  max-width:280px;
+  justify-content:center;
 }
 
 .reading-check-item{
@@ -3217,7 +3213,7 @@ body.data-connect-active .top-actions{
   .data-connect-frame{ max-height:calc(100vh - 32px); }
   .dc-screen{ padding:24px 20px 20px; }
   .dc-upload-screen{ min-height:0; }
-  .dc-loader-screen{ padding:56px 20px; min-height:280px; }
+  .dc-loader-screen{ padding:36px 20px; min-height:180px; }
   .dc-ask-cta{ width:100%; }
   .dc-manual-cta-row .dc-btn-outline{ flex:1; }
   .dc-manual-cta-row .dc-ask-cta{ flex:1; }

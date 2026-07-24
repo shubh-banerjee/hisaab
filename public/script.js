@@ -793,7 +793,7 @@
         if (body.session_id) localStorage.setItem('hisaabSessionId', body.session_id);
         lastUploadId = body.persistence?.uploadId || lastUploadId;
         lastSheetSummary = body.sheet_summary || body;
-        stopReadingMessages();
+        await stopReadingMessages();
         renderDcSummary(lastSheetSummary);
         setDcScreen('summary');
         // Data is real and parsed — promote it immediately so the
@@ -803,7 +803,7 @@
         hideApplyDataCta();
         applyPendingDataset();
       } catch (err) {
-        stopReadingMessages();
+        cancelReadingMessages();
         lastSheetSummary = null;
         setDcScreen('upload');
         if (readBtn) readBtn.disabled = false;
@@ -1925,14 +1925,81 @@
   // The summary screen shows ONLY facts the server actually returned
   // (date_range, orders_found, found/missing optional labels, suggested
   // questions) — never invented, never padded.
+  // Kept deliberately short — three concrete steps, not five. Per direct
+  // feedback: show one at a time, decide on a sensible number rather than
+  // a long list, and the screen must switch to the summary exactly when
+  // the last step turns green, never before and never with a visible gap.
   const READING_MESSAGES = [
     'Opening your data',
-    'Finding orders and dates',
-    'Checking sales fields',
-    'Looking for discounts, delivery fees, and customers',
+    'Checking your sales fields',
     'Preparing your summary',
   ];
-  let readingMessageTimer = null;
+  const READING_STEP_MS = 900;
+  const READING_DONE_PAUSE_MS = 380;
+  const READING_CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  let readingStepIndex = 0;
+  let readingAdvanceTimer = null;
+
+  function renderReadingStep(index, done) {
+    const el = document.getElementById('reading-checklist');
+    if (!el) return;
+    const msg = READING_MESSAGES[index] || '';
+    el.innerHTML = `
+      <div class="reading-check-item single${done ? ' done' : ' active'}">
+        <span class="reading-check-icon">${done ? READING_CHECK_SVG : ''}</span>
+        <span>${escapeHtml(msg)}</span>
+      </div>
+    `;
+  }
+
+  function clearReadingTimer() {
+    if (readingAdvanceTimer) { window.clearTimeout(readingAdvanceTimer); readingAdvanceTimer = null; }
+  }
+
+  function startReadingMessages() {
+    clearReadingTimer();
+    readingStepIndex = 0;
+    renderReadingStep(0, false);
+
+    // Auto-advances through every step EXCEPT the last one — the last
+    // step waits for the real fetch to actually complete (see
+    // stopReadingMessages below) instead of a timer, so the checklist
+    // can never finish "early" while the real read is still running.
+    function advance() {
+      renderReadingStep(readingStepIndex, true);
+      readingAdvanceTimer = window.setTimeout(() => {
+        if (readingStepIndex < READING_MESSAGES.length - 1) {
+          readingStepIndex += 1;
+          renderReadingStep(readingStepIndex, false);
+          if (readingStepIndex < READING_MESSAGES.length - 1) {
+            readingAdvanceTimer = window.setTimeout(advance, READING_STEP_MS);
+          }
+        }
+      }, READING_DONE_PAUSE_MS);
+    }
+    readingAdvanceTimer = window.setTimeout(advance, READING_STEP_MS);
+  }
+
+  // Called the moment the real fetch actually finishes successfully.
+  // Returns a Promise that resolves only after the final step's checkmark
+  // has been visibly on screen for a beat — callers must await this
+  // before switching screens, so the transition to the summary always
+  // happens right as the user sees the last check turn green.
+  function stopReadingMessages() {
+    clearReadingTimer();
+    return new Promise((resolve) => {
+      renderReadingStep(READING_MESSAGES.length - 1, true);
+      window.setTimeout(resolve, READING_DONE_PAUSE_MS);
+    });
+  }
+
+  // Used when the read didn't actually succeed (an error, or the user
+  // closed the modal mid-read) — no reason to force the completion
+  // animation for something that didn't complete.
+  function cancelReadingMessages() {
+    clearReadingTimer();
+  }
 
   function setDcScreen(name) {
     document.querySelectorAll('.dc-screen').forEach((el) => {
@@ -1980,59 +2047,6 @@
         statusEl.textContent = "This doesn't look like a Google Sheets link — check and paste again.";
       }
     }, 350);
-  }
-
-  const READING_CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-
-  function startReadingMessages() {
-    stopReadingMessages();
-    const listEl = document.getElementById('reading-checklist');
-    if (!listEl) return;
-    listEl.innerHTML = READING_MESSAGES.map((msg, i) => `
-      <div class="reading-check-item${i === 0 ? ' active' : ''}" data-idx="${i}">
-        <span class="reading-check-icon"></span>
-        <span>${escapeHtml(msg)}</span>
-      </div>
-    `).join('');
-
-    let idx = 0;
-    readingMessageTimer = window.setInterval(() => {
-      const items = listEl.querySelectorAll('.reading-check-item');
-      const current = items[idx];
-      if (current) {
-        current.classList.remove('active');
-        current.classList.add('done');
-        const icon = current.querySelector('.reading-check-icon');
-        if (icon) icon.innerHTML = READING_CHECK_SVG;
-      }
-      idx += 1;
-      if (idx < items.length) {
-        items[idx].classList.add('active');
-      } else {
-        // Every step has played out but the real fetch is still running —
-        // stop advancing and just wait with everything marked done.
-        window.clearInterval(readingMessageTimer);
-        readingMessageTimer = null;
-      }
-    }, 900);
-  }
-
-  function stopReadingMessages() {
-    if (readingMessageTimer) { window.clearInterval(readingMessageTimer); readingMessageTimer = null; }
-    // If parsing finished before the checklist animation naturally
-    // completed, snap every remaining item straight to done rather than
-    // cutting the animation off mid-spin right as the screen changes away.
-    const listEl = document.getElementById('reading-checklist');
-    if (listEl) {
-      listEl.querySelectorAll('.reading-check-item').forEach((item) => {
-        if (!item.classList.contains('done')) {
-          item.classList.remove('active');
-          item.classList.add('done');
-          const icon = item.querySelector('.reading-check-icon');
-          if (icon) icon.innerHTML = READING_CHECK_SVG;
-        }
-      });
-    }
   }
 
   function dcShowError(message) {
@@ -2192,7 +2206,7 @@
     document.body.classList.remove('data-connect-active');
     const overlay = document.getElementById('data-connect-page');
     if (overlay) overlay.hidden = true;
-    stopReadingMessages();
+    cancelReadingMessages();
   }
 
   // Used by the top-right "New question" button when real data is already
