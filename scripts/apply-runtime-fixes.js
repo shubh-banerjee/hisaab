@@ -39,12 +39,7 @@ function patchScript() {
     'CSV_TOO_LARGE_MESSAGE'
   );
 
-  source = insertAfterOnce(
-    source,
-    '  let uploadedCsv = null;',
-    '  let uploadedCsvSize = 0;',
-    'uploadedCsvSize'
-  );
+  source = insertAfterOnce(source, '  let uploadedCsv = null;', '  let uploadedCsvSize = 0;', 'uploadedCsvSize');
 
   const handleCsvReplacement = [
     '  async function handleCsvFile() {',
@@ -60,7 +55,7 @@ function patchScript() {
     '      renderCsvUploadState();',
     '      renderSheetUrlState();',
     '      updateDcReadButtonState();',
-    '      const note = document.getElementById(\'pending-data-note\');',
+    "      const note = document.getElementById('pending-data-note');",
     '      if (note) note.hidden = true;',
     '      dcShowError(CSV_TOO_LARGE_MESSAGE);',
     '      return;',
@@ -73,39 +68,26 @@ function patchScript() {
     '    renderCsvUploadState();',
     '    renderSheetUrlState();',
     '    updateDcLinkStatus();',
-    '    const isInlineRefresh = stage.classList.contains(\'connecting-data\') && Boolean(currentResult);',
+    "    const isInlineRefresh = stage.classList.contains('connecting-data') && Boolean(currentResult);",
     '    if (isInlineRefresh) {',
     '      await parseConnectedData();',
     '    } else {',
     '      updateDcReadButtonState();',
-    '      const noteText = document.getElementById(\'pending-data-note-text\');',
-    '      const note = document.getElementById(\'pending-data-note\');',
+    "      const noteText = document.getElementById('pending-data-note-text');",
+    "      const note = document.getElementById('pending-data-note');",
     '      if (noteText) noteText.textContent = `${uploadedFileName} selected — click Read data.`;',
     '      if (note) note.hidden = false;',
     '    }',
     '  }'
   ].join('\n');
 
-  source = source.replace(/  async function handleCsvFile\(\) \{[\s\S]*?\n  \}\n\n  function clearCsvUpload\(\) \{/,
-    handleCsvReplacement + '\n\n  function clearCsvUpload() {');
-
-  source = source.replace(
-    "  function clearCsvUpload() {\n    uploadedCsv = null;\n    uploadedFileName = '';",
-    "  function clearCsvUpload() {\n    uploadedCsv = null;\n    uploadedCsvSize = 0;\n    uploadedFileName = '';"
-  );
+  source = source.replace(/  async function handleCsvFile\(\) \{[\s\S]*?\n  \}\n\n  function clearCsvUpload\(\) \{/, handleCsvReplacement + '\n\n  function clearCsvUpload() {');
+  source = source.replace("  function clearCsvUpload() {\n    uploadedCsv = null;\n    uploadedFileName = '';", "  function clearCsvUpload() {\n    uploadedCsv = null;\n    uploadedCsvSize = 0;\n    uploadedFileName = '';");
 
   source = insertAfterOnce(
     source,
     '    if (!uploadedCsv && sheetUrl.length <= 20) return;',
-    [
-      '',
-      '    if (uploadedCsv && uploadedCsvSize > CSV_MAX_BYTES) {',
-      "      setDcScreen('upload');",
-      '      dcShowError(CSV_TOO_LARGE_MESSAGE);',
-      '      updateDcReadButtonState();',
-      '      return;',
-      '    }'
-    ].join('\n'),
+    ['', '    if (uploadedCsv && uploadedCsvSize > CSV_MAX_BYTES) {', "      setDcScreen('upload');", '      dcShowError(CSV_TOO_LARGE_MESSAGE);', '      updateDcReadButtonState();', '      return;', '    }'].join('\n'),
     'uploadedCsvSize > CSV_MAX_BYTES'
   );
 
@@ -115,7 +97,6 @@ function patchScript() {
       '        if (res.status === 413) throw new Error(CSV_TOO_LARGE_MESSAGE);\n        const body = await readJsonResponse(res);\n        if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);'
     );
   }
-
   if (!source.includes('throw new Error(CSV_TOO_LARGE_MESSAGE);\n      const body = await readJsonResponse(res);')) {
     source = source.replaceAll(
       '      const body = await readJsonResponse(res);\n      if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);',
@@ -160,18 +141,16 @@ function patchScript() {
     );
 
     source = source.replace(
-      '    }\n  }\n\n  // Populates the Ask Hisaab screen\'s suggested prompts',
+      "    }\n  }\n\n  // Populates the Ask Hisaab screen's suggested prompts",
       [
         '    }',
         '',
         '    // dc-summary-boundary-fix: random/non-business CSVs should stop at the boundary.',
-        "    // Hisaab is not a generic CSV chatbot; it only opens Ask when at least",
-        "    // one sales/business capability is ready or directionally usable.",
         "    const summaryAskCta = document.getElementById('dc-ask-cta-btn');",
         '    if (summaryAskCta) {',
         '      const canAskHisaab = capLabels.length > 0;',
         "      summaryAskCta.dataset.dcAction = canAskHisaab ? 'ask' : 'upload';",
-        '      summaryAskCta.textContent = canAskHisaab ? \'Ask Hisaab\' : \'Upload sales data\';',
+        "      summaryAskCta.textContent = canAskHisaab ? 'Ask Hisaab' : 'Upload sales data';",
         '      summaryAskCta.disabled = false;',
         "      summaryAskCta.setAttribute('aria-label', canAskHisaab ? 'Ask Hisaab' : 'Upload sales data');",
         '    }',
@@ -187,8 +166,7 @@ function patchScript() {
       "    if (askCtaBtn) askCtaBtn.addEventListener('click', () => {",
       [
         "    if (askCtaBtn) askCtaBtn.addEventListener('click', () => {",
-        "      // dc-summary-upload-action: if the uploaded CSV wasn't sales/order data,",
-        "      // the summary CTA becomes a retry/upload action instead of opening chat.",
+        "      // dc-summary-upload-action: non-business data returns to upload instead of opening chat.",
         "      if (askCtaBtn.dataset.dcAction === 'upload') {",
         "        questionInput.value = '';",
         "        resizeQuestion();",
@@ -212,119 +190,91 @@ function patchServer() {
   const before = source;
 
   if (!source.includes('hisaab-scope-guidance')) {
-    const helper = String.raw`
-// hisaab-scope-guidance: product guardrails for Hisaab's data and question scope.
-// Hisaab is a small-business sales analyst, not a generic CSV chatbot.
-function askableCapabilitiesFromSummary(sheetSummary) {
-  const capabilities = sheetSummary?.capability_map?.capabilities || [];
-  return capabilities.filter(item => item.status === 'ready' || item.status === 'limited');
-}
-
-function supportedQuestionsFromSummary(sheetSummary) {
-  const direct = (sheetSummary?.suggested_questions || []).filter(Boolean).slice(0, 3);
-  if (direct.length) return direct;
-
-  const questionByKey = {
-    sales_trend: 'Are my orders going up or down?',
-    pricing: 'What happens if I change my prices?',
-    delivery_fee: 'Should I raise my delivery fee?',
-    promotions: 'Are my discounts actually working?',
-    repeat_customers: 'Are customers coming back?',
-  };
-
-  return askableCapabilitiesFromSummary(sheetSummary)
-    .map(item => questionByKey[item.key])
-    .filter(Boolean)
-    .slice(0, 3);
-}
-
-function datasetLooksLikeHisaabData(data, dataSource, sheetSummary) {
-  if ((data || []).length > 0) return true;
-  if (sheetSummary?.orders_found) return true;
-  if (askableCapabilitiesFromSummary(sheetSummary).length > 0) return true;
-  const sources = dataSource?.field_sources || {};
-  return ['orders', 'avg_order_value', 'delivery_fee', 'promo_active', 'repeat_orders']
-    .some(field => isSourceUsable(sources[field]));
-}
-
-function readableMissingField(field) {
-  if (field === 'orders') return 'order date or order count';
-  if (field === 'delivery_fee') return 'delivery fee';
-  if (field === 'avg_order_value') return 'sales or order value';
-  if (field === 'promo_active') return 'discount or promo history';
-  if (field === 'repeat_orders_proxy') return 'customer or repeat-order data';
-  return String(field || '').replace(/_/g, ' ');
-}
-
-function guidanceForUnsupportedDataset(sheetSummary, dataSource) {
-  const rows = Number(sheetSummary?.raw_rows || dataSource?.sheet_rows_used || 0);
-  const rowLead = rows > 0 ? `I found ${rows} rows, but` : 'I read the file, but';
-  return `${rowLead} this does not look like shop sales data yet. Hisaab works with orders, sales/order value, customers, delivery fees, discounts, or promos — upload that kind of data to get a real answer.`;
-}
-
-function guidanceForMissingDataQuestion(question, missingFields, sheetSummary) {
-  const text = String(question || '').toLowerCase();
-  const suggested = supportedQuestionsFromSummary(sheetSummary);
-  const suffix = suggested.length
-    ? ` I can still help with: ${suggested.slice(0, 2).join(' or ')}.`
-    : ' Upload shop sales/order data to get a reliable answer.';
-
-  if (/profit|margin|cost|expense|expenses|cogs/.test(text)) {
-    return `I cannot calculate profit honestly because cost or margin data is missing.${suffix}`;
-  }
-
-  if (/product|item|sku|category/.test(text)) {
-    return `I cannot compare products honestly because product/category data is missing.${suffix}`;
-  }
-
-  if (/customer|repeat|loyal/.test(text) && missingFields.some(item => item.field === 'repeat_orders_proxy')) {
-    return `I cannot answer repeat-customer questions honestly because customer data is missing.${suffix}`;
-  }
-
-  const missingNames = missingFields.map(item => readableMissingField(item.field));
-  return `I do not have reliable ${missingNames.join(' or ')} data to answer that specific question yet.${suffix}`;
-}
-
-async function sendHisaabGuidance(res, { sessionId, uploadId, question, dataSource, sheetSummary, guidanceMessage, suggestedQuestions, missingFields = [], reason = 'guidance' }) {
-  const answer = guidanceMessage;
-  const questionPersistence = await firestoreService.saveQuestion({
-    sessionId,
-    uploadId: uploadId || null,
-    question: question.trim(),
-    answer,
-  });
-  await firestoreService.saveEvent({
-    type: 'ask',
-    sessionId,
-    uploadId: uploadId || null,
-    questionId: questionPersistence.id,
-    metadata: {
-      status: 'guidance',
-      reason,
-      missingFields: missingFields.map(item => item.field || item),
-    },
-  });
-  return res.json({
-    session_id: sessionId,
-    status: 'guidance',
-    guidance_message: guidanceMessage,
-    suggested_questions: (suggestedQuestions || []).slice(0, 3),
-    detected_language: detectFallbackLanguage(question),
-    data_source: dataSource,
-    sheet_summary: sheetSummary,
-    persistence: { question: questionPersistence },
-  });
-}
-`;
-    source = source.replace('app.post(\'/api/simulate\', async (req, res) => {', helper + '\napp.post(\'/api/simulate\', async (req, res) => {');
+    const helper = [
+      '// hisaab-scope-guidance: Hisaab is a small-business sales analyst, not a generic CSV chatbot.',
+      'function askableCapabilitiesFromSummary(sheetSummary) {',
+      '  const capabilities = sheetSummary?.capability_map?.capabilities || [];',
+      "  return capabilities.filter(item => item.status === 'ready' || item.status === 'limited');",
+      '}',
+      '',
+      'function supportedQuestionsFromSummary(sheetSummary) {',
+      '  const direct = (sheetSummary?.suggested_questions || []).filter(Boolean).slice(0, 3);',
+      '  if (direct.length) return direct;',
+      '  const questionByKey = {',
+      "    sales_trend: 'Are my orders going up or down?',",
+      "    pricing: 'What happens if I change my prices?',",
+      "    delivery_fee: 'Should I raise my delivery fee?',",
+      "    promotions: 'Are my discounts actually working?',",
+      "    repeat_customers: 'Are customers coming back?',",
+      '  };',
+      '  return askableCapabilitiesFromSummary(sheetSummary).map(item => questionByKey[item.key]).filter(Boolean).slice(0, 3);',
+      '}',
+      '',
+      'function datasetLooksLikeHisaabData(data, dataSource, sheetSummary) {',
+      '  if ((data || []).length > 0) return true;',
+      '  if (sheetSummary?.orders_found) return true;',
+      '  if (askableCapabilitiesFromSummary(sheetSummary).length > 0) return true;',
+      '  const sources = dataSource?.field_sources || {};',
+      "  return ['orders', 'avg_order_value', 'delivery_fee', 'promo_active', 'repeat_orders'].some(field => isSourceUsable(sources[field]));",
+      '}',
+      '',
+      'function readableMissingField(field) {',
+      "  if (field === 'orders') return 'order date or order count';",
+      "  if (field === 'delivery_fee') return 'delivery fee';",
+      "  if (field === 'avg_order_value') return 'sales or order value';",
+      "  if (field === 'promo_active') return 'discount or promo history';",
+      "  if (field === 'repeat_orders_proxy') return 'customer or repeat-order data';",
+      "  return String(field || '').replace(/_/g, ' ');",
+      '}',
+      '',
+      'function guidanceForUnsupportedDataset(sheetSummary, dataSource) {',
+      '  const rows = Number(sheetSummary?.raw_rows || dataSource?.sheet_rows_used || 0);',
+      "  const rowLead = rows > 0 ? ('I found ' + rows + ' rows, but') : 'I read the file, but';",
+      "  return rowLead + ' this does not look like shop sales data yet. Hisaab works with orders, sales/order value, customers, delivery fees, discounts, or promos — upload that kind of data to get a real answer.';",
+      '}',
+      '',
+      'function guidanceForMissingDataQuestion(question, missingFields, sheetSummary) {',
+      "  const text = String(question || '').toLowerCase();",
+      '  const suggested = supportedQuestionsFromSummary(sheetSummary);',
+      "  const suffix = suggested.length ? (' I can still help with: ' + suggested.slice(0, 2).join(' or ') + '.') : ' Upload shop sales/order data to get a reliable answer.';",
+      "  if (/profit|margin|cost|expense|expenses|cogs/.test(text)) return 'I cannot calculate profit honestly because cost or margin data is missing.' + suffix;",
+      "  if (/product|item|sku|category/.test(text)) return 'I cannot compare products honestly because product/category data is missing.' + suffix;",
+      "  if (/customer|repeat|loyal/.test(text) && missingFields.some(item => item.field === 'repeat_orders_proxy')) return 'I cannot answer repeat-customer questions honestly because customer data is missing.' + suffix;",
+      "  const missingNames = missingFields.map(item => readableMissingField(item.field));",
+      "  return 'I do not have reliable ' + missingNames.join(' or ') + ' data to answer that specific question yet.' + suffix;",
+      '}',
+      '',
+      'async function sendHisaabGuidance(res, { sessionId, uploadId, question, dataSource, sheetSummary, guidanceMessage, suggestedQuestions, missingFields = [], reason = \'guidance\' }) {',
+      '  const answer = guidanceMessage;',
+      '  const questionPersistence = await firestoreService.saveQuestion({ sessionId, uploadId: uploadId || null, question: question.trim(), answer });',
+      '  await firestoreService.saveEvent({',
+      "    type: 'ask',",
+      '    sessionId,',
+      '    uploadId: uploadId || null,',
+      '    questionId: questionPersistence.id,',
+      "    metadata: { status: 'guidance', reason, missingFields: missingFields.map(item => item.field || item) },",
+      '  });',
+      '  return res.json({',
+      '    session_id: sessionId,',
+      "    status: 'guidance',",
+      '    guidance_message: guidanceMessage,',
+      '    suggested_questions: (suggestedQuestions || []).slice(0, 3),',
+      '    detected_language: detectFallbackLanguage(question),',
+      '    data_source: dataSource,',
+      '    sheet_summary: sheetSummary,',
+      '    persistence: { question: questionPersistence },',
+      '  });',
+      '}',
+      ''
+    ].join('\n');
+    source = source.replace("app.post('/api/simulate', async (req, res) => {", helper + "\napp.post('/api/simulate', async (req, res) => {");
   }
 
   const guardedBlockRegex = /  if \(\(sheetUrl && String\(sheetUrl\)\.trim\(\)\) \|\| \(csvText && String\(csvText\)\.trim\(\)\)\) \{[\s\S]*?  \}\n\n  const summary = summarizeData\(data\);/;
   if (guardedBlockRegex.test(source) && !source.includes('question-scope-before-missing-fields')) {
     source = source.replace(guardedBlockRegex, String.raw`  const hasConnectedInput = Boolean((sheetUrl && String(sheetUrl).trim()) || (csvText && String(csvText).trim()));
   if (hasConnectedInput) {
-    // question-scope-before-missing-fields: first validate that the uploaded file is
-    // actually in Hisaab's product scope. Random CSVs must not open generic chat.
+    // question-scope-before-missing-fields: first validate uploaded file scope. Random CSVs must not open generic chat.
     if (!datasetLooksLikeHisaabData(data, dataSource, sheetSummary)) {
       return sendHisaabGuidance(res, {
         sessionId,
@@ -372,48 +322,13 @@ function patchCss() {
     source += `
 
 /* ask-cta-permanent-fix: keep Ask Hisaab CTA stable while request is running */
-.dc-ask-cta{
-  display:inline-flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  gap:8px !important;
-  min-width:132px !important;
-  min-height:44px !important;
-  width:auto !important;
-  white-space:nowrap !important;
-}
-.dc-ask-cta .btn-text{
-  display:inline-flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  width:auto !important;
-  height:auto !important;
-  line-height:1 !important;
-}
-.dc-ask-cta .btn-loader{
-  display:inline-flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  width:16px !important;
-  height:16px !important;
-  flex:0 0 16px !important;
-}
-.dc-ask-cta .btn-loader[hidden]{ display:none !important; }
-.dc-ask-cta.loading,
-.dc-ask-cta:disabled.loading{
-  background:var(--accent) !important;
-  border-color:var(--accent) !important;
-  color:#fff !important;
-  opacity:1 !important;
-  cursor:progress !important;
-}
-.dc-ask-cta.loading:hover,
-.dc-ask-cta:disabled.loading:hover{ background:var(--accent) !important; }
-.dc-ask-cta.loading .spinner{
-  width:14px !important;
-  height:14px !important;
-  border-width:2px !important;
-}
+.dc-ask-cta{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-width:132px!important;min-height:44px!important;width:auto!important;white-space:nowrap!important;}
+.dc-ask-cta .btn-text{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:auto!important;height:auto!important;line-height:1!important;}
+.dc-ask-cta .btn-loader{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:16px!important;height:16px!important;flex:0 0 16px!important;}
+.dc-ask-cta .btn-loader[hidden]{display:none!important;}
+.dc-ask-cta.loading,.dc-ask-cta:disabled.loading{background:var(--accent)!important;border-color:var(--accent)!important;color:#fff!important;opacity:1!important;cursor:progress!important;}
+.dc-ask-cta.loading:hover,.dc-ask-cta:disabled.loading:hover{background:var(--accent)!important;}
+.dc-ask-cta.loading .spinner{width:14px!important;height:14px!important;border-width:2px!important;}
 `;
   }
   writeIfChanged(cssPath, before, source, 'patched public/style.css');
@@ -427,7 +342,15 @@ function patchHtml() {
   writeIfChanged(htmlPath, before, source, 'patched public/index.html');
 }
 
-patchScript();
-patchServer();
-patchCss();
-patchHtml();
+function runPatch(label, fn) {
+  try {
+    fn();
+  } catch (err) {
+    console.warn(`[runtime-fixes] skipped ${label}: ${err.message}`);
+  }
+}
+
+runPatch('public/script.js', patchScript);
+runPatch('server.js', patchServer);
+runPatch('public/style.css', patchCss);
+runPatch('public/index.html', patchHtml);
