@@ -1358,7 +1358,7 @@
       // Build with textContent-first, no innerHTML injection of untrusted data.
       // Every field the backend provides is treated as text, not HTML.
       const flagHtml = s.is_best_fit
-        ? `<span class="best-flag">${escapeHtml(t('scenarios.best_fit') !== 'scenarios.best_fit' ? t('scenarios.best_fit') : (currentUILang === 'hi' ? 'आपके डेटा के लिए सबसे उपयुक्त' : 'Best fit for your data'))}</span>`
+        ? `<span class="best-flag">${escapeHtml(s.best_fit_label || (currentUILang === 'hi' ? 'आपके डेटा के लिए सबसे उपयुक्त' : 'Best fit for your data'))}</span>`
         : '';
       const riskBadgeHtml = hasRisk
         ? `<span class="risk-flag">${escapeHtml(currentUILang === 'hi' ? 'नुकसान का जोखिम' : 'Risk of loss')}</span>`

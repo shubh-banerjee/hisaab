@@ -2797,6 +2797,24 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
     const riskWhyEn = (result) => `This isn't a sure gain — your history shows this could range from a loss of ${fmtMoney(result.revenue_low)} to a gain of ${fmtMoney(result.revenue_high)}. Worth a small test before committing.`;
     const riskWhyHi = (result) => `यह पक्का फायदा नहीं है — आपके इतिहास के अनुसार यह ${fmtMoney(Math.abs(result.revenue_low))} के नुकसान से लेकर ${fmtMoney(result.revenue_high)} के फायदे तक कुछ भी हो सकता है। पूरी तरह अपनाने से पहले एक छोटा परीक्षण करें।`;
 
+    // Which scenario actually EARNS the recommended badge — computed from
+    // the real risk data, never hardcoded to a position. Previously
+    // is_best_fit was a static literal (always true on "as_asked"), which
+    // meant a card could honestly say "risk of loss" and "best fit for your
+    // data" at the same time — a real contradiction, not just confusing
+    // copy. Now: the asked-for change only earns the recommended badge if
+    // its own range doesn't cross zero; if it does, the honestly safest
+    // choice is "play it safe" (no change), so the badge — and its label —
+    // move there instead. This is deterministic arithmetic on numbers we
+    // already compute, not an LLM judgment call; nothing here benefits from
+    // a model's opinion over a plain risk check.
+    const recommendedId = askedHasRisk ? 'baseline' : 'as_asked';
+    const bestFitLabel = (id) => {
+      if (id !== recommendedId) return null;
+      if (id === 'baseline') return isHindi ? 'सबसे सुरक्षित विकल्प' : 'Safest choice';
+      return isHindi ? 'आपके डेटा के लिए सबसे उपयुक्त' : 'Best fit for your data';
+    };
+
     // Threshold: linear projection of where revenue impact = 0. Only include
     // when the slope has a real sign — |slope| effectively > 0 in a way the
     // range doesn't itself already cross zero at the asked change (which
@@ -2854,7 +2872,8 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
             ? 'ऑर्डर अपनी जगह पर बने रहते हैं। न कोई जोखिम, न कोई फायदा।'
             : 'Orders stay where they are. No risk, no gain.',
           cta: isHindi ? 'रहने दें' : 'Skip · keep as is',
-          is_best_fit: false,
+          is_best_fit: recommendedId === 'baseline',
+          best_fit_label: bestFitLabel('baseline'),
           projection: baseline,
         },
         {
@@ -2876,7 +2895,8 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
             : (generated.recommendation || (isHindi ? 'आपके इतिहास के अनुसार यह पैटर्न टिकाऊ रहा है।' : 'Your history shows this pattern has held up.')),
           has_downside_risk: askedHasRisk,
           cta: isHindi ? 'यही आजमाएं' : 'Try this',
-          is_best_fit: true,
+          is_best_fit: recommendedId === 'as_asked',
+          best_fit_label: bestFitLabel('as_asked'),
           projection: askedResult,
         },
         {
@@ -2900,7 +2920,8 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
               : 'This goes beyond changes you\'ve tried before — the range of outcomes widens accordingly.'),
           has_downside_risk: biggerHasRisk,
           cta: isHindi ? 'फिर भी आजमाएं' : 'Try anyway',
-          is_best_fit: false,
+          is_best_fit: recommendedId === 'bigger',
+          best_fit_label: bestFitLabel('bigger'),
           projection: biggerResult,
         },
       ],
