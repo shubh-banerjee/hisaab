@@ -2532,7 +2532,6 @@ body.demo-lesson-active .top-actions{
   align-items:center;
   justify-content:space-between;
   padding:22px 32px;
-  border-top:1px solid var(--line);
 }
 
 .demo-btn-outline,
@@ -2540,7 +2539,7 @@ body.demo-lesson-active .top-actions{
   font-family:var(--sans);
   font-size:14.5px;
   font-weight:600;
-  padding:13px 28px;
+  padding:12px 24px;
   border-radius:999px;
   cursor:pointer;
   transition:background-color .15s ease, border-color .15s ease;
@@ -2799,9 +2798,9 @@ body.data-connect-active .top-actions{
 
 .dc-read-btn{
   font-family:var(--sans);
-  font-size:13.5px;
+  font-size:14.5px;
   font-weight:600;
-  padding:10px 22px;
+  padding:12px 24px;
   border-radius:999px;
   border:1.5px solid var(--accent);
   background:var(--accent);
@@ -3035,9 +3034,9 @@ body.data-connect-active .top-actions{
    never full-bleed on desktop, stroke + solid-blue fill, no heavy shadow. */
 .dc-ask-cta{
   font-family:var(--sans);
-  font-size:13.5px;
+  font-size:14.5px;
   font-weight:600;
-  padding:10px 22px;
+  padding:12px 24px;
   border-radius:999px;
   border:1.5px solid var(--accent);
   background:var(--accent);
@@ -3073,9 +3072,9 @@ body.data-connect-active .top-actions{
 
 .dc-btn-outline{
   font-family:var(--sans);
-  font-size:13.5px;
+  font-size:14.5px;
   font-weight:600;
-  padding:10px 20px;
+  padding:12px 24px;
   border-radius:999px;
   border:1.5px solid var(--line-strong);
   background:transparent;
