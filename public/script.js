@@ -1670,7 +1670,8 @@
         <div class="s-action">${escapeHtml(s.action_short || '')}</div>
         <div class="s-outcome-label">${escapeHtml(currentUILang === 'hi' ? 'इस महीने, संभावित' : 'This month, likely')}</div>
         <div class="s-outcome ${revenueClass}">${revenueFormatted}</div>
-        <div class="s-outcome-note">${escapeHtml(s.headline_note || '')}${riskBadgeHtml}</div>
+        <div class="s-outcome-note">${escapeHtml(s.headline_note || '')}</div>
+        ${riskBadgeHtml}
         <div class="s-why">${escapeHtml(s.why || '')}</div>
         <button class="s-cta" type="button" data-scenario-id="${escapeHtml(s.id || '')}">${escapeHtml(s.cta || '')}</button>
       `;
