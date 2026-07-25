@@ -35,7 +35,7 @@
       'scenarios.you_asked': 'You asked',
       'scenarios.based_on': 'Based on {months} months of your own history.',
       'scenarios.threshold_label': 'Where safe turns risky',
-      'scenarios.see_details': 'Show the numbers behind this',
+      'scenarios.see_details': 'See how this was calculated',
       'track.see_all': 'See all →',
       'track.within': 'Within {pp} points on {hits} of your last {total} calls.',
       'track.latest': 'Last time we said {predicted}, you got {actual}.',
@@ -93,7 +93,7 @@
       'scenarios.you_asked': 'आपने पूछा',
       'scenarios.based_on': 'आपके अपने {months} महीनों के इतिहास के आधार पर।',
       'scenarios.threshold_label': 'जहाँ सुरक्षित से जोखिम शुरू होता है',
-      'scenarios.see_details': 'इसके पीछे के आंकड़े दिखाएं',
+      'scenarios.see_details': 'यह गणना कैसे हुई, देखें',
       'track.see_all': 'सभी देखें →',
       'track.within': 'आपके पिछले {total} में से {hits} बार {pp} अंकों के भीतर सही रहे।',
       'track.latest': 'पिछली बार हमने {predicted} बताया, आपको {actual} मिला।',
@@ -143,11 +143,30 @@
   }
 
   // Walk the DOM and swap textContent of every [data-i18n] element to the
-  // current language. Called on load and whenever setUILang() flips.
+  // current language. Called on load and whenever the global UI language
+  // is explicitly changed.
   function applyI18nToDom() {
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
       if (key) el.textContent = t(key);
+    });
+  }
+
+  // Scoped to the results container only — used to match a single
+  // question's detected language WITHOUT touching currentUILang (which
+  // drives every other [data-i18n] element on the page: "New question",
+  // "Your decisions", the landing page, every other screen). A result in
+  // Hindi should read in Hindi; it must never flip the surrounding app
+  // chrome along with it. Falls back to English for any language this UI
+  // doesn't have a translation dictionary for (e.g. Hinglish), rather than
+  // leaving stale text from whatever language happened to render last.
+  function applyResultLangScoped(lang) {
+    const resolved = SUPPORTED_UI_LANGS.includes(lang) ? lang : 'en';
+    const scope = document.getElementById('results');
+    if (!scope) return;
+    scope.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (key) el.textContent = (I18N[resolved] && I18N[resolved][key]) || I18N.en[key] || key;
     });
   }
   // ─── end i18n ────────────────────────────────────────────────────────────
@@ -1069,6 +1088,12 @@
         updateAwayFromLandingState();
         return;
       }
+      if (body.status === 'business_result') {
+        if (body.session_id) localStorage.setItem('hisaabSessionId', body.session_id);
+        renderBusinessResult(body, Date.now() - startTime);
+        return;
+      }
+      // business-result-status-v5
       if (body.status === 'guidance') {
         // The question was genuinely too broad/unrelated for a specific
         // calculation — Gemini classified intent and wrote an honest,
@@ -1108,7 +1133,13 @@
     const card = document.getElementById('dc-guidance-card');
     const msgEl = document.getElementById('dc-guidance-message');
     const questionsEl = document.getElementById('dc-guidance-questions');
+    const baseSuggestions = document.getElementById('dc-suggested-questions');
     if (!card || !msgEl || !questionsEl) return;
+    // guidance-single-source-v5
+    if (baseSuggestions) {
+      baseSuggestions.dataset.hiddenByGuidance = 'true';
+      baseSuggestions.hidden = true;
+    }
     msgEl.textContent = body.guidance_message || '';
     const questions = (body.suggested_questions || []).slice(0, 3);
     questionsEl.hidden = questions.length === 0;
@@ -1116,6 +1147,8 @@
     questionsEl.querySelectorAll('.chip').forEach((btn) => {
       btn.addEventListener('click', () => {
         questionInput.value = btn.dataset.q;
+        hideGuidanceMessage();
+        // guidance-hide-on-suggestion-v5
         resizeQuestion();
         updateQuestionState();
         hideGuidanceMessage();
@@ -1129,6 +1162,217 @@
   function hideGuidanceMessage() {
     const card = document.getElementById('dc-guidance-card');
     if (card) card.hidden = true;
+    const baseSuggestions = document.getElementById('dc-suggested-questions');
+    const askScreen = document.getElementById('dc-screen-ask');
+    if (baseSuggestions && baseSuggestions.dataset.hiddenByGuidance === 'true') {
+      delete baseSuggestions.dataset.hiddenByGuidance;
+      baseSuggestions.hidden = !(askScreen && !askScreen.hidden && baseSuggestions.children.length > 0);
+    }
+    // guidance-restore-v5
+  }
+
+
+  // business-result-renderer-v5
+  let blockResultLanguage = 'en';
+  function ensureBusinessResultBlock() {
+    let block = document.getElementById('business-result-block');
+    if (block) return block;
+    block = document.createElement('section');
+    block.id = 'business-result-block';
+    block.className = 'business-result-block';
+    const scenarios = document.getElementById('scenarios-block');
+    const results = document.getElementById('results');
+    if (scenarios?.parentElement) scenarios.parentElement.insertBefore(block, scenarios);
+    else results?.appendChild(block);
+    return block;
+  }
+
+  function businessResultItems(bundle, currentQuestion) {
+    const recommendations = Array.isArray(bundle.recommendations) ? bundle.recommendations.filter(Boolean).slice(0, 3) : [];
+    const rawQuestions = Array.isArray(bundle.suggested_questions) ? bundle.suggested_questions.filter(Boolean) : [];
+    const seen = new Set([String(currentQuestion || '').trim().toLowerCase()]);
+    const questions = rawQuestions.filter((item) => {
+      const prompt = String(item?.prompt || item || '').trim();
+      const key = prompt.toLowerCase();
+      if (!prompt || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 3);
+    return { recommendations, questions };
+  }
+
+  function setBusinessFollowUpLoading(block, trigger, loading) {
+    block?.classList.toggle('is-followup-loading', loading);
+    block?.querySelectorAll('.br-followup').forEach((button) => { button.disabled = loading; });
+    if (trigger) {
+      if (loading) {
+        trigger.dataset.originalText = trigger.textContent;
+        trigger.textContent = 'Checking…';
+      } else if (trigger.dataset.originalText) {
+        trigger.textContent = trigger.dataset.originalText;
+        delete trigger.dataset.originalText;
+      }
+    }
+    const status = block?.querySelector('.br-followup-status');
+    if (status) {
+      status.hidden = !loading;
+      status.textContent = loading ? 'Hisaab is checking this against the same data…' : '';
+    }
+  }
+
+  function showBusinessInlineGuidance(body) {
+    const block = ensureBusinessResultBlock();
+    let panel = block.querySelector('.br-inline-guidance');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.className = 'br-inline-guidance';
+      block.appendChild(panel);
+    }
+    const questions = (body.suggested_questions || []).filter(Boolean).slice(0, 3);
+    panel.classList.remove('error');
+    panel.innerHTML = '<strong>' + escapeHtml(body.guidance_message || 'I need a more specific business question.') + '</strong>'
+      + (questions.length ? '<div class="br-inline-guidance-actions">' + questions.map((question) => '<button type="button" class="br-followup" data-prompt="' + escapeHtml(question) + '">' + escapeHtml(question) + '</button>').join('') + '</div>' : '');
+    panel.hidden = false;
+    panel.querySelectorAll('[data-prompt]').forEach((button) => button.addEventListener('click', () => runBusinessFollowUp(button.dataset.prompt, button)));
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function runBusinessFollowUp(prompt, trigger) {
+    const question = String(prompt || '').trim();
+    if (!question || requestInFlight) return;
+    const block = ensureBusinessResultBlock();
+    requestInFlight = true;
+    setSubmissionLocked(true);
+    setBusinessFollowUpLoading(block, trigger, true);
+    hideError();
+    try {
+      const started = Date.now();
+      const response = await fetch('/api/simulate', {
+        method: 'POST',
+        headers: apiHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          sessionId: getSessionId(),
+          question,
+          uploadId: lastUploadId,
+          ...getActiveDatasetPayload(),
+          manual_inputs: manualInputs,
+        }),
+      });
+      const body = await readJsonResponse(response);
+      if (!response.ok) throw new Error(body.error || ('Server error (HTTP ' + response.status + ')'));
+      lastQuestion = question;
+      questionInput.value = question;
+      resizeQuestion();
+      updateQuestionState();
+      if (body.status === 'business_result') {
+        renderBusinessResult(body, Date.now() - started, { keepScroll: true });
+      } else if (body.status === 'guidance') {
+        showBusinessInlineGuidance(body);
+      } else if (body.status === 'needs_input') {
+        showBusinessInlineGuidance({
+          guidance_message: body.partial_data_summary || 'I need one more field before I can answer this reliably.',
+          suggested_questions: body.suggested_questions || [],
+        });
+      } else {
+        renderResults(body, Date.now() - started, { keepScroll: true });
+      }
+    } catch (error) {
+      let panel = block.querySelector('.br-inline-guidance');
+      if (!panel) {
+        panel = document.createElement('div');
+        panel.className = 'br-inline-guidance error';
+        block.appendChild(panel);
+      }
+      panel.classList.add('error');
+      panel.hidden = false;
+      panel.textContent = error.message || 'I could not check that just now. Your current answer is still here.';
+    } finally {
+      requestInFlight = false;
+      setSubmissionLocked(false);
+      setBusinessFollowUpLoading(block, trigger, false);
+      updateAwayFromLandingState();
+    }
+  }
+
+  function renderBusinessResult(data, elapsed = 0, options = {}) {
+    const demo = document.getElementById('demo-lesson');
+    if (demo && !demo.hidden) closeDemoLesson();
+    const connector = document.getElementById('data-connect-page');
+    if (connector && !connector.hidden) closeDataConnectPage();
+
+    const bundle = data.business_result || {};
+    const detected = String(data.generated?.detected_language || data.detected_language || '').toLowerCase();
+    applyResultLangScoped(detected === 'hi' ? 'hi' : 'en');
+    if (data.session_id) localStorage.setItem('hisaabSessionId', data.session_id);
+    lastSimulationPersistence = data.persistence || null;
+    lastQuestion = data.question || lastQuestion;
+    if (data.sheet_summary) {
+      lastSheetSummary = data.sheet_summary;
+      renderSheetSummary(data.sheet_summary);
+    }
+    renderConnectedDataState(data.data_source);
+    setDataSource(data.data_source);
+
+    const block = ensureBusinessResultBlock();
+    const items = businessResultItems(bundle, data.question || lastQuestion);
+    const facts = Array.isArray(bundle.found_facts) ? bundle.found_facts.filter(Boolean).slice(0, 4) : [];
+    const factsHtml = facts.length
+      ? '<div class="br-facts">' + facts.map((fact) => '<span>' + escapeHtml(fact) + '</span>').join('') + '</div>'
+      : '';
+    const limitationHtml = bundle.limitation
+      ? '<div class="br-limitation">' + escapeHtml(bundle.limitation) + '</div>'
+      : '';
+    const recommendationsHtml = items.recommendations.length
+      ? '<section class="br-recommendations"><div class="br-section-heading"><span>Recommended next steps</span><small>Start small. Change one thing at a time.</small></div><div class="br-actions">'
+        + items.recommendations.map((card) => '<article class="br-action ' + escapeHtml(card.tone || '') + '"><div class="br-action-label">' + escapeHtml(card.label || '') + '</div><h4>' + escapeHtml(card.title || '') + '</h4><p>' + escapeHtml(card.body || '') + '</p></article>').join('')
+        + '</div></section>'
+      : '';
+    const nextHtml = items.questions.length
+      ? '<section class="br-next"><div class="br-section-heading"><span>Explore next</span><small>Based on this answer and your available data.</small></div><div class="br-next-actions">'
+        + items.questions.map((item) => {
+          const prompt = item?.prompt || item;
+          const label = item?.label || prompt;
+          return '<button class="br-followup" type="button" data-prompt="' + escapeHtml(prompt) + '">' + escapeHtml(label) + '</button>';
+        }).join('')
+        + '</div></section>'
+      : '';
+
+    block.innerHTML = '<div class="br-question"><div class="br-eyebrow">You asked</div><h2>' + escapeHtml(data.question || lastQuestion || '') + '</h2></div>'
+      + '<div class="br-card br-answer"><div class="br-eyebrow">Hisaab says</div><h3>' + escapeHtml(bundle.title || 'Here is the clearest read') + '</h3><p class="br-main">' + escapeHtml(bundle.answer || '') + '</p>'
+      + (bundle.subtext ? '<p class="br-sub">' + escapeHtml(bundle.subtext) + '</p>' : '')
+      + factsHtml + limitationHtml + '</div>'
+      + recommendationsHtml + nextHtml
+      + '<div class="br-followup-status" hidden></div><div class="br-inline-guidance" hidden></div>';
+    block.hidden = false;
+    block.querySelectorAll('.br-followup[data-prompt]').forEach((button) => button.addEventListener('click', () => runBusinessFollowUp(button.dataset.prompt, button)));
+
+    const resultTop = document.querySelector('#results .result-top');
+    if (resultTop) resultTop.hidden = true;
+    const scenarios = document.getElementById('scenarios-block');
+    if (scenarios) scenarios.hidden = true;
+    const evidence = document.getElementById('evidence-block');
+    if (evidence) evidence.hidden = true;
+    const confidence = document.getElementById('confidence-block');
+    if (confidence) confidence.hidden = true;
+    const explain = document.querySelector('#results .explain');
+    if (explain) explain.hidden = true;
+    intentPrompt.classList.remove('show', 'captured');
+    intentPrompt.hidden = true;
+    refineInline.hidden = true;
+
+    activeResultId = crypto.randomUUID ? crypto.randomUUID() : 'result-' + Date.now();
+    currentResult = makeResultSnapshot(data, elapsed, {
+      id: activeResultId,
+      question: data.question || lastQuestion,
+      refinement: '',
+      value: finiteNumber(data.computed?.outcome_value),
+      isWeak: true,
+    });
+    stage.classList.add('has-result');
+    resultsSection.hidden = false;
+    resultsSection.classList.add('show');
+    if (!options.keepScroll) resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    updateAwayFromLandingState();
   }
 
   function renderResults(data, elapsed, options = {}) {
@@ -1144,16 +1388,27 @@
     const dataConnectOverlay = document.getElementById('data-connect-page');
     if (dataConnectOverlay && !dataConnectOverlay.hidden) closeDataConnectPage();
 
+    const previousBusinessResult = document.getElementById('business-result-block');
+    if (previousBusinessResult) previousBusinessResult.hidden = true;
+    const resultTopForNormal = document.querySelector('#results .result-top');
+    if (resultTopForNormal) resultTopForNormal.hidden = false;
+    const evidenceForNormal = document.getElementById('evidence-block');
+    if (evidenceForNormal) evidenceForNormal.hidden = false;
+    const confidenceForNormal = document.getElementById('confidence-block');
+    if (confidenceForNormal) confidenceForNormal.hidden = false;
+    const explainForNormal = document.querySelector('#results .explain');
+    if (explainForNormal) explainForNormal.hidden = false;
+    if (intentPrompt) intentPrompt.hidden = false;
+    // business-result-normal-reset-v5
     const computed = data.computed || data;
     const generated = data.generated || data;
-    // The UI chrome always mirrors the CURRENT question's detected language —
-    // in both directions. If this question is Hindi, switch to Hindi; if
-    // it's English (or anything else we don't have UI strings for), switch
-    // back to English. Each question gets a consistent single-language
-    // result screen matching what was actually asked, rather than a language
-    // choice "sticking" from an earlier question in the same session.
+    // The RESULT itself mirrors the current question's detected language —
+    // but only the result content, never the surrounding app chrome. Each
+    // question gets a consistent single-language result matching what was
+    // actually asked, without "New question"/"Your decisions"/every other
+    // page element silently flipping language along with it.
     const detected = String(generated.detected_language || data.detected_language || '').toLowerCase();
-    setUILang(detected === 'hi' ? 'hi' : 'en');
+    applyResultLangScoped(detected === 'hi' ? 'hi' : 'en');
 
     // Render the new scenarios/threshold block BEFORE the existing dense
     // stats layout. When scenarios_bundle is absent (weak data, unsupported
@@ -1238,11 +1493,20 @@
       revenueImpact.hidden = true;
       downsideCard.hidden = true;
       trendChip.hidden = true;
+      // The bottom "Are you going to try this? Yes / No / Not sure" prompt
+      // is now fully redundant once scenario cards are showing -- each
+      // card's own CTA (Skip / Try this / Try anyway) already asks the same
+      // question per-option, more specifically. Confirmed safe to hide:
+      // each card's CTA click handler already simulates a click on the
+      // matching hidden .intent-btn, so the same captureIntent() tracking
+      // still fires correctly -- nothing is lost, only the duplicate ask.
+      if (intentPrompt) intentPrompt.hidden = true;
       const lowConfActionsEl = document.getElementById('low-confidence-actions');
       if (lowConfActionsEl) lowConfActionsEl.classList.add('demoted');
     } else {
       if (explainBlockEl) explainBlockEl.hidden = false;
       if (evidenceBlockEl) evidenceBlockEl.hidden = false;
+      if (intentPrompt) intentPrompt.hidden = false;
       const lowConfActionsEl = document.getElementById('low-confidence-actions');
       if (lowConfActionsEl) lowConfActionsEl.classList.remove('demoted');
     }
@@ -1826,24 +2090,24 @@
   // cleanly to the landing screen with no side effects on real app state.
   const DEMO_RESULTS = {
     orders_trend: {
-      answer: 'For this demo shop, orders have been slowly rising over the last few months.',
-      why: 'Recent months show more orders than the months before them — a mild, steady upward trend.',
-      try_this: 'Keep an eye on the next 2–3 months to see if the rise continues.',
+      answer: 'Orders are slowly rising in this example.',
+      why: 'Recent months had more orders than earlier months.',
+      try_this: 'Watch the next few weeks before changing prices or offers.',
     },
     delivery_fee: {
-      answer: 'For this demo shop, a small delivery fee increase looks safe to try.',
-      why: 'Past fee changes did not noticeably reduce how many orders came in.',
-      try_this: 'Raise the fee by a small amount and watch orders for two weeks.',
+      answer: 'A small delivery-fee test looks safer than a big change.',
+      why: 'Past fee changes did not clearly reduce orders.',
+      try_this: 'Try a small change first, then watch orders.',
     },
     discounts: {
-      answer: 'For this demo shop, discounts helped a little, but not every time.',
-      why: 'Some discount months had more orders, but the pattern was not strong every month.',
-      try_this: 'Run a small offer for 3–5 days and compare orders.',
+      answer: 'Discounts helped sometimes, not always.',
+      why: 'Offer months were better in some places, but not every time.',
+      try_this: 'Test one small offer before repeating it everywhere.',
     },
     repeat_customers: {
-      answer: 'For this demo shop, a good share of customers are repeat buyers.',
-      why: 'Several months show the same customers ordering more than once.',
-      try_this: 'Try a small thank-you offer for repeat customers and see if it grows.',
+      answer: 'Repeat buyers look healthy in this example.',
+      why: 'The data shows people coming back more than once.',
+      try_this: 'Give recent buyers a small reason to return.',
     },
   };
 
@@ -1869,10 +2133,18 @@
     document.querySelectorAll('.demo-step').forEach((el) => {
       el.hidden = Number(el.dataset.step) !== demoStep;
     });
+
     const label = document.getElementById('demo-step-label');
     if (label) label.textContent = `STEP ${demoStep} OF 4`;
+
     document.querySelectorAll('.demo-dot').forEach((dot) => {
       dot.classList.toggle('filled', Number(dot.dataset.step) <= demoStep);
+    });
+
+    document.querySelectorAll('.demo-question-card').forEach((card) => {
+      const isSelected = card.getAttribute('data-demo-q') === demoChosenQuestion;
+      card.classList.toggle('selected', isSelected);
+      card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
     });
 
     const goBack = document.getElementById('demo-go-back');
@@ -1880,15 +2152,18 @@
     if (goBack) goBack.hidden = demoStep === 1;
 
     if (primary) {
+      primary.disabled = false;
       if (demoStep === 1) {
         primary.hidden = false;
         primary.textContent = 'Start demo';
       } else if (demoStep === 2) {
         primary.hidden = false;
         primary.textContent = 'Continue';
+      } else if (demoStep === 3) {
+        primary.hidden = false;
+        primary.textContent = 'Ask Hisaab';
+        primary.disabled = !demoChosenQuestion;
       } else {
-        // Steps 3 and 4 advance by picking a card / have no forward action —
-        // only "Go back" is shown, matching the reference design.
         primary.hidden = true;
       }
     }
@@ -1908,26 +2183,59 @@
     const closeBtn = document.getElementById('demo-close');
     const goBack = document.getElementById('demo-go-back');
     const primary = document.getElementById('demo-primary-btn');
-    if (closeBtn) closeBtn.addEventListener('click', closeDemoLesson);
-    if (goBack) goBack.addEventListener('click', () => {
-      if (demoStep > 1) { demoStep -= 1; renderDemoStep(); }
-    });
-    if (primary) primary.addEventListener('click', () => {
-      if (demoStep < 2) { demoStep += 1; renderDemoStep(); }
-      else if (demoStep === 2) { demoStep = 3; renderDemoStep(); }
-    });
+
+    if (closeBtn && !closeBtn.dataset.demoFlowWired) {
+      closeBtn.dataset.demoFlowWired = 'true';
+      closeBtn.addEventListener('click', closeDemoLesson);
+    }
+
+    if (goBack && !goBack.dataset.demoFlowWired) {
+      goBack.dataset.demoFlowWired = 'true';
+      goBack.addEventListener('click', () => {
+        if (demoStep > 1) {
+          demoStep -= 1;
+          renderDemoStep();
+        }
+      });
+    }
+
+    if (primary && !primary.dataset.demoFlowWired) {
+      primary.dataset.demoFlowWired = 'true';
+      primary.addEventListener('click', () => {
+        if (demoStep === 1) {
+          demoStep = 2;
+          renderDemoStep();
+          return;
+        }
+        if (demoStep === 2) {
+          demoStep = 3;
+          renderDemoStep();
+          return;
+        }
+        if (demoStep === 3 && demoChosenQuestion) {
+          demoStep = 4;
+          renderDemoStep();
+        }
+      });
+    }
+
     document.querySelectorAll('.demo-question-card').forEach((card) => {
+      if (card.dataset.demoFlowWired) return;
+      card.dataset.demoFlowWired = 'true';
+      card.setAttribute('aria-pressed', 'false');
       card.addEventListener('click', () => {
         demoChosenQuestion = card.getAttribute('data-demo-q');
-        demoStep = 4;
         renderDemoStep();
       });
     });
-    // Escape key closes the demo, matching standard modal expectations.
-    document.addEventListener('keydown', (e) => {
-      const overlay = document.getElementById('demo-lesson');
-      if (e.key === 'Escape' && overlay && !overlay.hidden) closeDemoLesson();
-    });
+
+    if (!document.body.dataset.demoEscapeWired) {
+      document.body.dataset.demoEscapeWired = 'true';
+      document.addEventListener('keydown', (e) => {
+        const overlay = document.getElementById('demo-lesson');
+        if (e.key === 'Escape' && overlay && !overlay.hidden) closeDemoLesson();
+      });
+    }
   }
 
   // ── Add-my-data full-page flow ──────────────────────────────────────────
@@ -2313,6 +2621,18 @@
       parseConnectedData();
     });
 
+    const summaryBackBtn = document.getElementById('dc-summary-back-btn');
+    if (summaryBackBtn) summaryBackBtn.addEventListener('click', () => {
+      dcHideError();
+      hideValidationNudge();
+      hideGuidanceMessage();
+      setDcScreen('upload');
+      updateDcReadButtonState();
+      updateDcLinkStatus();
+      const focusTarget = uploadedCsv ? document.getElementById('csv-upload-link') : sheetUrlInput;
+      if (focusTarget && typeof focusTarget.focus === 'function') focusTarget.focus();
+    });
+
     const askCtaBtn = document.getElementById('dc-ask-cta-btn');
     if (askCtaBtn) askCtaBtn.addEventListener('click', () => {
       if (dataConnectRefreshMode && currentResult?.question) {
@@ -2644,7 +2964,7 @@
 
   function setupSpeech() {
     if (navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
-      micBtn.title = 'Tap to speak your question — in any language';
+      micBtn.title = 'Tap to speak your question — in English, Hindi, or Hinglish';
     } else {
       micBtn.title = 'Voice input is not supported in this browser';
       micBtn.setAttribute('aria-disabled', 'true');
@@ -2845,15 +3165,17 @@
       const elapsed = Date.now() - startedAt;
       if (elapsed < MIN_RECORD_MS || !hasSpokenYet) {
         mediaChunks = [];
-        // Clear any live-preview leftovers if the recording was too short/empty.
         questionInput.classList.remove('live-previewing');
         if (livePreviewText) {
-          livePreviewText = '';
-          questionInput.value = '';
+          questionInput.value = livePreviewText;
           resizeQuestion();
           updateQuestionState();
+          hideValidationNudge();
+          showMicSoftNote('I heard this roughly. Edit it if needed, then ask Hisaab.');
+        } else {
+          showMicSoftNote('I could not hear that clearly. Try again or type the question.');
         }
-        showError('I didn\'t catch anything. Tap the mic and try speaking again.');
+        questionInput.focus();
         return;
       }
       await transcribeRecording();
@@ -2894,10 +3216,24 @@
     try { stream.getTracks().forEach(track => track.stop()); } catch (_err) { /* noop */ }
   }
 
+  // voice-soft-note-v2: mic/transcription is only an input helper. It must never
+  // close the Ask Hisaab shell or send the user back to the landing page.
+  function showMicSoftNote(message) {
+    const listeningNote = document.getElementById('mic-listening-note');
+    if (!listeningNote) return;
+    listeningNote.hidden = false;
+    listeningNote.textContent = message;
+    window.clearTimeout(showMicSoftNote.timer);
+    showMicSoftNote.timer = window.setTimeout(() => {
+      if (listeningNote && !recognizing) listeningNote.hidden = true;
+    }, 4200);
+  }
+
   async function transcribeRecording() {
     if (!mediaChunks.length) {
       questionInput.classList.remove('live-previewing');
-      showError('I didn\'t catch anything. Tap the mic and try speaking again.');
+      showMicSoftNote('I could not hear that clearly. Try again or type the question.');
+      questionInput.focus();
       return;
     }
 
@@ -2929,15 +3265,25 @@
       updateQuestionState();
       hideValidationNudge();
       questionInput.focus();
-    } catch (err) {
-      // If Gemini failed but we do have live-preview text, keep it — better than
-      // nothing, and clearly marked as preview to the user.
-      if (!livePreviewText) showError(err.message);
-      else showError(`Couldn't refine the transcription (${err.message}). Using the rough live preview — feel free to edit before running.`);
+    } catch (_err) {
+      // voice-transcription-nonblocking-v2: failed transcription should keep
+      // the current/rough text in the Ask screen, not show a global error.
+      const fallbackTranscript = (livePreviewText || questionInput.value || '').trim();
+      if (fallbackTranscript) {
+        questionInput.value = fallbackTranscript;
+        resizeQuestion();
+        updateQuestionState();
+        hideValidationNudge();
+        showMicSoftNote('I heard this roughly. Edit it if needed, then ask Hisaab.');
+        questionInput.focus();
+      } else {
+        showMicSoftNote('I could not hear that clearly. Try again or type the question.');
+        questionInput.focus();
+      }
     } finally {
       micBtn.disabled = false;
       micBtn.classList.remove('transcribing');
-      micBtn.title = 'Tap to speak your question — in any language';
+      micBtn.title = 'Tap to speak your question — in English, Hindi, or Hinglish';
       questionInput.classList.remove('live-previewing');
       livePreviewText = '';
       mediaChunks = [];
@@ -3241,6 +3587,9 @@
     resultsSection.classList.remove('with-scenarios');
     const scenariosBlock = document.getElementById('scenarios-block');
     if (scenariosBlock) scenariosBlock.hidden = true;
+    const businessResultBlock = document.getElementById('business-result-block');
+    if (businessResultBlock) businessResultBlock.hidden = true;
+    // business-result-hide-v5
     if (!options.keepTrajectory) stage.classList.remove('has-result', 'connecting-data');
     intentPrompt.classList.remove('show', 'captured');
     viewInLog.hidden = true;

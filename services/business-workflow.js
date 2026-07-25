@@ -20,7 +20,7 @@ function round(value, digits = 1) {
 function languageOf(question) {
   const text = String(question || '').toLowerCase();
   if (/[\u0900-\u097F]/.test(text)) return 'hi';
-  if (/\b(main|mai|mein|mujhe|mera|meri|mere|kaise|kya|karu|badha|badhau|dukaan|dhandha|vyapar|bikri|grahak|daam|kimat|munafa|kharcha)\b/i.test(text)) return 'hinglish';
+  if (/\b(agar|main|mai|mein|mujhe|mera|meri|mere|kaise|kya|kyu|karu|karun|badha|bada|badhau|badhana|ghata|ghatau|kam|zyada|rupaye|rupee|dukaan|dhandha|vyapar|bikri|grahak|daam|kimat|munafa|kharcha|hoga|toh)\b/i.test(text)) return 'hinglish';
   return 'en';
 }
 
@@ -30,7 +30,7 @@ function classifyQuestion(question) {
     || (/[\u0900-\u097F]/.test(text) && /(व्यापार|बिजनेस|दुकान|बिक्री|ग्राहक|ऑर्डर|मुनाफा|छूट|डिलीवरी|कीमत|खर्च)/.test(text))
     || /\b(what should i do|what shall i do|how can i grow|how can i improve|increase profits?|next step)\b/i.test(text);
   if (!business) return 'out_of_scope';
-  const change = /\b(what happens|change|raise|increase|decrease|lower|reduce|test|try|should i|if i|impact|effect|working|worth|run)\b/i.test(text);
+  const change = /\b(what happens|what will happen|change|raise|increase|decrease|lower|reduce|test|try|should i|if i|impact|effect|working|worth|run|agar|kya hoga|kya hoga agar|badha|bada|badhau|badhana|ghata|ghatau|kam karu|kam karun|zyada karu|zyada karun)\b/i.test(text);
   const lever = /\b(price|prices|pricing|delivery|shipping|fee|fees|discount|promo|promotion|offer|cod)\b/i.test(text);
   if (change && lever) return 'what_if';
   if (/\b(customer|customers|repeat|returning|retain|retention|loyal|loyalty|come back|coming back|grahak)\b/i.test(text)) return 'customer_retention';
@@ -328,7 +328,13 @@ async function naturalize(questionText, bundle) {
       limitation: bundle.limitation,
       recommendations: bundle.recommendations,
     };
-    const prompt = 'Rewrite this already-computed Hisaab answer as a calm human business analyst for a small shop owner. Match English, Hindi in Devanagari, or natural Roman Hinglish. Keep all facts, numbers, limitations, recommendation IDs, and meaning unchanged. Do not invent data. Return JSON only with title, answer, subtext, recommendations (id,label,title,body), detected_language. Input: ' + JSON.stringify(safe);
+    const targetLanguage = languageOf(questionText);
+    const languageInstruction = targetLanguage === 'hinglish'
+      ? 'The user wrote in Roman Hinglish. Every user-facing string must be natural Roman Hinglish, not English and not Devanagari Hindi.'
+      : targetLanguage === 'hi'
+        ? 'The user wrote in Hindi. Every user-facing string must be Hindi in Devanagari.'
+        : 'The user wrote in English. Every user-facing string must remain English.';
+    const prompt = 'Rewrite this already-computed Hisaab answer as a calm human business analyst for a small shop owner. ' + languageInstruction + ' Keep all facts, numbers, limitations, recommendation IDs, and meaning unchanged. Do not invent data. Return JSON only with title, answer, subtext, recommendations (id,label,title,body), detected_language. Input: ' + JSON.stringify(safe);
     const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await client.models.generateContent({
       model: MODEL,

@@ -6,6 +6,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { ApiError, GoogleGenAI, Type } = require('@google/genai');
 const firestoreService = require('./services/firestore');
+const businessWorkflow = require('./services/business-workflow'); // business-workflow-service-v5
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -2444,6 +2445,81 @@ app.post('/api/parse-sheet', async (req, res) => {
   }
 });
 
+// hisaab-scope-guidance: Hisaab is a small-business sales analyst, not a generic CSV chatbot.
+function askableCapabilitiesFromSummary(sheetSummary) {
+  const capabilities = sheetSummary?.capability_map?.capabilities || [];
+  return capabilities.filter(item => item.status === 'ready' || item.status === 'limited');
+}
+
+function supportedQuestionsFromSummary(sheetSummary) {
+  const direct = (sheetSummary?.suggested_questions || []).filter(Boolean).slice(0, 3);
+  if (direct.length) return direct;
+  const questionByKey = {
+    sales_trend: 'Are my orders going up or down?',
+    pricing: 'What happens if I change my prices?',
+    delivery_fee: 'Should I raise my delivery fee?',
+    promotions: 'Are my discounts actually working?',
+    repeat_customers: 'Are customers coming back?',
+  };
+  return askableCapabilitiesFromSummary(sheetSummary).map(item => questionByKey[item.key]).filter(Boolean).slice(0, 3);
+}
+
+function datasetLooksLikeHisaabData(data, dataSource, sheetSummary) {
+  if ((data || []).length > 0) return true;
+  if (sheetSummary?.orders_found) return true;
+  if (askableCapabilitiesFromSummary(sheetSummary).length > 0) return true;
+  const sources = dataSource?.field_sources || {};
+  return ['orders', 'avg_order_value', 'delivery_fee', 'promo_active', 'repeat_orders'].some(field => isSourceUsable(sources[field]));
+}
+
+function readableMissingField(field) {
+  if (field === 'orders') return 'order date or order count';
+  if (field === 'delivery_fee') return 'delivery fee';
+  if (field === 'avg_order_value') return 'sales or order value';
+  if (field === 'promo_active') return 'discount or promo history';
+  if (field === 'repeat_orders_proxy') return 'customer or repeat-order data';
+  return String(field || '').replace(/_/g, ' ');
+}
+
+function guidanceForUnsupportedDataset(sheetSummary, dataSource) {
+  const rows = Number(sheetSummary?.raw_rows || dataSource?.sheet_rows_used || 0);
+  const rowLead = rows > 0 ? ('I found ' + rows + ' rows, but') : 'I read the file, but';
+  return rowLead + ' this does not look like shop sales data yet. Hisaab works with orders, sales/order value, customers, delivery fees, discounts, or promos — upload that kind of data to get a real answer.';
+}
+
+function guidanceForMissingDataQuestion(question, missingFields, sheetSummary) {
+  const text = String(question || '').toLowerCase();
+  const suggested = supportedQuestionsFromSummary(sheetSummary);
+  const suffix = suggested.length ? (' I can still help with: ' + suggested.slice(0, 2).join(' or ') + '.') : ' Upload shop sales/order data to get a reliable answer.';
+  if (/profit|margin|cost|expense|expenses|cogs/.test(text)) return 'I cannot calculate profit honestly because cost or margin data is missing.' + suffix;
+  if (/product|item|sku|category/.test(text)) return 'I cannot compare products honestly because product/category data is missing.' + suffix;
+  if (/customer|repeat|loyal/.test(text) && missingFields.some(item => item.field === 'repeat_orders_proxy')) return 'I cannot answer repeat-customer questions honestly because customer data is missing.' + suffix;
+  const missingNames = missingFields.map(item => readableMissingField(item.field));
+  return 'I do not have reliable ' + missingNames.join(' or ') + ' data to answer that specific question yet.' + suffix;
+}
+
+async function sendHisaabGuidance(res, { sessionId, uploadId, question, dataSource, sheetSummary, guidanceMessage, suggestedQuestions, missingFields = [], reason = 'guidance' }) {
+  const answer = guidanceMessage;
+  const questionPersistence = await firestoreService.saveQuestion({ sessionId, uploadId: uploadId || null, question: question.trim(), answer });
+  await firestoreService.saveEvent({
+    type: 'ask',
+    sessionId,
+    uploadId: uploadId || null,
+    questionId: questionPersistence.id,
+    metadata: { status: 'guidance', reason, missingFields: missingFields.map(item => item.field || item) },
+  });
+  return res.json({
+    session_id: sessionId,
+    status: 'guidance',
+    guidance_message: guidanceMessage,
+    suggested_questions: (suggestedQuestions || []).slice(0, 3),
+    detected_language: detectFallbackLanguage(question),
+    data_source: dataSource,
+    sheet_summary: sheetSummary,
+    persistence: { question: questionPersistence },
+  });
+}
+
 app.post('/api/simulate', async (req, res) => {
   // Everything below is wrapped in one top-level try/catch. Without this,
   // any unexpected exception here (a bug in the regression math, a bad
@@ -2479,56 +2555,81 @@ async function handleSimulate(req, res) {
 
   const { data, dataSource, sheetSummary } = await getSimulationData(sheetUrl, manualInputs, csvText, bootstrapOwner);
 
-  if ((sheetUrl && String(sheetUrl).trim()) || (csvText && String(csvText).trim())) {
-    const missingFields = missingCriticalFields(question.trim(), dataSource);
-    if (!data.length || missingFields.length) {
-      // Reuses the exact same guidance response shape/rendering already
-      // built for the open-ended-question case (classifyQuestionIntentWithGemini) —
-      // per explicit instruction, no forced manual-data-entry form right
-      // now. Honest about what's missing, but never blocks the user from
-      // getting SOME kind of answer; offers real, already-computed
-      // alternative questions instead (drawn from sheetSummary's actual
-      // capability_map, never fabricated).
-      const missingFieldNames = missingFields.map(item => {
-        if (item.field === 'orders') return 'order dates';
-        if (item.field === 'delivery_fee') return 'delivery fee';
-        if (item.field === 'avg_order_value') return 'order value';
-        if (item.field === 'promo_active') return 'discount history';
-        return item.field;
-      });
-      const guidanceMessage = !data.length
-        ? "I couldn't build a reliable order history from this sheet yet, so I can't compute a real answer for this specific question."
-        : `I don't have reliable ${missingFieldNames.join(' or ')} data to answer this specific question yet.`;
-      const suggestedQuestions = (sheetSummary?.suggested_questions || []).slice(0, 3);
-      const answer = guidanceMessage;
-      const questionPersistence = await firestoreService.saveQuestion({
+  // business-workflow-router-v5: one router coordinates scope, intent, capability and result type.
+  const workflow = await businessWorkflow.answerQuestion({
+    question: question.trim(),
+    rows: data,
+    dataSource,
+    sheetSummary,
+  });
+  if (workflow.status === 'guidance' || workflow.status === 'business_result') {
+    let savedQuestion = null;
+    try {
+      savedQuestion = await firestoreService.saveQuestion({
         sessionId,
         uploadId: uploadId || null,
         question: question.trim(),
-        answer,
+        answer: workflow.status === 'guidance'
+          ? workflow.guidance_message
+          : (workflow.business_result?.answer || workflow.business_result?.title || ''),
       });
       await firestoreService.saveEvent({
         type: 'ask',
         sessionId,
         uploadId: uploadId || null,
-        questionId: questionPersistence.id,
+        questionId: savedQuestion?.id || null,
         metadata: {
-          status: 'guidance',
-          missingFields: missingFields.map(item => item.field),
+          status: workflow.status,
+          answerType: workflow.business_result?.answer_type || workflow.guidance_type || null,
         },
       });
-      return res.json({
-        session_id: sessionId,
-        status: 'guidance',
-        guidance_message: guidanceMessage,
-        suggested_questions: suggestedQuestions,
-        detected_language: detectFallbackLanguage(question),
-        data_source: dataSource,
-        sheet_summary: sheetSummary,
-        persistence: {
-          question: questionPersistence,
-        },
+    } catch (error) {
+      console.error('[business-workflow-v5] persistence failed softly:', error?.message || error);
+    }
+    return res.json({
+      ...workflow,
+      session_id: sessionId,
+      data_source: dataSource,
+      sheet_summary: sheetSummary,
+      analytics_capabilities: sheetSummary?.capability_map || null,
+      persistence: { question: savedQuestion },
+    });
+  }
+  // A supported what-if question falls through to the existing regression engine.
+
+  const hasConnectedInput = Boolean((sheetUrl && String(sheetUrl).trim()) || (csvText && String(csvText).trim()));
+  if (hasConnectedInput) {
+    // question-scope-before-missing-fields: first validate uploaded file scope. Random CSVs must not open generic chat.
+    if (!datasetLooksLikeHisaabData(data, dataSource, sheetSummary)) {
+      return sendHisaabGuidance(res, {
+        sessionId,
+        uploadId,
+        question,
+        dataSource,
+        sheetSummary,
+        guidanceMessage: guidanceForUnsupportedDataset(sheetSummary, dataSource),
+        suggestedQuestions: [],
+        reason: 'unsupported_dataset',
       });
+    }
+
+    const questionText = question.trim();
+    const earlyScenario = detectScenario(questionText, data);
+    if (earlyScenario.hasLeverSignal) {
+      const missingFields = missingCriticalFields(questionText, dataSource);
+      if (missingFields.length) {
+        return sendHisaabGuidance(res, {
+          sessionId,
+          uploadId,
+          question,
+          dataSource,
+          sheetSummary,
+          guidanceMessage: guidanceForMissingDataQuestion(questionText, missingFields, sheetSummary),
+          suggestedQuestions: supportedQuestionsFromSummary(sheetSummary),
+          missingFields,
+          reason: 'missing_required_data',
+        });
+      }
     }
   }
 

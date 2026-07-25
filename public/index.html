@@ -59,12 +59,9 @@
           <div class="demo-eyebrow">DEMO SHOP</div>
           <h2 class="demo-title">Meet a small food stall</h2>
           <p class="demo-desc">This example shows how Hisaab reads everyday sales data and explains one useful next step in plain language.</p>
-          <div class="demo-chip-row">
-            <span class="demo-chip">Orders</span>
-            <span class="demo-chip">Sales</span>
-            <span class="demo-chip">Delivery fee</span>
-            <span class="demo-chip">Discounts</span>
-            <span class="demo-chip">Repeat customers</span>
+          <div class="demo-data-strip" aria-label="Demo data includes">
+            <span class="demo-data-label">Data includes</span>
+            <span class="demo-data-items">Orders · Sales · Delivery fee · Discounts · Repeat customers</span>
           </div>
         </div>
 
@@ -73,23 +70,11 @@
           <div class="demo-eyebrow">WHAT HISAAB CHECKS</div>
           <h2 class="demo-title">First, Hisaab checks what data can be trusted</h2>
           <p class="demo-desc">Before answering, Hisaab looks for the basic signals a shop owner can understand and act on.</p>
-          <div class="demo-card-grid">
-            <div class="demo-info-card">
-              <div class="demo-info-title">Orders</div>
-              <div class="demo-info-body">How many orders came in over time.</div>
-            </div>
-            <div class="demo-info-card">
-              <div class="demo-info-title">Sales</div>
-              <div class="demo-info-body">Whether orders are creating more or less money.</div>
-            </div>
-            <div class="demo-info-card">
-              <div class="demo-info-title">Delivery fee</div>
-              <div class="demo-info-body">Whether fee changes moved with order changes.</div>
-            </div>
-            <div class="demo-info-card">
-              <div class="demo-info-title">Customers</div>
-              <div class="demo-info-body">Whether people are coming back again.</div>
-            </div>
+          <div class="demo-check-list" aria-label="What Hisaab checks">
+            <div class="demo-check-row"><span aria-hidden="true">✓</span><div><b>Orders over time</b><small>Is the shop growing, slowing, or stable?</small></div></div>
+            <div class="demo-check-row"><span aria-hidden="true">✓</span><div><b>Sales value</b><small>Are orders bringing in more or less money?</small></div></div>
+            <div class="demo-check-row"><span aria-hidden="true">✓</span><div><b>Delivery fee changes</b><small>Did fee changes move with order changes?</small></div></div>
+            <div class="demo-check-row"><span aria-hidden="true">✓</span><div><b>Repeat customers</b><small>Are people coming back again?</small></div></div>
           </div>
           <p class="demo-footnote">This is example data only. With your data, Hisaab will only answer what your file or Sheet can support.</p>
         </div>
@@ -123,25 +108,23 @@
         <div class="demo-step" id="demo-step-4" data-step="4" hidden>
           <div class="demo-eyebrow">DEMO ANSWER</div>
           <h2 class="demo-title">Demo result</h2>
-          <div class="demo-card-grid">
-            <div class="demo-info-card">
-              <div class="demo-info-title">Answer</div>
-              <div class="demo-info-body" id="demo-result-answer"></div>
+          <div class="demo-result-wrap">
+            <section class="demo-result-main">
+              <div class="demo-result-label">Hisaab says</div>
+              <p id="demo-result-answer"></p>
+            </section>
+            <div class="demo-result-support">
+              <section>
+                <div class="demo-result-label">Why</div>
+                <p id="demo-result-why"></p>
+              </section>
+              <section>
+                <div class="demo-result-label">Try this</div>
+                <p id="demo-result-try"></p>
+              </section>
             </div>
-            <div class="demo-info-card">
-              <div class="demo-info-title">Why?</div>
-              <div class="demo-info-body" id="demo-result-why"></div>
-            </div>
-            <div class="demo-info-card">
-              <div class="demo-info-title">Try this</div>
-              <div class="demo-info-body" id="demo-result-try"></div>
-            </div>
-            <div class="demo-info-card">
-              <div class="demo-info-title">How sure is this?</div>
-              <div class="demo-info-body">Demo only — example data, not your business.</div>
-            </div>
+            <p class="demo-confidence-note">Demo only · Example data, not your business</p>
           </div>
-          <p class="demo-footnote">Demo example · Not your business data</p>
         </div>
       </div>
 
@@ -196,7 +179,7 @@
             <button class="dc-dropzone" id="csv-upload-link" type="button">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0-12 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
               <span class="dc-dropzone-title" id="csv-dropzone-title">Click to upload or drag and drop</span>
-              <span class="dc-dropzone-sub">CSV files only</span>
+              <span class="dc-dropzone-sub">CSV files under 4 MB</span>
             </button>
           </div>
 
@@ -288,7 +271,8 @@
           <p class="dc-directional-note" id="dc-directional-note" hidden>Some answers will be directional, not exact.</p>
         </div>
 
-        <div class="dc-cta-row">
+        <div class="dc-cta-row dc-summary-actions">
+          <button class="dc-btn-outline" id="dc-summary-back-btn" type="button">Back</button>
           <button class="dc-ask-cta" id="dc-ask-cta-btn" type="button">Ask Hisaab</button>
         </div>
       </div>
@@ -480,7 +464,7 @@
           <div class="threshold-caption" id="threshold-caption"></div>
         </div>
         <details class="scenarios-details" id="scenarios-details">
-          <summary data-i18n="scenarios.see_details">Show the numbers behind this</summary>
+          <summary data-i18n="scenarios.see_details">See how this was calculated</summary>
           <div class="scenarios-plain-summary" id="scenarios-plain-summary"></div>
         </details>
       </div>
