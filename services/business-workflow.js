@@ -317,24 +317,40 @@ function extractJson(text) {
 async function naturalize(questionText, bundle) {
   const fallback = { ...bundle, detected_language: languageOf(questionText), wording_source: 'deterministic' };
   if (!process.env.GEMINI_API_KEY) return fallback;
-  try {
-    const safe = {
-      question: questionText,
-      answer_type: bundle.answer_type,
-      title: bundle.title,
-      answer: bundle.answer,
-      subtext: bundle.subtext,
-      facts: bundle.found_facts,
-      limitation: bundle.limitation,
-      recommendations: bundle.recommendations,
-    };
-    const targetLanguage = languageOf(questionText);
+
+  const targetLanguage = languageOf(questionText);
+  const safe = {
+    question: questionText,
+    answer_type: bundle.answer_type,
+    title: bundle.title,
+    answer: bundle.answer,
+    subtext: bundle.subtext,
+    facts: bundle.found_facts,
+    limitation: bundle.limitation,
+    recommendations: bundle.recommendations,
+  };
+
+  function buildPrompt(emphasize) {
+    // Hinglish is the hardest of the three registers for a model to hit
+    // consistently on a "rewrite this JSON" task -- it's easy to default
+    // back to plain English since that's the safer, more common output.
+    // A concrete worked example is far more reliable than an abstract
+    // instruction like "respond in Hinglish".
     const languageInstruction = targetLanguage === 'hinglish'
-      ? 'The user wrote in Roman Hinglish. Every user-facing string must be natural Roman Hinglish, not English and not Devanagari Hindi.'
+      ? 'The user wrote in Roman Hinglish (Hindi words spelled in Latin script, mixed naturally with English business words). Every user-facing string in your JSON output must ALSO be natural Roman Hinglish -- not English, not Devanagari Hindi. '
+        + 'Example of the register required: instead of "Start with existing customers before spending on a broad offer.", write something like "Naye offer par kharch karne se pehle apne purane customers se shuru karein." Match that mixed, informal register throughout every field. Set detected_language to exactly "hinglish".'
       : targetLanguage === 'hi'
-        ? 'The user wrote in Hindi. Every user-facing string must be Hindi in Devanagari.'
-        : 'The user wrote in English. Every user-facing string must remain English.';
-    const prompt = 'Rewrite this already-computed Hisaab answer as a calm human business analyst for a small shop owner. ' + languageInstruction + ' Keep all facts, numbers, limitations, recommendation IDs, and meaning unchanged. Do not invent data. Return JSON only with title, answer, subtext, recommendations (id,label,title,body), detected_language. Input: ' + JSON.stringify(safe);
+        ? 'The user wrote in Hindi. Every user-facing string must be Hindi in Devanagari script. Set detected_language to exactly "hi".'
+        : 'The user wrote in English. Every user-facing string must remain English. Set detected_language to exactly "en".';
+    const insistence = emphasize
+      ? ' IMPORTANT: your previous attempt did not follow this language requirement. Every single string (title, answer, subtext, and every recommendation label/title/body) must be rewritten in the required language -- none of them may be left in English if the required language is Hindi or Hinglish.'
+      : '';
+    return 'Rewrite this already-computed Hisaab answer as a calm human business analyst for a small shop owner. '
+      + languageInstruction + insistence
+      + ' Keep all facts, numbers, limitations, recommendation IDs, and meaning unchanged. Do not invent data. Return JSON only with title, answer, subtext, recommendations (id,label,title,body), detected_language. Input: ' + JSON.stringify(safe);
+  }
+
+  async function callGemini(prompt) {
     const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await client.models.generateContent({
       model: MODEL,
@@ -344,7 +360,10 @@ async function naturalize(questionText, bundle) {
     const text = typeof response.text === 'string'
       ? response.text
       : (response.candidates?.[0]?.content?.parts || []).map((part) => part.text || '').join('');
-    const parsed = JSON.parse(extractJson(text));
+    return JSON.parse(extractJson(text));
+  }
+
+  function toBundle(parsed) {
     const byId = new Map((parsed.recommendations || []).map((item) => [item.id, item]));
     return {
       ...bundle,
@@ -352,9 +371,33 @@ async function naturalize(questionText, bundle) {
       answer: String(parsed.answer || bundle.answer),
       subtext: String(parsed.subtext || bundle.subtext),
       recommendations: bundle.recommendations.map((item) => ({ ...item, ...(byId.get(item.id) || {}), id: item.id, tone: item.tone })),
-      detected_language: String(parsed.detected_language || languageOf(questionText)),
+      detected_language: String(parsed.detected_language || languageOf(questionText)).toLowerCase(),
       wording_source: 'gemini_grounded',
     };
+  }
+
+  try {
+    let parsed = await callGemini(buildPrompt(false));
+    let result = toBundle(parsed);
+    // Trust Gemini's OWN reported detected_language as the check, rather
+    // than a fragile heuristic guessing at the output text -- if it didn't
+    // even claim to write in the language we asked for, one retry with a
+    // more forceful instruction is worth it before giving up.
+    if (result.detected_language !== targetLanguage) {
+      console.warn(`[business-workflow] naturalize() language mismatch on first attempt: asked for "${targetLanguage}", got "${result.detected_language}" -- retrying once`);
+      parsed = await callGemini(buildPrompt(true));
+      result = toBundle(parsed);
+    }
+    if (result.detected_language !== targetLanguage) {
+      // Both attempts failed to produce the requested language. Falling
+      // back to the raw English deterministic bundle is still better than
+      // presenting a mismatched result as if it were correctly localized,
+      // but this should be visible, not silent -- if this shows up in
+      // production logs repeatedly, the prompt itself needs more work.
+      console.error(`[business-workflow] naturalize() could not get "${targetLanguage}" after retry (got "${result.detected_language}") -- falling back to deterministic English for question: ${questionText}`);
+      return fallback;
+    }
+    return result;
   } catch (error) {
     console.error('[business-workflow] wording fallback:', error?.message || error);
     return fallback;

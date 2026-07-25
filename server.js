@@ -1065,7 +1065,7 @@ function summarizeSheetParse(parsed) {
     classification_source: parsed.classification_source,
     body_line: bodyLine,
     caveat_line: importantMissing.length
-      ? `${importantMissing[0]} isn't in this sheet, so I'll flag it if that matters for your question.`
+      ? `I don't see ${importantMissing[0]} in this sheet, so I'll flag it if that matters for your question.`
       : firstLimited
         ? `${firstLimited.label.toLowerCase()} is limited: ${firstLimited.reason}`
         : firstMissing
