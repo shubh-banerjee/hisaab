@@ -32,7 +32,7 @@ process.on('uncaughtException', (err) => {
 
 const config = {
   geminiApiKey: process.env.GEMINI_API_KEY,
-  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
   compareMinDays: Number(process.env.HISAAB_COMPARE_MIN_DAYS || process.env.DECISION_COMPARE_MIN_DAYS || 20),
   // Check-back is a lightweight qualitative "did you do it / what happened"
   // ask, not a full sheet re-fetch, so it surfaces sooner than compare.
@@ -121,7 +121,7 @@ Never invent a capability that isn't in the ready or limited lists. Respond with
       maxOutputTokens: 1024,
       responseMimeType: 'application/json',
       responseSchema: intentClassificationSchema,
-      thinkingConfig: { thinkingBudget: 0 },
+      thinkingConfig: { thinkingLevel: 'low' },
       systemInstruction: 'You are a retail analytics intent classifier. Always respond with valid JSON only — no markdown, no text outside the JSON object. Never claim a data capability that was not explicitly listed as ready or limited.',
     },
   });
@@ -583,7 +583,7 @@ Be conservative. If a column's purpose is ambiguous or does not clearly fit one 
     config: {
       maxOutputTokens: 2048,
       responseMimeType: 'application/json',
-      thinkingConfig: { thinkingBudget: 0 },
+      thinkingConfig: { thinkingLevel: 'low' },
       systemInstruction: 'You classify spreadsheet columns for small-business order data. Always return valid JSON only.',
     },
   });
@@ -2375,7 +2375,7 @@ app.post('/api/transcribe', async (req, res) => {
       }],
       config: {
         maxOutputTokens: 256,
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: { thinkingLevel: 'low' },
       },
     });
 
@@ -2754,7 +2754,7 @@ Respond with ONLY a raw JSON object — no markdown, no code fences. Exactly the
         responseMimeType: 'application/json',
         responseSchema: simulationResponseSchema,
         thinkingConfig: {
-          thinkingBudget: 0,
+          thinkingLevel: 'low',
         },
         systemInstruction: 'You are a retail analytics AI assistant. Always respond with valid JSON only — no markdown, no code fences, no text outside the JSON object. Localize only the recommendation and why fields to the user question language.',
       },

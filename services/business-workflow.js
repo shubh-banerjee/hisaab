@@ -1,6 +1,6 @@
 const { GoogleGenAI } = require('@google/genai');
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const USABLE = new Set(['derived', 'derived_manual', 'derived_low_confidence', 'fallback']);
 
 function hasField(source, field) {
@@ -355,7 +355,7 @@ async function naturalize(questionText, bundle) {
     const response = await client.models.generateContent({
       model: MODEL,
       contents: prompt,
-      config: { maxOutputTokens: 1200, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } },
+      config: { maxOutputTokens: 1200, responseMimeType: 'application/json', thinkingConfig: { thinkingLevel: 'low' } },
     });
     const text = typeof response.text === 'string'
       ? response.text
