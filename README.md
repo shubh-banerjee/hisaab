@@ -9,14 +9,20 @@ Browser (index.html)
     |  POST /api/simulate { question, sheetUrl? }
     v
 Express server (server.js)
-    |  getHistoricalData() <-- synthetic JSON fallback (BigQuery-ready)
-    |  optional Google Sheets CSV import
-    |  fuzzy column matching + fallback for missing fields
-    |  regression / promo lift math computes the numeric result
+    |  getHistoricalData() <-- synthetic JSON demo dataset
+    |  optional Google Sheets / CSV import
+    |  fuzzy column matching + honest guidance for missing fields
+    |  question-type routing (services/business-workflow.js):
+    |    - numeric what-if (price/fee/promo) -> regression engine
+    |    - trend / retention / general business questions -> a
+    |      separate "business result" bundle + answer-type routing
+    |  regression / promo-lift math computes the numeric result
     v
 Google Gemini Developer API (@google/genai)
-    |  receives computed numbers
-    |  returns only recommendation, why, and a friendly metric label
+    |  receives the already-computed numbers
+    |  returns only recommendation, why, and plain-language wording
+    |  (regression never asks Gemini for a number; Gemini never
+    |  invents one)
     v
 Browser renders: calculated impact + AI-written explanation
     |  X-Hisaab-Session browser UUID
@@ -25,7 +31,7 @@ Firebase Firestore
     |  sessions, uploads, analytics, questions, simulations, feedback, events
 ```
 
-> **BigQuery-ready data layer:** The `getHistoricalData()` function in `server.js` is isolated behind a clear comment. To connect to BigQuery in production, replace the function body with a single `bigquery.query(...)` call. Google Sheets is the near-term bridge for testing with real shop data.
+> **On "BigQuery-ready":** an earlier version of this README described `getHistoricalData()` as BigQuery-ready. There is no BigQuery integration anywhere in this codebase today — that line was aspirational, not implemented, and has been removed to keep this doc honest. Firestore is the real, live data layer; Google Sheets/CSV is the real ingestion path. BigQuery would be a genuinely reasonable next step if the product ever needs to aggregate across many shops at once (cross-shop benchmarking, large-scale prediction tracking) — Firestore is not well-suited to that kind of query — but nothing here uses it today.
 
 ## What Is Calculated vs. AI-Written
 
@@ -34,11 +40,13 @@ The API response separates:
 - `computed`: server-calculated values from historical data, including `outcome_value`, `range_low`, `range_high`, `confidence`, `monthly_revenue_impact`, `worst_case_revenue_impact`, and `trend_pct`.
 - `generated`: Gemini-written language, including `recommendation`, `why`, `outcome_metric_label`, and `detected_language`.
 
-Gemini is explicitly told not to change the numeric fields.
+Gemini is explicitly told not to change the numeric fields. When Gemini's rewrite call fails or times out, the server falls back to a plain templated description of the same real numbers — this is disclosed to the user (`ai-wording-note` in the UI), not hidden, so a degraded AI-wording layer never quietly presents as full confidence.
 
 ## Multilingual Questions
 
-The app supports multilingual input through Gemini's language understanding. Users can ask questions in English, Hindi, Bengali, Tamil, Hinglish, and other Indian languages without a separate translation service. The current product keeps the generated recommendation and explanation consistent in English; full same-language output is a near-term milestone to make the experience more accessible for regional-language shop owners.
+Be precise about what's actually true here, since an earlier draft of this README overclaimed it: the app's own UI chrome (buttons, labels) has real translations for **English and Hindi only** — not Bengali or Tamil. Gemini's own language understanding is broader than that, so a question asked in another language may still get a reasonable answer, but the surrounding product experience is not actually localized beyond English/Hindi today.
+
+For the answer content itself, Hisaab detects the question's language (English / Hindi / Hinglish) and asks Gemini to reply in kind — this is implemented, not a future milestone. Hinglish specifically is the hardest of the three registers for a model to hit consistently on a rewrite task; the code retries once with a firmer instruction if the model's own reported language doesn't match what was asked for, and falls back to English (with a visible server-side log, not a silent failure) if it still doesn't match after the retry.
 
 ## Optional Google Sheets Input
 
@@ -53,7 +61,7 @@ Expected columns can be named flexibly:
 - `delivery_fee`, `shipping_fee`, or `delivery_charge`
 - `promo_active`, `promo`, `promotion`, or `discount`
 
-When a Sheet is provided, missing critical fields are not filled with demo data. The API returns `status: "needs_input"` with inline prompts for anything required by the current question. Demo data is used only when no Sheet URL is provided.
+When a Sheet is provided, missing critical fields are never silently filled with demo data. If the specific question asked can't be honestly computed from what's actually in the sheet, the API returns `status: "guidance"` with a plain explanation of what's missing plus real alternative questions the data genuinely can answer — the user is never blocked behind a form demanding more data before they can get any response at all. (An earlier version of this product did exactly that — a manual-data-entry form that blocked further use until fields were filled — and it was removed this refinement phase after one of its inputs was found to be mathematically incapable of producing a real answer no matter what was typed into it.) Demo data is used only when no Sheet URL is provided at all.
 
 Column classification is adaptive: the server sends headers and sample rows to Gemini, which classifies concepts such as order date, order ID, customer identifier, order value, delivery fee, promo flag, and order status. The server then aggregates order-level rows into monthly summaries before running regression.
 
@@ -83,14 +91,14 @@ Put these values in `.env`:
 
 ```bash
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.5-flash-lite
+GEMINI_MODEL=gemini-3.6-flash
 PORT=8080
 ```
 
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
 | `GEMINI_API_KEY` | Yes | None | Gemini Developer API key from Google AI Studio |
-| `GEMINI_MODEL` | No | `gemini-2.5-flash-lite` | Gemini model used for wording only |
+| `GEMINI_MODEL` | No | `gemini-3.6-flash` | Gemini model used for wording only |
 | `PORT` | No | `8080` | Port the Express server listens on |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Local only | ADC | Absolute path to a Google Cloud service-account JSON key with Firestore access |
 | `FIREBASE_SERVICE_ACCOUNT_BASE64` | Vercel only | None | Base64-encoded Firebase service-account JSON for hosts without ADC or mounted files |
@@ -191,14 +199,15 @@ gcloud run deploy hisaab \
   --source . \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars GEMINI_API_KEY=your_actual_key_here,GEMINI_MODEL=gemini-2.5-flash-lite
+  --set-env-vars GEMINI_API_KEY=your_actual_key_here,GEMINI_MODEL=gemini-3.6-flash
 ```
 
 ## Tech Stack
 
 - **Backend:** Node.js + Express
 - **Math:** Plain JavaScript regression and promo lift calculations
-- **AI:** Gemini Developer API via `@google/genai` for wording only
+- **Question routing:** `services/business-workflow.js` — routes trend/retention/general business questions to a separate answer-type bundle, distinct from the numeric what-if regression path in `server.js`
+- **AI:** Gemini Developer API via `@google/genai` for wording only — currently `gemini-3.6-flash`
 - **Frontend:** Plain HTML + CSS + JS
 - **Container:** Docker on `node:20-alpine`
 - **Deploy target:** Vercel
