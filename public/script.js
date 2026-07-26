@@ -2870,9 +2870,6 @@
     decisionList.querySelectorAll('[data-compare-id]').forEach(btn => {
       btn.addEventListener('click', () => compareDecision(btn.dataset.compareId));
     });
-    decisionList.querySelectorAll('[data-manual-id]').forEach(form => {
-      form.addEventListener('submit', event => submitManualOutcome(event, form.dataset.manualId));
-    });
   }
 
   function decisionCardHtml(decision) {
@@ -2906,20 +2903,11 @@
         </div>
       `;
     }
-    if (decision.status === 'applied' && decision.dataSource === 'sample') {
-      return `
-        <form class="manual-outcome" data-manual-id="${escapeHtml(decision.id)}">
-          <span>What actually happened?</span>
-          <select name="direction" aria-label="Direction">
-            <option value="up">Up</option>
-            <option value="down">Down</option>
-            <option value="flat">Flat</option>
-          </select>
-          <input name="magnitude" type="number" step="0.1" min="0" placeholder="Rough %" aria-label="Rough magnitude">
-          <button type="submit">Save outcome</button>
-        </form>
-      `;
-    }
+    // Sample-data decisions used to show an inline "What actually
+    // happened?" form here -- removed as a redundant, worse-UX duplicate
+    // of the dedicated check-back flow, which already covers exactly this
+    // self-report case elsewhere. Nothing else to show for any other
+    // status/source combination.
     return '';
   }
 
@@ -2945,26 +2933,6 @@
     } catch (err) {
       actions.innerHTML = `<div class="log-empty-note">Couldn't reach your sheet just now — try again? <button data-compare-id="${escapeHtml(id)}" type="button">Retry</button></div>`;
       actions.querySelector('button')?.addEventListener('click', () => compareDecision(id));
-    }
-  }
-
-  async function submitManualOutcome(event, id) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const direction = form.elements.direction.value;
-    const magnitude = Number(form.elements.magnitude.value || 0);
-    const actualValue = direction === 'down' ? -Math.abs(magnitude) : direction === 'flat' ? 0 : Math.abs(magnitude);
-    try {
-      const res = await fetch(`/api/decisions/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        headers: apiHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ actualValue, actualNote: `Self-reported ${direction}` }),
-      });
-      const body = await readJsonResponse(res);
-      if (!res.ok) throw new Error(body.error || `Server error (HTTP ${res.status})`);
-      await openDecisionLog();
-    } catch (err) {
-      form.innerHTML += `<span class="bad"> ${escapeHtml(err.message)}</span>`;
     }
   }
 

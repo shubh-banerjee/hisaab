@@ -2260,7 +2260,7 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 .dl-actions{ margin-top:12px; }
 .new-data-cta{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border:1px solid rgba(59,111,230,.18); border-radius:12px; background:linear-gradient(135deg, rgba(232,239,254,.55), var(--surface)); }
 .new-data-cta .msg{ color:var(--ink); font-size:13px; font-weight:500; }
-.new-data-cta button,.manual-outcome button{ padding:7px 14px; border:none; border-radius:999px; background:var(--accent); color:#fff; font-size:12.5px; font-weight:500; white-space:nowrap; }
+.new-data-cta button{ padding:7px 14px; border:none; border-radius:999px; background:var(--accent); color:#fff; font-size:12.5px; font-weight:500; white-space:nowrap; }
 .compare-loading{ margin-top:12px; padding:16px; border-radius:12px; background:var(--surface-2); text-align:center; }
 .compare-loading .spinner{ width:18px; height:18px; margin:0 auto 10px; border:2px solid rgba(59,111,230,.18); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
 .compare-loading .txt{ color:var(--ink-soft); font-size:12.5px; }
@@ -2275,9 +2275,6 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
 .dl-verdict .dot{ width:6px; height:6px; flex-shrink:0; border-radius:50%; background:var(--good); }
 .fresh-badge{ display:inline-flex; align-items:center; gap:6px; margin-top:12px; color:var(--accent); font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; }
 .fresh-badge .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); }
-.manual-outcome{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:12px; padding:12px 14px; border-radius:12px; background:var(--surface-2); }
-.manual-outcome span{ width:100%; color:var(--ink); font-size:13px; font-weight:500; }
-.manual-outcome select,.manual-outcome input{ min-height:34px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); font-size:12.5px; }
 .log-empty-note{ padding:20px 22px; border:1px dashed var(--line); border-radius:16px; background:var(--surface); color:var(--ink-soft); font-size:14px; line-height:1.55; text-align:center; }
 
 @media (max-width: 980px){
