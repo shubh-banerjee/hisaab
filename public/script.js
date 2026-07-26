@@ -2809,7 +2809,12 @@
 
   function renderDecisionCount(count) {
     decisionCount.textContent = String(count);
-    openDecisions.hidden = count <= 0;
+    // Never show the "Your decisions" button while the decision-log page
+    // itself is open — previously this only checked count, so the button
+    // stayed visible (or got re-shown, since openDecisionLog() calls this
+    // same function once its fetch completes) even while already on that
+    // exact page.
+    openDecisions.hidden = count <= 0 || !decisionLog.hidden;
     updateAwayFromLandingState();
   }
 
@@ -2840,6 +2845,7 @@
   function closeDecisionLog() {
     stage.classList.remove('has-log');
     decisionLog.hidden = true;
+    renderDecisionCount(decisionsCountValue);
     updateAwayFromLandingState();
   }
 
