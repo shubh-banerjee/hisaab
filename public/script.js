@@ -230,12 +230,10 @@
   const rangeLine = document.getElementById('range-line');
   const lowSignalWarning = document.getElementById('low-signal-warning');
   const aiWordingNote = document.getElementById('ai-wording-note');
-  const lowConfidenceActions = document.getElementById('low-confidence-actions');
+  const confidenceOutlookNote = document.getElementById('confidence-outlook-note');
   const inlineDataMount = document.getElementById('inline-data-mount');
   const connectedDataNote = document.getElementById('connected-data-note');
   const connectedDataText = document.getElementById('connected-data-text');
-  const addRealDataBtn = document.getElementById('add-real-data-btn');
-  const tryDifferentBtn = document.getElementById('try-different-btn');
   const chartLabel = document.getElementById('chart-label');
   const chartSampleTag = document.getElementById('chart-sample-tag');
   const chartStart = document.getElementById('chart-start');
@@ -409,8 +407,6 @@
     await runSimulation({ skipValidation: true });
   });
 
-  tryDifferentBtn.addEventListener('click', resetToComposer);
-  addRealDataBtn.addEventListener('click', openInlineDataConnector);
   micBtn.addEventListener('click', toggleSpeech);
   refineLink.addEventListener('click', () => {
     if (!lastRefinement || !currentResult) return;
@@ -768,9 +764,11 @@
     updateDcReadButtonState();
     // The fresh Add-my-data flow now requires an explicit "Read data" click
     // (see dc-read-data-btn's handler) rather than auto-parsing as the user
-    // types/pastes. The inline refresh-from-a-result flow
-    // (openInlineDataConnector) is a different, quieter in-place-update UX
-    // and keeps its existing auto-parse-on-input behavior, unchanged.
+    // types/pastes. The inline refresh-from-a-result flow below is a
+    // separate, quieter in-place-update path (its own former trigger button
+    // was removed along with the low-confidence-actions strip; this branch
+    // is currently unreachable in the UI but left in place rather than
+    // partially gutted, since removing it fully would need a wider check).
     const isInlineRefresh = stage.classList.contains('connecting-data') && Boolean(currentResult);
     if (!isInlineRefresh) return;
     const value = sheetUrlInput.value.trim();
@@ -1501,14 +1499,10 @@
       // matching hidden .intent-btn, so the same captureIntent() tracking
       // still fires correctly -- nothing is lost, only the duplicate ask.
       if (intentPrompt) intentPrompt.hidden = true;
-      const lowConfActionsEl = document.getElementById('low-confidence-actions');
-      if (lowConfActionsEl) lowConfActionsEl.classList.add('demoted');
     } else {
       if (explainBlockEl) explainBlockEl.hidden = false;
       if (evidenceBlockEl) evidenceBlockEl.hidden = false;
       if (intentPrompt) intentPrompt.hidden = false;
-      const lowConfActionsEl = document.getElementById('low-confidence-actions');
-      if (lowConfActionsEl) lowConfActionsEl.classList.remove('demoted');
     }
 
     confidenceBlock.classList.toggle('weak', isWeak);
@@ -1520,12 +1514,17 @@
     rangeLine.textContent = rangeText(low, high, value, isWeak);
     lowSignalWarning.textContent = computed.low_signal_warning || '';
     lowSignalWarning.hidden = !computed.low_signal_warning;
-    // Removed entirely per explicit repeated instruction — "Try a different
-    // question" duplicated the top-right "New question" button, and
-    // "Update data" duplicated the "Add your real data" path that's
-    // available directly from the low-confidence card elsewhere. Always
-    // hidden now, regardless of confidence level.
-    lowConfidenceActions.hidden = true;
+    // Replaces the old "Add your real data" / "Try a different question"
+    // button strip (removed -- both actions duplicated buttons already
+    // available elsewhere on the page). This is deliberately just a plain
+    // note, not another call to action: lowSignalWarning above already
+    // explains WHY confidence is low; this answers the different,
+    // forward-looking question of what happens next, grounded in the
+    // same real reasons computed server-side.
+    if (confidenceOutlookNote) {
+      confidenceOutlookNote.textContent = computed.confidence_outlook_note || '';
+      confidenceOutlookNote.hidden = !computed.confidence_outlook_note;
+    }
     // This is a SEPARATE, distinctly-styled notice from lowSignalWarning
     // above. lowSignalWarning means "the regression genuinely ran and the
     // relationship is weak" (a data-quality fact, computed server-side
@@ -3355,18 +3354,6 @@
     brandReset.tabIndex = inAnalysis ? 0 : -1;
   }
 
-  function resetToComposer() {
-    restoreDataConnectorToHome();
-    hideResults();
-    hideMissingInputs();
-    hideValidationNudge();
-    hideGuidanceMessage();
-    hideError();
-    stopIntro();
-    stage.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    updateAwayFromLandingState();
-  }
-
   function restoreDataConnectorToHome() {
     // sheetSlot/dataDetected's real permanent home is inside the Add-my-data
     // modal's upload screen (#dc-screen-upload) — that's where they live for
@@ -3393,23 +3380,6 @@
     if (missingSection.parentElement !== stage) stage.insertBefore(missingSection, errorBanner);
   }
 
-  function openInlineDataConnector() {
-    if (!currentResult) {
-      resetToComposer();
-      setPath('real');
-      sheetUrlInput.focus();
-      return;
-    }
-    // Unified with the main "Add my data" experience: this used to move
-    // sheetSlot/dataDetected inline directly onto the results page (a
-    // second, more cluttered upload UI, duplicating the clean modal built
-    // for the fresh-connect flow). Now it opens that SAME modal in refresh
-    // mode — read data -> honest summary -> Ask Hisaab re-runs the current
-    // question and closes automatically once the updated result is ready.
-    hideError();
-    openDataConnectPage({ refreshMode: true });
-  }
-
   async function refreshAnalysisWithConnectedData() {
     if (!currentResult) return;
     // Shares the SAME global lock as runSimulation() — an "Apply to
@@ -3421,10 +3391,6 @@
     setSubmissionLocked(true);
     const question = currentResult.question;
     const startTime = Date.now();
-    lowConfidenceActions.classList.add('refreshing-data');
-    addRealDataBtn.disabled = true;
-    addRealDataBtn.textContent = t('lowconf.updating');
-    tryDifferentBtn.disabled = true;
     applyDataBtn.disabled = true;
     applyDataBtn.textContent = 'Applying...';
     hideError();
@@ -3473,9 +3439,6 @@
       renderConnectedDataState(null);
       setDataSource(null);
     } finally {
-      lowConfidenceActions.classList.remove('refreshing-data');
-      addRealDataBtn.disabled = false;
-      tryDifferentBtn.disabled = false;
       if (applied || !stage.classList.contains('connecting-data')) {
         hideApplyDataCta();
       } else {
@@ -3697,7 +3660,6 @@
 
   function renderConnectedDataState(source) {
     const connected = activeDataset.kind !== 'sample';
-    addRealDataBtn.textContent = connected ? t('lowconf.update_data') : t('lowconf.add_data');
     connectedDataNote.hidden = !connected;
     if (!connected) {
       connectedDataText.textContent = t('data.using_this');

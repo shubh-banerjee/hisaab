@@ -1717,6 +1717,19 @@ code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-siz
   line-height:1.5;
 }
 
+/* Calm and reassuring, not a warning — this answers "what happens next",
+   distinct in tone from .weak-note (which explains why confidence is low
+   right now). A light blue tint signals "helpful context", not "caution". */
+.confidence-outlook-note{
+  margin-top:10px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:var(--accent-soft);
+  color:var(--ink-soft);
+  font-size:12.5px;
+  line-height:1.5;
+}
+
 .cta-row{
   display:flex;
   flex-wrap:wrap;

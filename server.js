@@ -1433,6 +1433,35 @@ function lowSignalMessage({ leverLabel, reasons }, language = 'en') {
   return `${lead} ${reasons[0].charAt(0).toUpperCase()}${reasons[0].slice(1)}. Use this as an early directional read, not a decision-grade forecast.`;
 }
 
+// Replaces the old "Add your real data" / "Try a different question"
+// button strip, which duplicated actions already available elsewhere
+// (the top-right New question button, the Add/Update data flow) and had
+// become dead UI once those buttons were permanently hidden. This is
+// deliberately NOT another call to action -- lowSignalMessage above
+// already explains WHY confidence is low; this answers the different,
+// forward-looking question of what happens next and whether the user
+// needs to do anything about it. Mapped from the exact same real
+// `reasons` array computeConfidence already produces, not invented text.
+function confidenceOutlookNote(reasons, language = 'en') {
+  const reason = reasons[0] || '';
+  if (language === 'hi') {
+    if (reason.includes('usable month')) {
+      return 'जैसे-जैसे आपका इतिहास और महीनों में बढ़ेगा, यह अपने आप अधिक विश्वसनीय होता जाएगा — आपको कुछ करने की ज़रूरत नहीं है।';
+    }
+    if (reason.includes('barely changes')) {
+      return 'अभी आपके डेटा में इसमें ज़्यादा बदलाव नहीं दिखा है। एक बार जब आप कुछ अलग-अलग मान आज़मा लेंगे, तो यह अनुमान और स्पष्ट हो जाएगा।';
+    }
+    return 'फ़िलहाल महीने-दर-महीने का उतार-चढ़ाव इस असर से बड़ा है — इसे एक शुरुआती संकेत मानें, पक्का आंकड़ा नहीं।';
+  }
+  if (reason.includes('usable month')) {
+    return "This will get more reliable as more months of your history build up \u2014 nothing you need to do.";
+  }
+  if (reason.includes('barely changes')) {
+    return "Hisaab hasn't seen much variation in this yet \u2014 once you've tried a few different values, this estimate will sharpen.";
+  }
+  return "The month-to-month swings in your data are bigger than this effect right now \u2014 treat this as an early signal, not a fixed number.";
+}
+
 function computePromoLift(data, outcomeMetric, scenario = {}) {
   const promo = data.filter(row => row.promo_active).map(row => row[outcomeMetric]);
   const nonPromo = data.filter(row => !row.promo_active).map(row => row[outcomeMetric]);
@@ -1570,6 +1599,9 @@ function computeRegressionResult(question, data, summary, scenarioOverride = nul
     : rangeIsTooWide
       ? lowSignalMessage({ leverLabel, reasons: outcome.evidenceReasons || [] }, lang)
       : null;
+  const confidenceOutlook = rangeIsTooWide && !cannotEstimateOutcome
+    ? confidenceOutlookNote(outcome.evidenceReasons || [], lang)
+    : null;
   if (rangeIsTooWide) {
     outcome.confidence = Math.min(outcome.confidence, 0.28);
   }
@@ -1600,6 +1632,7 @@ function computeRegressionResult(question, data, summary, scenarioOverride = nul
       : scenario.delta,
     promo_scale: scenario.lever === 'promo_active' ? scenario.promoScale : undefined,
     low_signal_warning: lowSignalWarning,
+    confidence_outlook_note: confidenceOutlook,
   };
 }
 
