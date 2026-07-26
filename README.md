@@ -1,6 +1,6 @@
 # Hisaab
 
-Hisaab is an AI-assisted what-if simulator for small retail business owners. The projected percentage is calculated from order history with simple statistics; Gemini only turns the result into plain-English guidance.
+"Hisaab gives small retail business owners an honest answer to their toughest business decisions - grounded in their own sales data, not guesswork."
 
 ## Architecture
 
